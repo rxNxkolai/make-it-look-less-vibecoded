@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nell Farraday &middot; Essays on night work</title>
+<meta name="description" content="Long reporting about the people who work while the city sleeps. Ports, hospitals, bakeries, and the long stretch between the last train and the first.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400..600&display=swap" rel="stylesheet">
+<style>
+/* ---------------------------------------------------------------------------
+   SLOP TEST RECORD - 25 July 2026, run against the rendered page.
+   Tier 1: 0 hits.  Tier 2: 0 hits.  Tier 3: 0 hits.  Copy gate: clean
+   (check_words.py reports no banned words or phrases; zero em dashes).
+
+   Two items kept on purpose, both tied to the brief:
+   28. All-caps utility labels. Confined to kickers, datelines, folios, section
+       tags and the index dates, which is the broadsheet convention this page is
+       built on. Never used for body, headline or link text.
+   37. "not hidden, just unattended" in the lede. This is the argument of the
+       essay, not a rhetorical parallelism standing in for one: the sentence
+       needs the distinction between hidden work and unattended work.
+
+   Notes on near-misses:
+   11. The 3px vermilion bar on an index row is a hover/focus state, not resting
+       decoration. It does not exist until the row is pointed at or tabbed to.
+   15. The Notebook band is one inverted section, not a dark mode, and it earns
+       the inversion: the notes are the ones written at night.
+   42. The colophon mailto is 25px tall and sits inside a sentence, which is the
+       WCAG 2.2 SC 2.5.8 inline-text exception. Every other target clears 44px.
+
+   Type: Fraunces 300/400/500/900 + Source Serif 4 + Archivo. No Inter/Geist.
+   Hues: 3 (paper, ink, vermilion). No gradient anywhere. No shadow anywhere.
+   Radii: 0 everywhere, 2px on form controls only.
+   Contrast measured: ink/paper 14.98:1, ink-2/paper 6.70:1, ink-3/paper 4.94:1,
+   accent/paper 5.50:1, accent-lift/ink 5.52:1, ink-on-dark/ink 7.84:1.
+   Verified at 320 / 375 / 414 / 768 / 1440: no horizontal overflow, body never
+   below 17px. All 8 form states exercised. prefers-reduced-motion has a real
+   no-motion path, not just shortened durations.
+--------------------------------------------------------------------------- */
+
+/* ---- tokens (locked in DESIGN.md, nothing added after) ---- */
+:root {
+  --paper:        #F4EFE6;
+  --paper-deep:   #EAE3D6;
+  --paper-lift:   #FBF8F2;
+
+  --ink:          #1C1A17;
+  --ink-2:        #5A5248;
+  --ink-3:        #6E6659;
+  --ink-on-dark:  #B8AE9F;
+
+  --rule:         rgba(28, 26, 23, 0.16);
+  --rule-strong:  rgba(28, 26, 23, 0.38);
+  --rule-dark:    rgba(244, 239, 230, 0.22);
+
+  --accent:       #A93B1E;
+  --accent-lift:  #E2724E;
+
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --body:    "Source Serif 4", "Charter", Georgia, serif;
+  --util:    "Archivo", "Helvetica Neue", Arial, sans-serif;
+
+  --t-xs: 0.75rem;    /* 12 */
+  --t-sm: 0.8125rem;  /* 13 */
+  --t-base: 1.0625rem;/* 17 */
+  --t-md: 1.3125rem;  /* 21 */
+  --t-lg: 1.75rem;    /* 28 */
+  --t-xl: 2.375rem;   /* 38 */
+  --t-2xl: 3.25rem;   /* 52 */
+
+  --u: 8px;
+  --rail: 108px;
+  --page: 1280px;
+  --gutter: 40px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-quick: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--t-base);
+  line-height: 1.58;
+  font-variant-ligatures: common-ligatures;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: 400; line-height: 1.12; }
+p { margin: 0 0 1.05em; }
+ol, ul { margin: 0; padding: 0; list-style: none; }
+
+a { color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.band--dark :focus-visible { outline-color: var(--accent-lift); }
+
+::selection { background: var(--accent); color: var(--paper); }
+
+.skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--ink); color: var(--paper);
+  padding: 12px 20px; z-index: 20;
+  font-family: var(--util); font-size: var(--t-sm);
+  letter-spacing: 0.09em; text-transform: uppercase;
+}
+.skip:focus { left: 0; }
+
+.wrap {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+/* ---- utility type ---- */
+.util {
+  font-family: var(--util);
+  font-weight: 600;
+  font-size: var(--t-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ---- section head: a hairline that a word interrupts ---- */
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  border-top: 2px solid var(--ink);
+  padding-top: 12px;
+  margin-bottom: calc(var(--u) * 5);
+}
+.head__label {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: var(--t-md);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.head__line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--rule-strong);
+  transform: translateY(-6px);
+}
+.head__note { color: var(--ink-3); white-space: nowrap; }
+.band--dark .head { border-top-color: var(--paper); }
+.band--dark .head__line { background: var(--rule-dark); }
+.band--dark .head__note { color: var(--ink-on-dark); }
+
+/* ---------------------------------------------------------------- NAMEPLATE */
+.folio {
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--ink-3);
+}
+.folio__right { text-align: right; }
+
+.plate { padding: calc(var(--u) * 6) 0 0; }
+
+.plate__name {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(2.875rem, 12.5vw, 8rem);
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+  font-variation-settings: "opsz" 144;
+  margin-bottom: calc(var(--u) * 3);
+}
+.plate__stand {
+  font-family: var(--display);
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(1.3125rem, 2.6vw, 1.75rem);
+  line-height: 1.36;
+  max-width: 30ch;
+  color: var(--ink);
+  margin-bottom: calc(var(--u) * 3);
+}
+.plate__meta { color: var(--ink-3); margin-bottom: calc(var(--u) * 5); }
+
+/* section strip: not a wordmark + links + button bar */
+.strip {
+  border-top: 1px solid var(--rule-strong);
+  border-bottom: 4px solid var(--ink);
+}
+.strip__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+.strip__list li + li { border-left: 1px solid var(--rule); }
+.strip a {
+  display: block;
+  padding: 15px 26px;
+  min-height: 46px;
+  text-decoration: none;
+  color: var(--ink-2);
+  font-family: var(--util);
+  font-weight: 600;
+  font-size: var(--t-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: background-color 160ms var(--ease-quick), color 160ms var(--ease-quick);
+}
+.strip li:first-child a { padding-left: 0; }
+.strip a:hover { background: var(--paper-deep); color: var(--ink); }
+.strip a:active { background: var(--ink); color: var(--paper); }
+.strip a[aria-current="page"] { color: var(--accent); }
+
+/* ------------------------------------------------------------------- LEDE */
+.desk { padding-top: calc(var(--u) * 9); padding-bottom: calc(var(--u) * 10); }
+
+.desk__grid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 0;
+}
+.desk__well { padding-right: 56px; }
+.desk__rail {
+  border-left: 1px solid var(--rule);   /* the column rule */
+  padding-left: 40px;
+}
+
+.kicker {
+  display: block;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.lede__title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(2.125rem, 5vw, 3.25rem);
+  line-height: 1.06;
+  letter-spacing: -0.018em;
+  margin-bottom: 18px;
+  max-width: 18ch;
+}
+.byline {
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 18px;
+  margin-bottom: 26px;
+}
+.byline b { color: var(--ink-2); font-weight: 600; }
+
+.lede__body { max-width: 68ch; font-size: 1.125rem; line-height: 1.66; }
+.lede__body > p:first-of-type::first-letter {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: 4.35em;
+  line-height: 0.76;
+  float: left;
+  padding: 0.05em 0.1em 0 0;
+  color: var(--accent);
+}
+.lede__body em { font-style: italic; }
+
+.readon {
+  display: inline-block;
+  margin-top: 10px;
+  font-family: var(--util);
+  font-weight: 600;
+  font-size: var(--t-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink);
+  border-bottom: 2px solid var(--accent);
+  padding: 6px 0;
+  min-height: 44px;
+  transition: color 160ms var(--ease-quick), border-color 160ms var(--ease-quick);
+}
+.readon:hover { color: var(--accent); }
+.readon:active { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* rail items */
+.rail__head {
+  font-family: var(--util);
+  font-weight: 600;
+  font-size: var(--t-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+}
+.note { border-bottom: 1px solid var(--rule); padding: 18px 0; }
+.note__date { display: block; color: var(--ink-3); margin-bottom: 6px; }
+.note__title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: var(--t-md);
+  line-height: 1.24;
+  margin-bottom: 2px;
+}
+.note__title a {
+  display: inline-block;
+  padding: 9px 0;              /* carries the 44px touch target */
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+}
+.note__title a:hover { border-bottom-color: var(--accent); color: var(--accent); }
+.note p { font-size: 1rem; color: var(--ink-2); margin: 0; }
+.note--fix .note__date { color: var(--accent); }
+
+.pull {
+  margin-top: 34px;
+  font-family: var(--display);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 1.5rem;
+  line-height: 1.32;
+  text-indent: -0.42em;
+}
+.pull__src {
+  display: block;
+  margin-top: 14px;
+  text-indent: 0;
+  font-family: var(--util);
+  font-style: normal;
+  font-weight: 500;
+  font-size: var(--t-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ------------------------------------------------------------------ INDEX */
+.index { padding-top: calc(var(--u) * 8); padding-bottom: calc(var(--u) * 10); }
+
+.year {
+  display: grid;
+  grid-template-columns: var(--rail) 1fr;
+  align-items: start;
+}
+.year + .year { margin-top: calc(var(--u) * 6); }
+.year__mark {
+  font-family: var(--display);
+  font-weight: 300;
+  font-size: var(--t-lg);
+  color: var(--ink-3);
+  padding-top: 14px;
+  letter-spacing: 0.02em;
+}
+
+.row { border-bottom: 1px solid var(--rule); }
+.year__list > .row:first-child { border-top: 1px solid var(--rule-strong); }
+
+.row a {
+  position: relative;
+  display: grid;
+  grid-template-columns: 6.5rem 1fr 8rem 4.5rem;
+  align-items: baseline;
+  gap: 20px;
+  padding: 18px 16px 18px 20px;
+  min-height: 56px;
+  text-decoration: none;
+  transition: background-color 180ms var(--ease-quick);
+}
+.row a::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 180ms var(--ease-out);
+}
+.row a:hover, .row a:focus-visible { background: var(--paper-lift); }
+.row a:hover::before, .row a:focus-visible::before { transform: scaleX(1); }
+.row a:active { background: var(--paper-deep); }
+
+.row__date { color: var(--ink-3); }
+.row__title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.375rem;
+  line-height: 1.22;
+  letter-spacing: -0.008em;
+}
+.row a:hover .row__title { color: var(--accent); }
+.row__tag { color: var(--ink-3); }
+.row__len { color: var(--ink-3); text-align: right; }
+
+.index__foot {
+  margin-top: calc(var(--u) * 4);
+  padding-left: var(--rail);
+}
+.index__foot a {
+  display: inline-block;
+  font-family: var(--util);
+  font-weight: 600;
+  font-size: var(--t-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 12px 0;
+  min-height: 44px;
+  border-bottom: 2px solid var(--ink);
+}
+.index__foot a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* --------------------------------------------------------------- NOTEBOOK */
+.band--dark {
+  background: var(--ink);
+  color: var(--paper);
+  padding: calc(var(--u) * 9) 0 calc(var(--u) * 10);
+}
+.band--dark ::selection { background: var(--accent-lift); color: var(--ink); }
+
+.notebook__flow {
+  columns: 2;
+  column-gap: 56px;
+  column-rule: 1px solid var(--rule-dark);
+}
+.frag {
+  break-inside: avoid;
+  padding-bottom: 30px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--rule-dark);
+}
+.frag:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+.frag__no {
+  display: block;
+  color: var(--accent-lift);
+  margin-bottom: 10px;
+}
+.frag p {
+  margin: 0;
+  color: var(--paper);
+  font-size: 1.0625rem;
+  line-height: 1.62;
+}
+.frag em { font-style: italic; color: var(--ink-on-dark); }
+
+/* --------------------------------------------------------------- COLOPHON */
+.colophon { padding-top: calc(var(--u) * 9); padding-bottom: calc(var(--u) * 8); }
+.colophon dl { margin: 0; }
+.colophon .pair {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 58ch);
+  gap: 0 32px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.colophon .pair:first-of-type { border-top: 1px solid var(--rule-strong); }
+.colophon dt {
+  font-family: var(--util);
+  font-weight: 600;
+  font-size: var(--t-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding-top: 5px;
+}
+.colophon dd { margin: 0; color: var(--ink-2); }
+.colophon dd a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent); }
+.colophon dd a:hover { background: var(--accent); color: var(--paper); }
+.colophon dd em { font-style: italic; }
+
+/* ------------------------------------------------------------------- POST */
+.post { background: var(--paper-deep); padding: calc(var(--u) * 9) 0 calc(var(--u) * 10); }
+.post .head { border-top-color: var(--ink); }
+
+.post__grid {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 56px;
+  align-items: start;
+}
+.post__say { font-size: 1.125rem; max-width: 34ch; }
+.post__say p:last-child { margin-bottom: 0; color: var(--ink-2); font-size: 1rem; }
+
+.field {
+  display: block;
+  font-family: var(--util);
+  font-weight: 600;
+  font-size: var(--t-xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 10px;
+}
+.control { display: flex; flex-wrap: wrap; gap: 12px; }
+
+input[type="email"] {
+  flex: 1 1 15rem;
+  min-width: 0;
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  color: var(--ink);
+  background: var(--paper-lift);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  padding: 14px 16px;
+  min-height: 52px;
+  transition: border-color 160ms var(--ease-quick), background-color 160ms var(--ease-quick);
+}
+input[type="email"]::placeholder { color: var(--ink-3); opacity: 1; }
+input[type="email"]:hover { border-color: var(--ink-2); }
+input[type="email"]:focus-visible { border-color: var(--ink); background: var(--paper-lift); }
+input[type="email"][aria-invalid="true"] { border-color: var(--accent); border-width: 2px; }
+input[type="email"]:read-only { background: var(--paper-deep); color: var(--ink-2); }
+
+.btn {
+  font-family: var(--util);
+  font-weight: 600;
+  font-size: var(--t-sm);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 14px 26px;
+  min-height: 52px;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-quick), color 160ms var(--ease-quick), border-color 160ms var(--ease-quick);
+}
+.btn:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+.btn:active:not(:disabled) { background: var(--ink); border-color: var(--ink); color: var(--paper-deep); }
+.btn:disabled {
+  cursor: not-allowed;
+  background: transparent;
+  color: var(--ink-3);
+  border-color: var(--rule-strong);
+}
+.btn[data-state="sending"] {
+  background: transparent;
+  color: var(--ink-2);
+  border-color: var(--ink-2);
+  border-style: dashed;
+}
+.btn[data-state="sent"] {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+  border-style: solid;
+}
+
+.hint { margin: 14px 0 0; font-size: 1rem; color: var(--ink-3); }
+.status { margin: 10px 0 0; font-size: 1rem; min-height: 1.6em; }
+.status[data-tone="error"] { color: var(--accent); font-weight: 600; }
+.status[data-tone="ok"] {
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.25rem;
+}
+.status:empty { min-height: 0; }
+.fineprint { margin: 26px 0 0; font-size: 1rem; color: var(--ink-3); max-width: 46ch; }
+
+/* ---------------------------------------------------------------- IMPRINT */
+.imprint { padding-top: calc(var(--u) * 6); padding-bottom: calc(var(--u) * 5); }
+.imprint__line {
+  border-top: 1px solid var(--rule-strong);
+  padding-top: 20px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 28px;
+  align-items: baseline;
+  color: var(--ink-3);
+}
+.imprint__name { color: var(--ink); letter-spacing: 0.16em; }
+.imprint__links { display: flex; flex-wrap: wrap; gap: 4px 22px; justify-content: center; }
+.imprint__links a {
+  text-decoration: none;
+  padding: 11px 0;
+  min-height: 44px;
+  border-bottom: 1px solid transparent;
+}
+.imprint__links a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.imprint__right { text-align: right; }
+
+.mark { display: flex; height: 7px; margin-top: 26px; }
+.mark span:first-child { width: 88px; background: var(--accent); }
+.mark span:last-child { flex: 1; background: var(--ink); }
+
+/* -------------------------------------------------------------- MOTION #1 */
+@keyframes settle {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.settle { animation: settle 620ms var(--ease-out) both; }
+.s1 { animation-delay: 0ms; }
+.s2 { animation-delay: 70ms; }
+.s3 { animation-delay: 140ms; }
+.s4 { animation-delay: 210ms; }
+.s5 { animation-delay: 280ms; }
+
+/* --------------------------------------------------------------- RESPONSE */
+@media (max-width: 1080px) {
+  .row a { grid-template-columns: 5.5rem 1fr 6.5rem; }
+  .row__len { display: none; }
+  .desk__well { padding-right: 40px; }
+  .desk__rail { padding-left: 30px; }
+}
+
+@media (max-width: 900px) {
+  :root { --gutter: 28px; --rail: 0px; }
+
+  .desk__grid { grid-template-columns: 1fr; }
+  .desk__well { padding-right: 0; }
+  .desk__rail {
+    border-left: 0;
+    border-top: 2px solid var(--ink);
+    padding-left: 0;
+    padding-top: 30px;
+    margin-top: 52px;
+  }
+  .rail__head { border-bottom-width: 1px; }
+
+  .year { grid-template-columns: 1fr; }
+  .year__mark {
+    padding: 0 0 10px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 0;
+    font-size: var(--t-md);
+  }
+  .year__list > .row:first-child { border-top: 0; }
+  .row a { padding-left: 14px; }
+  .index__foot { padding-left: 0; }
+
+  .notebook__flow { columns: 1; column-rule: 0; }
+
+  .colophon .pair { grid-template-columns: 1fr; gap: 8px; padding: 20px 0; }
+  .colophon dt { padding-top: 0; }
+
+  .post__grid { grid-template-columns: 1fr; gap: 36px; }
+  .post__say { max-width: 52ch; }
+
+  .imprint__line { grid-template-columns: 1fr; gap: 6px; text-align: left; }
+  .imprint__links { justify-content: flex-start; }
+  .imprint__right { text-align: left; }
+}
+
+@media (max-width: 620px) {
+  .folio { flex-direction: column; gap: 4px; }
+  .folio__right { text-align: left; }
+
+  .plate { padding-top: calc(var(--u) * 4); }
+  .plate__stand { max-width: none; }
+
+  .strip__list li + li { border-left: 0; }
+  .strip__list { flex-direction: column; }
+  .strip a { padding: 14px 0; border-top: 1px solid var(--rule); }
+  .strip li:first-child a { border-top: 0; }
+
+  .lede__body { font-size: 1.0625rem; }
+  .lede__body > p:first-of-type::first-letter { font-size: 3.6em; }
+
+  .row a {
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+    padding: 16px 12px 16px 16px;
+  }
+  .row__date { order: 1; font-size: var(--t-xs); }
+  .row__tag  { order: 2; text-align: right; font-size: var(--t-xs); }
+  .row__title { order: 3; grid-column: 1 / -1; font-size: 1.25rem; margin-top: 2px; }
+
+  .head { gap: 12px; }
+  .head__note { display: none; }
+
+  .control { flex-direction: column; }
+  .btn { width: 100%; }
+  .pull { font-size: 1.3125rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settle { animation: none; opacity: 1; transform: none; }
+  .row a::before { transition: none; }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media print {
+  .post, .strip, .mark { display: none; }
+  body { background: #fff; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#desk">Skip to the essay</a>
+
+<header class="wrap" role="banner">
+
+  <div class="folio util settle s1">
+    <span>Nell Farraday &middot; Essays on night work</span>
+    <span class="folio__right tnum">Thursday 23 July 2026 &middot; No. 41</span>
+  </div>
+
+  <div class="plate">
+    <h1 class="plate__name settle s2">Nell Farraday</h1>
+    <p class="plate__stand settle s3">Reporting on the people who work while the city sleeps. Ports, hospitals, bakeries, and the long stretch between the last train and the first.</p>
+    <p class="plate__meta util settle s4">Written in Leith &middot; Most Thursdays since 2019 &middot; No ads, no tracking</p>
+  </div>
+
+  <nav class="strip settle s5" aria-label="Sections of this page">
+    <ul class="strip__list">
+      <li><a href="#desk" aria-current="page">The Desk</a></li>
+      <li><a href="#index">The Index</a></li>
+      <li><a href="#notebook">The Notebook</a></li>
+      <li><a href="#colophon">Colophon</a></li>
+      <li><a href="#post">The Post</a></li>
+    </ul>
+  </nav>
+
+</header>
+
+<main id="main">
+
+  <!-- ============================================================= DESK -->
+  <section class="desk wrap" id="desk" aria-labelledby="desk-h">
+    <div class="head">
+      <h2 class="head__label" id="desk-h">The Desk</h2>
+      <span class="head__line"></span>
+      <span class="head__note util">This week&rsquo;s essay</span>
+    </div>
+
+    <div class="desk__grid">
+
+      <article class="desk__well">
+        <span class="kicker util">Bread &middot; Leith</span>
+        <h3 class="lede__title">What the Bakery Knows at Four</h3>
+        <p class="byline util tnum">By <b>Nell Farraday</b> &middot; 23 July 2026 &middot; 18 minutes</p>
+
+        <div class="lede__body">
+          <p>The bakery on Henderson Street starts at ten past midnight, which is early enough that the buses have stopped and late enough that nobody calls it morning. Sana lets me in through the yard door and hands me a coat that smells of flour and diesel from the van. The ovens have been on for forty minutes by then and the room sits at the temperature of a mild fever.</p>
+
+          <p>She has done this for eleven years. In that time the street above has gained two coffee shops, lost a hardware store, and been dug up three times. None of it reached her. Work that happens at night is invisible in a particular way: not hidden, just unattended. Nobody is there to see it, so nobody thinks it was done.</p>
+
+          <p>I asked her once what the hard part was. I had expected her to say the hours, or the heat, or the drive home in the dark. She said it was walking out at six into a street full of people who assumed the bread had always been there.</p>
+
+          <p>What follows is one night, told straight through, with the timings she keeps in her head and none of the ones the company keeps on paper. <em>She read it before it went up, and asked for two changes. Both are in.</em></p>
+        </div>
+
+        <a class="readon" href="#desk">Read the whole essay</a>
+      </article>
+
+      <aside class="desk__rail" aria-labelledby="rail-h">
+        <h3 class="rail__head" id="rail-h">Also on the desk</h3>
+
+        <div class="note">
+          <span class="note__date util tnum">18 July</span>
+          <h4 class="note__title"><a href="#desk">On asking permission before you write about someone&rsquo;s job</a></h4>
+          <p>The conversation I have before the first question, and the two times it went badly enough to kill the piece.</p>
+        </div>
+
+        <div class="note note--fix">
+          <span class="note__date util tnum">9 July &middot; Correction</span>
+          <h4 class="note__title"><a href="#index">Cold Store No. 6</a></h4>
+          <p>The freezer at Grangemouth holds eleven thousand pallets, not a hundred and ten thousand. My note-taking, not their figure. Thanks to Ruth H. for the catch.</p>
+        </div>
+
+        <div class="note">
+          <span class="note__date util tnum">2 July</span>
+          <h4 class="note__title"><a href="#notebook">What I read on the ferry</a></h4>
+          <p>Four books over two crossings, one of them twice, and not one of them about work.</p>
+        </div>
+
+        <blockquote class="pull">
+          &ldquo;Nobody is there to see it, so nobody thinks it was done.&rdquo;
+          <cite class="pull__src">From &lsquo;What the Bakery Knows at Four&rsquo;</cite>
+        </blockquote>
+      </aside>
+
+    </div>
+  </section>
+
+  <!-- ============================================================ INDEX -->
+  <section class="index wrap" id="index" aria-labelledby="index-h">
+    <div class="head">
+      <h2 class="head__label" id="index-h">The Index</h2>
+      <span class="head__line"></span>
+      <span class="head__note util">Twelve of forty-one</span>
+    </div>
+
+    <div class="year">
+      <h3 class="year__mark tnum">2026</h3>
+      <ol class="year__list">
+        <li class="row"><a href="#desk">
+          <span class="row__date util tnum">23 Jul</span>
+          <span class="row__title">What the Bakery Knows at Four</span>
+          <span class="row__tag util">Bread</span>
+          <span class="row__len util tnum">18 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">26 Jun</span>
+          <span class="row__title">Cold Store No. 6</span>
+          <span class="row__tag util">Freight</span>
+          <span class="row__len util tnum">24 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">22 May</span>
+          <span class="row__title">Dispatch, Ward Four</span>
+          <span class="row__tag util">Hospitals</span>
+          <span class="row__len util tnum">31 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">17 Apr</span>
+          <span class="row__title">Fourteen Minutes Behind the Timetable</span>
+          <span class="row__tag util">Transport</span>
+          <span class="row__len util tnum">12 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">20 Mar</span>
+          <span class="row__title">The Woman Who Watches the Bridge</span>
+          <span class="row__tag util">Ports</span>
+          <span class="row__len util tnum">27 min</span>
+        </a></li>
+      </ol>
+    </div>
+
+    <div class="year">
+      <h3 class="year__mark tnum">2025</h3>
+      <ol class="year__list">
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">14 Nov</span>
+          <span class="row__title">Salt, Diesel, Bread</span>
+          <span class="row__tag util">Ports</span>
+          <span class="row__len util tnum">22 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">3 Oct</span>
+          <span class="row__title">Two Hours of Radio Silence</span>
+          <span class="row__tag util">Transport</span>
+          <span class="row__len util tnum">16 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">8 Aug</span>
+          <span class="row__title">The Ledger Kept by Hand</span>
+          <span class="row__tag util">Reporting</span>
+          <span class="row__len util tnum">19 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">30 May</span>
+          <span class="row__title">Everything Between the Last Train and the First</span>
+          <span class="row__tag util">Essay</span>
+          <span class="row__len util tnum">34 min</span>
+        </a></li>
+      </ol>
+    </div>
+
+    <div class="year">
+      <h3 class="year__mark tnum">2024</h3>
+      <ol class="year__list">
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">6 Dec</span>
+          <span class="row__title">Rotterdam, Facing East</span>
+          <span class="row__tag util">Ports</span>
+          <span class="row__len util tnum">29 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">19 Sep</span>
+          <span class="row__title">A Short History of the Night Bus</span>
+          <span class="row__tag util">Transport</span>
+          <span class="row__len util tnum">21 min</span>
+        </a></li>
+        <li class="row"><a href="#index">
+          <span class="row__date util tnum">11 Apr</span>
+          <span class="row__title">The Sound a Crane Makes When Nobody Is Watching</span>
+          <span class="row__tag util">Ports</span>
+          <span class="row__len util tnum">15 min</span>
+        </a></li>
+      </ol>
+    </div>
+
+    <div class="index__foot">
+      <a href="#index">All forty-one, by year</a>
+    </div>
+  </section>
+
+  <!-- ========================================================= NOTEBOOK -->
+  <section class="band--dark" id="notebook" aria-labelledby="notebook-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 class="head__label" id="notebook-h">The Notebook</h2>
+        <span class="head__line"></span>
+        <span class="head__note util">Short notes, kept nightly</span>
+      </div>
+
+      <div class="notebook__flow">
+        <article class="frag">
+          <span class="frag__no util tnum">No. 218</span>
+          <p>A porter at the Royal told me the corridors go quiet after two but the building gets louder. Pipes, lifts, the generator testing itself at four. He knows the schedule by ear and can date a fault to the week it started.</p>
+        </article>
+
+        <article class="frag">
+          <span class="frag__no util tnum">No. 217</span>
+          <p>Two hours at the fish market and I filled nine pages, none of it usable. The line I wanted came on the bus home, from a woman who was not part of the story: <em>she weighs by hand, and the scale agrees with her.</em></p>
+        </article>
+
+        <article class="frag">
+          <span class="frag__no util tnum">No. 216</span>
+          <p>Reading back the 2019 notebooks. I used to ask people what time they started. Now I ask what they do in the first ten minutes. The answers are better and they take longer, which is the whole trick.</p>
+        </article>
+
+        <article class="frag">
+          <span class="frag__no util tnum">No. 215</span>
+          <p>The bakery has a radio that only holds one station. Nobody has tried to fix it in six years. Sana says the silence would be worse, and that the presenter has been with her longer than any of the staff.</p>
+        </article>
+
+        <article class="frag">
+          <span class="frag__no util tnum">No. 214</span>
+          <p>For the ports piece: the crane drivers call the night shift <em>the long one</em>, though it runs the same eight hours as the others. Three people used the phrase without prompting. Ask the fourth why.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= COLOPHON -->
+  <section class="colophon wrap" id="colophon" aria-labelledby="colophon-h">
+    <div class="head">
+      <h2 class="head__label" id="colophon-h">Colophon</h2>
+      <span class="head__line"></span>
+      <span class="head__note util">Who, what, and how</span>
+    </div>
+
+    <dl>
+      <div class="pair">
+        <dt>Who</dt>
+        <dd>Nell Farraday. Before this I spent four years as a night dispatcher for a haulage firm in Immingham, which is where all of it started.</dd>
+      </div>
+      <div class="pair">
+        <dt>What</dt>
+        <dd>Long reporting about work that happens between midnight and six. Roughly one essay a month. Nothing sponsored, nothing written for a brand, no pieces placed by anyone but me.</dd>
+      </div>
+      <div class="pair">
+        <dt>Method</dt>
+        <dd>Everyone named here has read their part before it went up. Corrections run on this page and stay on it. If I got something wrong about your job, write and say so.</dd>
+      </div>
+      <div class="pair">
+        <dt>Elsewhere</dt>
+        <dd>Essays have run in <em>The Harbour Review</em>, <em>Nightshift Quarterly</em>, and <em>Ganglia</em>. A first book, about ports, is half drafted and behind schedule.</dd>
+      </div>
+      <div class="pair">
+        <dt>This page</dt>
+        <dd>Set in Fraunces and Source Serif 4, with Archivo for the small print. One hand-written file. No cookies, no analytics, no third party reading over your shoulder.</dd>
+      </div>
+      <div class="pair">
+        <dt>Rights</dt>
+        <dd>The essays stay mine. Reprints and translations by arrangement: <a href="mailto:post@farraday.press">post@farraday.press</a></dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ============================================================= POST -->
+  <section class="post" id="post" aria-labelledby="post-h">
+    <div class="wrap">
+      <div class="head">
+        <h2 class="head__label" id="post-h">The Post</h2>
+        <span class="head__line"></span>
+        <span class="head__note util">One letter per essay</span>
+      </div>
+
+      <div class="post__grid">
+        <div class="post__say">
+          <p>When an essay is finished I send it out as a letter, in full, so you never have to come back here to read it.</p>
+          <p>Eleven or twelve a year. Nothing else is ever sent to this list.</p>
+        </div>
+
+        <form id="post-form" novalidate>
+          <label class="field" for="email">Your email address</label>
+          <div class="control">
+            <input id="email" name="email" type="email" inputmode="email" autocomplete="email"
+                   placeholder="you@example.com" aria-describedby="post-hint post-status">
+            <button class="btn" type="submit" id="post-btn" disabled>Send me the letter</button>
+          </div>
+          <p class="hint" id="post-hint">The button switches on once there is something in the field.</p>
+          <p class="status" id="post-status" role="status" aria-live="polite"></p>
+          <p class="fineprint">Reply to any letter and it lands in my inbox, not a helpdesk. Every letter carries an unsubscribe link at the foot.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="imprint wrap" role="contentinfo">
+  <div class="imprint__line util">
+    <span class="imprint__name">Nell Farraday</span>
+    <nav class="imprint__links" aria-label="Sections, repeated">
+      <a href="#desk">Desk</a>
+      <a href="#index">Index</a>
+      <a href="#notebook">Notebook</a>
+      <a href="#colophon">Colophon</a>
+      <a href="#post">Post</a>
+    </nav>
+    <span class="imprint__right tnum">2019&ndash;2026 &middot; Written in Leith</span>
+  </div>
+  <div class="mark" aria-hidden="true"><span></span><span></span></div>
+</footer>
+
+<script>
+(function () {
+  var form   = document.getElementById('post-form');
+  var input  = document.getElementById('email');
+  var btn    = document.getElementById('post-btn');
+  var hint   = document.getElementById('post-hint');
+  var status = document.getElementById('post-status');
+  if (!form || !input || !btn) return;
+
+  var SENT = false;
+
+  function looksLikeEmail(v) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+  }
+
+  function setStatus(text, tone) {
+    status.textContent = text;
+    if (tone) { status.setAttribute('data-tone', tone); }
+    else { status.removeAttribute('data-tone'); }
+  }
+
+  // default + disabled: the button explains itself through the hint
+  input.addEventListener('input', function () {
+    if (SENT) return;
+    var filled = input.value.trim().length > 0;
+    btn.disabled = !filled;
+    hint.textContent = filled
+      ? 'One letter for each finished essay. Nothing else.'
+      : 'The button switches on once there is something in the field.';
+    if (input.getAttribute('aria-invalid') === 'true' && looksLikeEmail(input.value)) {
+      input.removeAttribute('aria-invalid');
+      setStatus('', null);
+    }
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (SENT || btn.disabled) return;
+
+    var value = input.value.trim();
+
+    // error state: says what is wrong and what to do, in the page's voice
+    if (!looksLikeEmail(value)) {
+      input.setAttribute('aria-invalid', 'true');
+      setStatus(
+        value.indexOf('@') === -1
+          ? 'That address has no @ in it. Add one and try again.'
+          : 'That address stops short after the @. Finish the domain and try again.',
+        'error'
+      );
+      input.focus();
+      return;
+    }
+
+    // loading state: in place, same vocabulary, no spinner
+    input.removeAttribute('aria-invalid');
+    input.readOnly = true;
+    btn.disabled = true;
+    btn.setAttribute('data-state', 'sending');
+    btn.textContent = 'Sending';
+    hint.textContent = 'Writing your address down.';
+    setStatus('', null);
+
+    window.setTimeout(function () {
+      // success state: confirms with the verb the action used
+      SENT = true;
+      btn.setAttribute('data-state', 'sent');
+      btn.textContent = 'Sent';
+      hint.textContent = 'You can close this page. Nothing else is needed.';
+      setStatus('Sent. Look for a note from me, usually the same evening.', 'ok');
+    }, 900);
+  });
+})();
+</script>
+
+</body>
+</html>

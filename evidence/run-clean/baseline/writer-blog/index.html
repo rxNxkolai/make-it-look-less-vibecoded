@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nell Farrow — Essays on cities, memory, and the small machinery of daily life</title>
+<meta name="description" content="Nell Farrow writes essays about cities, memory, and the small machinery of daily life. Archive, notes, reading log, and a monthly letter.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f5f2ea'/><text y='.9em' x='.12em' font-size='84' font-family='Georgia,serif' fill='%23a8412a'>N</text></svg>">
+
+<script>
+/* Set theme + js flag before first paint: avoids a flash of the wrong theme,
+   and keeps all content visible if scripting is unavailable. */
+(function(){
+  var r = document.documentElement;
+  r.className += ' js';
+  var t = null;
+  try { t = localStorage.getItem('nf-theme'); } catch(e){}
+  if (!t) {
+    t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  r.setAttribute('data-theme', t);
+})();
+</script>
+
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --paper:#f5f2ea;
+  --paper-2:#efeade;
+  --paper-3:#e8e2d2;
+  --ink:#17150f;
+  --ink-2:#3c382e;
+  --muted:#77705f;
+  --rule:#ded6c5;
+  --rule-soft:#e9e2d3;
+  --accent:#a8412a;
+  --accent-2:#8a3320;
+  --accent-wash:#f1e3dc;
+  --shadow:rgba(23,21,15,.07);
+
+  --serif-display:'Fraunces','Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+  --serif-text:'Newsreader','Iowan Old Style',Georgia,'Times New Roman',serif;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+
+  --wrap:1180px;
+  --gutter:clamp(1.25rem,5vw,4.5rem);
+  --rhythm:clamp(4.5rem,9vw,8.5rem);
+  --ease:cubic-bezier(.2,.7,.25,1);
+}
+[data-theme="dark"]{
+  --paper:#141310;
+  --paper-2:#1c1a15;
+  --paper-3:#24211a;
+  --ink:#f1ede2;
+  --ink-2:#cdc7b8;
+  --muted:#8d8674;
+  --rule:#2f2c24;
+  --rule-soft:#26241d;
+  --accent:#e07a56;
+  --accent-2:#f09370;
+  --accent-wash:#2a1d17;
+  --shadow:rgba(0,0,0,.4);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--serif-text);
+  font-size:clamp(1.0625rem,.35vw + 1rem,1.1875rem);
+  line-height:1.68;
+  font-optical-sizing:auto;
+  -webkit-font-smoothing:antialiased;
+  transition:background-color .5s var(--ease),color .5s var(--ease);
+  overflow-x:hidden;
+}
+img{max-width:100%;display:block}
+h1,h2,h3,h4{font-family:var(--serif-display);font-weight:600;line-height:1.08;letter-spacing:-.02em;margin:0}
+p{margin:0 0 1.1em}
+a{color:inherit}
+::selection{background:var(--accent);color:var(--paper)}
+
+.wrap{max-width:var(--wrap);margin-inline:auto;padding-inline:var(--gutter)}
+.narrow{max-width:60ch}
+
+.skip{
+  position:absolute;left:-9999px;top:0;z-index:200;
+  background:var(--ink);color:var(--paper);padding:.75rem 1.25rem;
+  font-family:var(--mono);font-size:.75rem;text-decoration:none;
+}
+.skip:focus{left:1rem;top:1rem}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+/* paper grain */
+.grain{
+  position:fixed;inset:0;z-index:100;pointer-events:none;opacity:.4;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.32'/%3E%3C/svg%3E");
+  mix-blend-mode:multiply;
+}
+[data-theme="dark"] .grain{mix-blend-mode:screen;opacity:.16}
+
+/* reading progress */
+.progress{
+  position:fixed;top:0;left:0;height:2px;width:0;z-index:120;
+  background:var(--accent);transition:width .1s linear;
+}
+
+/* ============================================================
+   TYPE HELPERS
+   ============================================================ */
+.eyebrow{
+  font-family:var(--mono);font-size:.6875rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 1.25rem;
+  display:flex;align-items:center;gap:.75rem;
+}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+.meta{font-family:var(--mono);font-size:.6875rem;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.lede{font-size:1.2em;line-height:1.55;color:var(--ink-2)}
+.rule{height:1px;background:var(--rule);border:0;margin:0}
+
+/* link with sliding underline */
+.link{
+  text-decoration:none;background-image:linear-gradient(var(--accent),var(--accent));
+  background-size:0% 1px;background-position:0 100%;background-repeat:no-repeat;
+  transition:background-size .35s var(--ease),color .25s var(--ease);
+  padding-bottom:1px;
+}
+.link:hover,.link:focus-visible{background-size:100% 1px;color:var(--accent)}
+.link--on{background-size:100% 1px}
+.link--on:hover{color:var(--accent)}
+
+/* ============================================================
+   MASTHEAD
+   ============================================================ */
+.masthead{
+  position:sticky;top:0;z-index:90;
+  background:color-mix(in srgb,var(--paper) 88%,transparent);
+  backdrop-filter:saturate(150%) blur(12px);
+  border-bottom:1px solid transparent;
+  transition:border-color .3s var(--ease),background-color .3s var(--ease);
+}
+.masthead.is-stuck{border-bottom-color:var(--rule)}
+.masthead__in{
+  display:flex;align-items:baseline;justify-content:space-between;gap:1.5rem;
+  padding-block:1.15rem;
+}
+.wordmark{
+  font-family:var(--serif-display);font-size:1.0625rem;font-weight:600;
+  letter-spacing:.01em;text-decoration:none;white-space:nowrap;
+  display:flex;align-items:baseline;gap:.55rem;
+}
+.wordmark span{
+  font-family:var(--mono);font-size:.625rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);font-weight:400;
+}
+.nav{display:flex;align-items:baseline;gap:1.6rem}
+.nav a{
+  font-family:var(--mono);font-size:.6875rem;letter-spacing:.11em;
+  text-transform:uppercase;text-decoration:none;color:var(--muted);
+  transition:color .22s var(--ease);
+}
+.nav a:hover,.nav a[aria-current="true"]{color:var(--ink)}
+.nav a[aria-current="true"]{position:relative}
+.nav a[aria-current="true"]::after{
+  content:"";position:absolute;left:0;right:0;bottom:-6px;height:1px;background:var(--accent)
+}
+.toggle{
+  appearance:none;border:1px solid var(--rule);background:transparent;color:var(--muted);
+  font-family:var(--mono);font-size:.625rem;letter-spacing:.11em;text-transform:uppercase;
+  padding:.45rem .7rem;cursor:pointer;border-radius:2px;line-height:1;
+  transition:border-color .22s var(--ease),color .22s var(--ease);
+}
+.toggle:hover{border-color:var(--ink);color:var(--ink)}
+.navtoggle{display:none}
+
+@media (max-width:800px){
+  .nav{
+    position:fixed;inset:64px 0 auto;background:var(--paper);border-bottom:1px solid var(--rule);
+    flex-direction:column;align-items:flex-start;gap:0;padding:1rem var(--gutter) 1.75rem;
+    transform:translateY(-140%);transition:transform .4s var(--ease);
+  }
+  .nav.is-open{transform:translateY(0)}
+  .nav a{font-size:.8125rem;padding-block:.7rem;width:100%;border-bottom:1px solid var(--rule-soft)}
+  .navtoggle{display:inline-block}
+  .desk-only{display:none}
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{padding-block:clamp(3.5rem,10vw,7.5rem) clamp(3rem,7vw,5.5rem);position:relative}
+.hero__grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);align-items:end}
+@media (max-width:900px){.hero__grid{grid-template-columns:1fr;align-items:start}}
+
+.hero h1{
+  font-size:clamp(2.7rem,7.6vw,5.75rem);
+  font-weight:500;letter-spacing:-.035em;line-height:.98;margin:0 0 1.5rem;
+  font-variation-settings:'SOFT' 0,'WONK' 1;
+}
+.hero h1 em{font-style:italic;color:var(--accent);font-weight:400}
+.hero__bio{max-width:46ch;color:var(--ink-2)}
+.hero__aside{border-left:1px solid var(--rule);padding-left:clamp(1.25rem,2.5vw,2rem)}
+@media (max-width:900px){.hero__aside{border-left:0;border-top:1px solid var(--rule);padding-left:0;padding-top:1.75rem;margin-top:1rem}}
+.status{display:flex;flex-direction:column;gap:1.35rem;margin:0;padding:0}
+.status div{display:flex;flex-direction:column;gap:.3rem}
+.status dt{font-family:var(--mono);font-size:.625rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.status dd{margin:0;font-size:.9375rem;line-height:1.45}
+.dot{
+  display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);
+  margin-right:.5rem;vertical-align:middle;
+  animation:pulse 2.8s var(--ease) infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.82)}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+
+.hero__actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:2.25rem}
+.btn{
+  font-family:var(--mono);font-size:.6875rem;letter-spacing:.11em;text-transform:uppercase;
+  text-decoration:none;padding:.8rem 1.3rem;border:1px solid var(--ink);color:var(--ink);
+  background:transparent;cursor:pointer;border-radius:2px;line-height:1;
+  transition:background-color .25s var(--ease),color .25s var(--ease),border-color .25s var(--ease);
+  display:inline-flex;align-items:center;gap:.5rem;
+}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn--accent{border-color:var(--accent);background:var(--accent);color:var(--paper)}
+.btn--accent:hover{background:var(--accent-2);border-color:var(--accent-2);color:var(--paper)}
+.btn--quiet{border-color:var(--rule);color:var(--muted)}
+.btn--quiet:hover{background:transparent;border-color:var(--ink);color:var(--ink)}
+
+/* ============================================================
+   SECTION SHELL
+   ============================================================ */
+section{padding-block:var(--rhythm)}
+section + section{padding-top:0}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:2rem;margin-bottom:2.75rem}
+.sec-head h2{font-size:clamp(1.6rem,3vw,2.3rem);font-weight:500;letter-spacing:-.025em}
+.sec-head p{margin:.55rem 0 0;color:var(--muted);font-size:.9375rem;max-width:44ch}
+.sec-head .meta{white-space:nowrap;padding-bottom:.4rem}
+@media (max-width:700px){.sec-head{flex-direction:column;align-items:flex-start;gap:.75rem}}
+
+/* ============================================================
+   FEATURED
+   ============================================================ */
+.feature{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.72fr);
+  gap:clamp(1.5rem,4vw,3.5rem);
+  border-top:2px solid var(--ink);border-bottom:1px solid var(--rule);
+  padding-block:clamp(2rem,4vw,3.25rem);
+}
+@media (max-width:900px){.feature{grid-template-columns:1fr}}
+.feature__tag{
+  display:inline-block;font-family:var(--mono);font-size:.625rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);
+  padding:.3rem .6rem;border-radius:2px;margin-bottom:1.5rem;
+}
+.feature h3{font-size:clamp(1.9rem,4.4vw,3.1rem);font-weight:500;letter-spacing:-.03em;margin-bottom:1.1rem}
+.feature h3 a{text-decoration:none}
+.feature h3 a:hover{color:var(--accent)}
+.feature__dek{max-width:52ch;color:var(--ink-2)}
+.feature__foot{display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;margin-top:1.75rem}
+.pull{
+  border-left:2px solid var(--accent);padding:.4rem 0 .4rem 1.5rem;
+  font-family:var(--serif-display);font-size:clamp(1.05rem,1.7vw,1.35rem);
+  font-style:italic;font-weight:400;line-height:1.45;color:var(--ink);margin:0 0 1.5rem;
+}
+.figure{
+  aspect-ratio:4/5;border:1px solid var(--rule);position:relative;overflow:hidden;
+  background:
+    radial-gradient(120% 90% at 20% 8%,var(--accent-wash) 0%,transparent 62%),
+    linear-gradient(168deg,var(--paper-2) 0%,var(--paper-3) 100%);
+}
+.figure::before{
+  content:"";position:absolute;inset:0;
+  background-image:
+    repeating-linear-gradient(to bottom,transparent 0 22px,var(--rule-soft) 22px 23px);
+  opacity:.85;
+}
+.figure::after{
+  content:"";position:absolute;left:14%;right:14%;top:22%;bottom:22%;
+  border:1px solid var(--accent);opacity:.5;
+  transform:rotate(-4deg);
+  background:linear-gradient(200deg,transparent 40%,var(--accent-wash) 100%);
+}
+.figure__cap{
+  position:absolute;left:0;right:0;bottom:0;padding:.85rem 1rem;
+  font-family:var(--mono);font-size:.625rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);background:color-mix(in srgb,var(--paper) 84%,transparent);
+  border-top:1px solid var(--rule);z-index:2;
+}
+@media (max-width:900px){.figure{aspect-ratio:16/9}}
+
+/* ============================================================
+   ARCHIVE LIST
+   ============================================================ */
+.filters{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.75rem;align-items:center}
+.chip{
+  font-family:var(--mono);font-size:.625rem;letter-spacing:.11em;text-transform:uppercase;
+  border:1px solid var(--rule);background:transparent;color:var(--muted);
+  padding:.45rem .75rem;border-radius:99px;cursor:pointer;line-height:1;
+  transition:all .22s var(--ease);
+}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.filters__count{font-family:var(--mono);font-size:.625rem;letter-spacing:.1em;color:var(--muted);margin-left:auto}
+
+.entries{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+.entry{border-bottom:1px solid var(--rule-soft)}
+.entry.is-hidden{display:none}
+.entry a{
+  display:grid;grid-template-columns:7.5rem minmax(0,1fr) 8.5rem 4.5rem;
+  gap:1.5rem;align-items:baseline;
+  padding:1.5rem .75rem;text-decoration:none;
+  transition:background-color .3s var(--ease),padding-left .3s var(--ease);
+  position:relative;
+}
+.entry a:hover{background:var(--paper-2);padding-left:1.25rem}
+.entry a::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--accent);
+  transform:scaleY(0);transform-origin:top;transition:transform .3s var(--ease);
+}
+.entry a:hover::before{transform:scaleY(1)}
+.entry__date{font-family:var(--mono);font-size:.6875rem;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.entry__title{
+  font-family:var(--serif-display);font-size:1.25rem;font-weight:500;letter-spacing:-.015em;
+  line-height:1.25;margin:0 0 .4rem;transition:color .22s var(--ease);
+}
+.entry a:hover .entry__title{color:var(--accent)}
+.entry__dek{font-size:.9375rem;color:var(--muted);line-height:1.5;margin:0;max-width:56ch}
+.entry__tag{font-family:var(--mono);font-size:.625rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.entry__len{font-family:var(--mono);font-size:.625rem;letter-spacing:.06em;color:var(--muted);text-align:right;white-space:nowrap}
+@media (max-width:900px){
+  .entry a{grid-template-columns:1fr;gap:.5rem;padding-inline:0}
+  .entry a:hover{padding-left:.75rem}
+  .entry__len{text-align:left}
+  .entry__meta-row{display:flex;gap:1rem}
+}
+.archive__more{margin-top:2rem;display:flex;justify-content:center}
+
+/* ============================================================
+   NOTES
+   ============================================================ */
+/* 1px gap + a 1px ring on each card: neighbouring rings meet inside the gap to
+   form single hairlines, and empty cells in the last row stay paper rather than
+   showing a block of rule colour. */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:1px}
+.note{
+  background:var(--paper);padding:1.75rem 1.6rem;
+  display:flex;flex-direction:column;gap:.85rem;
+  box-shadow:0 0 0 1px var(--rule);
+  transition:background-color .3s var(--ease);
+}
+.note:hover{background:var(--paper-2)}
+.note__head{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+.note h3{font-size:1.0625rem;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.note p{font-size:.9375rem;line-height:1.6;color:var(--ink-2);margin:0}
+.note__kind{
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);border:1px solid var(--accent);padding:.22rem .45rem;border-radius:2px;white-space:nowrap;
+}
+
+/* ============================================================
+   SHELF
+   ============================================================ */
+.shelf-wrap{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding-block:2.5rem}
+.shelf{display:flex;gap:.5rem;align-items:flex-end;overflow-x:auto;padding-bottom:1rem;scrollbar-width:thin}
+.book{
+  flex:0 0 auto;width:46px;border-radius:2px 3px 3px 2px;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(0,0,0,.14);box-shadow:inset -3px 0 6px rgba(0,0,0,.14);
+  cursor:default;transition:transform .3s var(--ease);
+  position:relative;
+}
+.book:hover{transform:translateY(-10px)}
+.book span{
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-family:var(--serif-display);font-size:.75rem;font-weight:600;letter-spacing:.01em;
+  padding:1rem .25rem;white-space:nowrap;color:#f7f4ec;text-shadow:0 1px 2px rgba(0,0,0,.35);
+}
+.book--current{outline:2px solid var(--accent);outline-offset:3px}
+.shelf__legend{display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1.25rem}
+.shelf__legend p{margin:0;font-size:.875rem;color:var(--muted)}
+.shelf__legend strong{color:var(--ink);font-weight:600}
+
+/* ============================================================
+   ELSEWHERE
+   ============================================================ */
+.elsewhere{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 clamp(2rem,5vw,4rem)}
+.pubs{list-style:none;margin:0;padding:0}
+.pubs li{
+  display:flex;justify-content:space-between;align-items:baseline;gap:1rem;
+  padding:.95rem 0;border-bottom:1px solid var(--rule-soft);
+}
+.pubs a{text-decoration:none;font-family:var(--serif-display);font-size:1.0625rem;font-weight:500}
+.pubs a:hover{color:var(--accent)}
+.pubs .meta{white-space:nowrap}
+
+/* ============================================================
+   ABOUT
+   ============================================================ */
+.about{display:grid;grid-template-columns:minmax(0,.62fr) minmax(0,1fr);gap:clamp(2rem,5vw,4.5rem);align-items:start}
+@media (max-width:860px){.about{grid-template-columns:1fr}}
+.portrait{
+  aspect-ratio:3/4;border:1px solid var(--rule);position:relative;overflow:hidden;
+  background:linear-gradient(158deg,var(--paper-2),var(--paper-3));
+}
+.portrait__mono{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-family:var(--serif-display);font-size:clamp(7rem,18vw,12rem);font-weight:400;
+  color:var(--accent);opacity:.16;line-height:1;font-style:italic;
+}
+.portrait__lines{position:absolute;inset:0}
+.portrait__lines i{
+  position:absolute;left:-20%;right:-20%;height:1px;background:var(--rule);
+  transform-origin:center;
+}
+.portrait__cap{
+  position:absolute;left:0;right:0;bottom:0;padding:.85rem 1rem;
+  border-top:1px solid var(--rule);background:color-mix(in srgb,var(--paper) 86%,transparent);
+  font-family:var(--mono);font-size:.625rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+}
+.about__body h2{font-size:clamp(1.7rem,3.4vw,2.5rem);font-weight:500;margin-bottom:1.4rem}
+.about__body p{max-width:58ch;color:var(--ink-2)}
+.facts{list-style:none;margin:2rem 0 0;padding:1.5rem 0 0;border-top:1px solid var(--rule);display:grid;gap:.85rem}
+.facts li{display:grid;grid-template-columns:8.5rem 1fr;gap:1rem;font-size:.9375rem;align-items:baseline}
+.facts b{font-family:var(--mono);font-size:.625rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400}
+@media (max-width:520px){.facts li{grid-template-columns:1fr;gap:.15rem}}
+
+/* ============================================================
+   LETTER / SIGNUP
+   ============================================================ */
+.letter{
+  border:1px solid var(--rule);background:var(--paper-2);
+  padding:clamp(2rem,5vw,3.5rem);
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.85fr);
+  gap:clamp(2rem,5vw,4rem);align-items:center;position:relative;overflow:hidden;
+}
+.letter::before{
+  content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;
+  border:1px solid var(--accent);opacity:.22;border-radius:50%;
+}
+@media (max-width:860px){.letter{grid-template-columns:1fr}}
+.letter h2{font-size:clamp(1.6rem,3.2vw,2.35rem);font-weight:500;margin-bottom:1rem}
+.letter p{color:var(--ink-2);max-width:44ch;margin-bottom:0}
+.form{position:relative;z-index:2}
+.field{display:flex;gap:.5rem;margin-bottom:.85rem}
+@media (max-width:480px){.field{flex-direction:column}}
+.field input{
+  flex:1;min-width:0;font-family:var(--serif-text);font-size:1rem;
+  padding:.9rem 1rem;border:1px solid var(--rule);background:var(--paper);color:var(--ink);
+  border-radius:2px;transition:border-color .22s var(--ease);
+}
+.field input::placeholder{color:var(--muted)}
+.field input:focus{outline:none;border-color:var(--accent)}
+.form__note{font-family:var(--mono);font-size:.625rem;letter-spacing:.08em;color:var(--muted);margin:0}
+.form__msg{font-family:var(--mono);font-size:.6875rem;letter-spacing:.06em;margin:.75rem 0 0;min-height:1.2em}
+.form__msg[data-state="err"]{color:var(--accent)}
+.form__msg[data-state="ok"]{color:var(--ink)}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.foot{border-top:1px solid var(--rule);margin-top:var(--rhythm);padding-block:3.5rem 2.5rem}
+.foot__grid{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr));gap:2.5rem}
+@media (max-width:760px){.foot__grid{grid-template-columns:1fr 1fr}.foot__brand{grid-column:1/-1}}
+.foot__brand p{font-size:.9375rem;color:var(--muted);max-width:34ch;margin-top:.9rem}
+.foot h4{font-family:var(--mono);font-size:.625rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:400;margin:0 0 1rem}
+.foot ul{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
+.foot ul a{font-size:.9375rem;text-decoration:none}
+.foot ul a:hover{color:var(--accent)}
+.foot__bar{
+  display:flex;justify-content:space-between;align-items:center;gap:1.5rem;flex-wrap:wrap;
+  margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--rule-soft);
+}
+.foot__bar p{margin:0;font-family:var(--mono);font-size:.625rem;letter-spacing:.08em;color:var(--muted)}
+.totop{
+  font-family:var(--mono);font-size:.625rem;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted);text-decoration:none;display:inline-flex;gap:.5rem;align-items:center;
+}
+.totop:hover{color:var(--ink)}
+
+/* ============================================================
+   REVEAL
+   ============================================================ */
+.js .rv{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.js .rv.is-in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  .rv{opacity:1;transform:none;transition:none}
+  *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+}
+</style>
+</head>
+
+<body>
+<div class="progress" id="progress" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- ========================= MASTHEAD ========================= -->
+<header class="masthead" id="masthead">
+  <div class="wrap masthead__in">
+    <a class="wordmark" href="#top">Nell Farrow <span>Est. 2014</span></a>
+
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="#featured">Featured</a>
+      <a href="#archive">Archive</a>
+      <a href="#notes">Notes</a>
+      <a href="#reading">Reading</a>
+      <a href="#about">About</a>
+      <a href="#letter">The Letter</a>
+    </nav>
+
+    <div style="display:flex;gap:.5rem;align-items:center">
+      <button class="toggle" id="themeBtn" type="button" aria-live="polite">Dark</button>
+      <button class="toggle navtoggle" id="navBtn" type="button" aria-expanded="false" aria-controls="nav">Menu</button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ========================= HERO ========================= -->
+<div class="hero wrap" id="top">
+  <div class="hero__grid">
+    <div>
+      <p class="eyebrow" style="margin-bottom:2rem">Writer, essayist, occasional cartographer</p>
+      <h1>I write about cities, memory, and the small <em>machinery</em> of daily life.</h1>
+      <p class="lede hero__bio">
+        Fourteen years of essays, most of them written on trains or in the last hour before a
+        library closes. Some have been published in places with mastheads. The rest live here,
+        where nobody edits out the digressions.
+      </p>
+      <div class="hero__actions">
+        <a class="btn btn--accent" href="#featured">Start with the newest essay</a>
+        <a class="btn btn--quiet" href="#archive">Browse the archive (64)</a>
+      </div>
+    </div>
+
+    <aside class="hero__aside">
+      <dl class="status">
+        <div>
+          <dt>Currently</dt>
+          <dd><span class="dot"></span>Finishing a book about night trains and the people who work them.</dd>
+        </div>
+        <div>
+          <dt>Last published</dt>
+          <dd>11 July 2026, in <a class="link link--on" href="#featured">The Grain of a Neighbourhood</a></dd>
+        </div>
+        <div>
+          <dt>Based in</dt>
+          <dd>Lisbon, mostly. Porto when the rent moves.</dd>
+        </div>
+        <div>
+          <dt>Reply time</dt>
+          <dd>Slow, but I do reply. <a class="link" href="#letter">nell@farrow.works</a></dd>
+        </div>
+      </dl>
+    </aside>
+  </div>
+</div>
+
+<!-- ========================= FEATURED ========================= -->
+<section id="featured" class="wrap rv">
+  <div class="sec-head">
+    <div>
+      <p class="eyebrow" style="margin-bottom:.75rem">The newest thing</p>
+      <h2>Featured essay</h2>
+    </div>
+    <p class="meta">No. 64 / July 2026</p>
+  </div>
+
+  <article class="feature">
+    <div>
+      <span class="feature__tag">Cities</span>
+      <h3><a class="link" href="#featured">The Grain of a Neighbourhood</a></h3>
+      <p class="feature__dek lede">
+        A street is not a plan. It is a texture you learn with your feet: which corner floods, which
+        baker opens at six, which stairwell carries sound. I spent a year mapping one hillside in
+        Lisbon the slow way, and found that almost nothing worth knowing about it appears on a map.
+      </p>
+      <blockquote class="pull">
+        The city planners drew lines. The residents drew shortcuts. Forty years later the shortcuts
+        are the streets, and the lines are where the weeds grow.
+      </blockquote>
+      <div class="feature__foot">
+        <span class="meta">11 July 2026</span>
+        <span class="meta">4,100 words / 18 min</span>
+        <a class="btn" href="#featured">Read the essay</a>
+      </div>
+    </div>
+
+    <figure class="figure" role="img" aria-label="Abstract representation of a hillside street grid">
+      <figcaption class="figure__cap">Fig. 1 / Hand survey, Graça hillside, Mar 2026</figcaption>
+    </figure>
+  </article>
+</section>
+
+<!-- ========================= ARCHIVE ========================= -->
+<section id="archive" class="wrap rv">
+  <div class="sec-head">
+    <div>
+      <p class="eyebrow" style="margin-bottom:.75rem">Everything, in order</p>
+      <h2>The archive</h2>
+      <p>Sixty-four essays since 2014. Filter by subject, or read in reverse until you get bored.</p>
+    </div>
+    <p class="meta">Updated monthly</p>
+  </div>
+
+  <div class="filters" role="group" aria-label="Filter essays by subject">
+    <button class="chip" data-filter="all" aria-pressed="true">All</button>
+    <button class="chip" data-filter="cities" aria-pressed="false">Cities</button>
+    <button class="chip" data-filter="memory" aria-pressed="false">Memory</button>
+    <button class="chip" data-filter="work" aria-pressed="false">Work</button>
+    <button class="chip" data-filter="objects" aria-pressed="false">Objects</button>
+    <button class="chip" data-filter="travel" aria-pressed="false">Travel</button>
+    <span class="filters__count" id="count" aria-live="polite">12 shown</span>
+  </div>
+
+  <ul class="entries" id="entries">
+
+    <li class="entry" data-tag="cities">
+      <a href="#archive">
+        <span class="entry__date">11 Jul 2026</span>
+        <span>
+          <h3 class="entry__title">The Grain of a Neighbourhood</h3>
+          <p class="entry__dek">A year of walking one hillside, and what a map cannot hold.</p>
+        </span>
+        <span class="entry__tag">Cities</span>
+        <span class="entry__len">18 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="work">
+      <a href="#archive">
+        <span class="entry__date">02 Jun 2026</span>
+        <span>
+          <h3 class="entry__title">Everyone on the 04:40</h3>
+          <p class="entry__dek">The bakers, the cleaners, the two nurses who share a thermos. A census of the first train.</p>
+        </span>
+        <span class="entry__tag">Work</span>
+        <span class="entry__len">14 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="objects">
+      <a href="#archive">
+        <span class="entry__date">18 May 2026</span>
+        <span>
+          <h3 class="entry__title">In Defence of the Ugly Chair</h3>
+          <p class="entry__dek">My grandmother's chair was hideous and correct. A short theory of objects that earn their place.</p>
+        </span>
+        <span class="entry__tag">Objects</span>
+        <span class="entry__len">9 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="memory">
+      <a href="#archive">
+        <span class="entry__date">27 Apr 2026</span>
+        <span>
+          <h3 class="entry__title">What the House Remembered</h3>
+          <p class="entry__dek">We sold the house in March. I went back in April to see what was left of us in it.</p>
+        </span>
+        <span class="entry__tag">Memory</span>
+        <span class="entry__len">21 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="travel">
+      <a href="#archive">
+        <span class="entry__date">09 Apr 2026</span>
+        <span>
+          <h3 class="entry__title">Sleeper to Nowhere in Particular</h3>
+          <p class="entry__dek">Eleven hours, one bunk, four strangers, and the specific honesty of people who will never meet again.</p>
+        </span>
+        <span class="entry__tag">Travel</span>
+        <span class="entry__len">16 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="cities">
+      <a href="#archive">
+        <span class="entry__date">14 Mar 2026</span>
+        <span>
+          <h3 class="entry__title">The Shop That Sold Only Buttons</h3>
+          <p class="entry__dek">It survived four decades and two recessions. It did not survive the rent review.</p>
+        </span>
+        <span class="entry__tag">Cities</span>
+        <span class="entry__len">11 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="work">
+      <a href="#archive">
+        <span class="entry__date">22 Feb 2026</span>
+        <span>
+          <h3 class="entry__title">Craft, and the Long Middle</h3>
+          <p class="entry__dek">Nobody warns you that the interesting part of any skill is the decade in the middle where nothing visibly improves.</p>
+        </span>
+        <span class="entry__tag">Work</span>
+        <span class="entry__len">13 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="memory">
+      <a href="#archive">
+        <span class="entry__date">30 Jan 2026</span>
+        <span>
+          <h3 class="entry__title">A Partial Inventory of Smells</h3>
+          <p class="entry__dek">Diesel, bleach, wet wool, the inside of a school satchel. Twenty-two entries and one apology.</p>
+        </span>
+        <span class="entry__tag">Memory</span>
+        <span class="entry__len">7 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="objects">
+      <a href="#archive">
+        <span class="entry__date">08 Jan 2026</span>
+        <span>
+          <h3 class="entry__title">Things I Have Repaired Badly</h3>
+          <p class="entry__dek">A kettle, a bicycle, a friendship. Notes on the honourable failure of the amateur.</p>
+        </span>
+        <span class="entry__tag">Objects</span>
+        <span class="entry__len">10 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="travel">
+      <a href="#archive">
+        <span class="entry__date">11 Dec 2025</span>
+        <span>
+          <h3 class="entry__title">Border Towns Are All the Same Town</h3>
+          <p class="entry__dek">Six crossings in five countries, and the identical shop selling identical cigarettes at each one.</p>
+        </span>
+        <span class="entry__tag">Travel</span>
+        <span class="entry__len">15 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="cities">
+      <a href="#archive">
+        <span class="entry__date">19 Nov 2025</span>
+        <span>
+          <h3 class="entry__title">Benches, and Who They Are For</h3>
+          <p class="entry__dek">A city tells you exactly who it wants by where it lets them sit down.</p>
+        </span>
+        <span class="entry__tag">Cities</span>
+        <span class="entry__len">12 min</span>
+      </a>
+    </li>
+
+    <li class="entry" data-tag="memory">
+      <a href="#archive">
+        <span class="entry__date">03 Oct 2025</span>
+        <span>
+          <h3 class="entry__title">My Father's Handwriting</h3>
+          <p class="entry__dek">He wrote in a hand nobody could read, including him. I have been translating it for two years.</p>
+        </span>
+        <span class="entry__tag">Memory</span>
+        <span class="entry__len">19 min</span>
+      </a>
+    </li>
+
+  </ul>
+
+  <div class="archive__more">
+    <a class="btn btn--quiet" href="#archive">Load the other 52 essays</a>
+  </div>
+</section>
+
+<!-- ========================= NOTES ========================= -->
+<section id="notes" class="wrap rv">
+  <div class="sec-head">
+    <div>
+      <p class="eyebrow" style="margin-bottom:.75rem">Shorter, rougher</p>
+      <h2>Notes and marginalia</h2>
+      <p>Things too small for an essay. Mostly written in one sitting, rarely revised.</p>
+    </div>
+    <p class="meta">Last 6</p>
+  </div>
+
+  <div class="notes">
+    <article class="note">
+      <div class="note__head">
+        <span class="meta">21 Jul</span>
+        <span class="note__kind">Overheard</span>
+      </div>
+      <h3>Two men arguing about bread</h3>
+      <p>Forty minutes, at volume, about whether the crust on the corner bakery's broa has thinned since spring. Neither of them was wrong. This is what a functioning neighbourhood sounds like.</p>
+    </article>
+
+    <article class="note">
+      <div class="note__head">
+        <span class="meta">16 Jul</span>
+        <span class="note__kind">Process</span>
+      </div>
+      <h3>On cutting the first page</h3>
+      <p>Almost every essay I have written works better with its opening paragraph deleted. I keep writing that paragraph anyway. It seems to be the fee for getting to the second one.</p>
+    </article>
+
+    <article class="note">
+      <div class="note__head">
+        <span class="meta">09 Jul</span>
+        <span class="note__kind">Found</span>
+      </div>
+      <h3>A receipt from 1998</h3>
+      <p>Inside a secondhand copy of Calvino. Two coffees, one pastry, a phone number crossed out. I have not managed to stop thinking about it for a week.</p>
+    </article>
+
+    <article class="note">
+      <div class="note__head">
+        <span class="meta">28 Jun</span>
+        <span class="note__kind">Correction</span>
+      </div>
+      <h3>I was wrong about the tram</h3>
+      <p>The 28 was not rerouted in 1974. A reader who drove it for nineteen years wrote to tell me so, politely, with a timetable attached. The essay has been amended.</p>
+    </article>
+
+    <article class="note">
+      <div class="note__head">
+        <span class="meta">14 Jun</span>
+        <span class="note__kind">Reading</span>
+      </div>
+      <h3>Berger, again</h3>
+      <p>Third time through <em>Ways of Seeing</em>. It gets shorter every time, which I think means I am getting slower in the right way.</p>
+    </article>
+
+    <article class="note">
+      <div class="note__head">
+        <span class="meta">02 Jun</span>
+        <span class="note__kind">Desk</span>
+      </div>
+      <h3>The book is at 61,000 words</h3>
+      <p>Which is roughly 40,000 too many and 20,000 too few, simultaneously. Winter deadline holds. Probably.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ========================= READING ========================= -->
+<section id="reading" class="wrap rv">
+  <div class="sec-head">
+    <div>
+      <p class="eyebrow" style="margin-bottom:.75rem">The shelf by the desk</p>
+      <h2>What I am reading</h2>
+      <p>Updated whenever I finish something, which is less often than I would like.</p>
+    </div>
+    <p class="meta">2026 / 23 finished</p>
+  </div>
+
+  <div class="shelf-wrap">
+    <div class="shelf" id="shelf" role="list" aria-label="Currently reading and recently finished books"></div>
+    <div class="shelf__legend">
+      <p><strong>Reading now:</strong> The Rings of Saturn, W. G. Sebald</p>
+      <p><strong>Next:</strong> A Field Guide to Getting Lost</p>
+      <p><strong>Abandoned this year:</strong> four, without guilt</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= ELSEWHERE ========================= -->
+<section id="elsewhere" class="wrap rv">
+  <div class="sec-head">
+    <div>
+      <p class="eyebrow" style="margin-bottom:.75rem">Work with other people's mastheads on it</p>
+      <h2>Published elsewhere</h2>
+    </div>
+    <p class="meta">Selected, 2016 to now</p>
+  </div>
+
+  <div class="elsewhere">
+    <ul class="pubs">
+      <li><a class="link" href="#elsewhere">The Alpine Review</a><span class="meta">2026</span></li>
+      <li><a class="link" href="#elsewhere">Harbour Quarterly</a><span class="meta">2025</span></li>
+      <li><a class="link" href="#elsewhere">Common Ground</a><span class="meta">2024</span></li>
+      <li><a class="link" href="#elsewhere">The Lisbon Reader</a><span class="meta">2023</span></li>
+    </ul>
+    <ul class="pubs">
+      <li><a class="link" href="#elsewhere">Northline Magazine</a><span class="meta">2022</span></li>
+      <li><a class="link" href="#elsewhere">Slow Transit Journal</a><span class="meta">2021</span></li>
+      <li><a class="link" href="#elsewhere">The Provincial</a><span class="meta">2019</span></li>
+      <li><a class="link" href="#elsewhere">Grain &amp; Signal</a><span class="meta">2016</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========================= ABOUT ========================= -->
+<section id="about" class="wrap rv">
+  <div class="about">
+    <figure class="portrait" role="img" aria-label="Stylised monogram in place of a portrait">
+      <div class="portrait__lines" aria-hidden="true">
+        <i style="top:18%;transform:rotate(-7deg)"></i>
+        <i style="top:38%;transform:rotate(4deg)"></i>
+        <i style="top:58%;transform:rotate(-3deg)"></i>
+        <i style="top:78%;transform:rotate(6deg)"></i>
+      </div>
+      <div class="portrait__mono" aria-hidden="true">NF</div>
+      <figcaption class="portrait__cap">No photograph. Sorry. It is a whole thing.</figcaption>
+    </figure>
+
+    <div class="about__body">
+      <p class="eyebrow" style="margin-bottom:1.25rem">About</p>
+      <h2>I started this site because a magazine cut my favourite paragraph.</h2>
+      <p>
+        That was 2014. The paragraph was about a woman who repaired umbrellas in a doorway near the
+        station, and the editor was almost certainly right to cut it. But I wanted somewhere the
+        digressions could survive, so I built one, badly, in an evening.
+      </p>
+      <p>
+        Since then I have written sixty-four essays here, three of which I would still defend in
+        public. I work slowly. I report by walking, asking, and going back a second time to check
+        what I got wrong the first time. My corrections page is longer than most people's about page,
+        which I have decided to be proud of.
+      </p>
+      <p>
+        The book, if it ever finishes, is called <em>Night Work</em>. It is about the people who keep
+        the sleeper trains running while everyone aboard is unconscious.
+      </p>
+
+      <ul class="facts">
+        <li><b>Writing since</b><span>2014, here. 2011, badly, elsewhere.</span></li>
+        <li><b>Method</b><span>Notebook first, always. Typing is the second draft.</span></li>
+        <li><b>Teaching</b><span>One essay workshop a year, ten people, no fee.</span></li>
+        <li><b>Represented by</b><span>Ada Kirsch, Kirsch &amp; Vale Literary</span></li>
+        <li><b>Elsewhere</b><span>
+          <a class="link" href="#about">Letters</a>,
+          <a class="link" href="#about">RSS</a>,
+          <a class="link" href="#about">Archive index</a>
+        </span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= LETTER ========================= -->
+<section id="letter" class="wrap rv">
+  <div class="letter">
+    <div>
+      <p class="eyebrow" style="margin-bottom:1rem">Once a month, on a Sunday</p>
+      <h2>The Letter</h2>
+      <p>
+        One essay, two or three notes, and whatever I have been reading. No tracking, no referral
+        links, no growth strategy. About 2,900 people get it, which is more than enough.
+      </p>
+    </div>
+
+    <form class="form" id="signup" novalidate>
+      <div class="field">
+        <label for="email" class="skip">Email address</label>
+        <input id="email" name="email" type="email" placeholder="you@somewhere.com" autocomplete="email" required>
+        <button class="btn btn--accent" type="submit">Subscribe</button>
+      </div>
+      <p class="form__note">Unsubscribe link in every issue. I have never once sent a second email in a week.</p>
+      <p class="form__msg" id="formMsg" role="status"></p>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- ========================= FOOTER ========================= -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot__grid">
+      <div class="foot__brand">
+        <a class="wordmark" href="#top">Nell Farrow</a>
+        <p>Essays on cities, memory, and the small machinery of daily life. Written in Lisbon, slowly.</p>
+      </div>
+
+      <div>
+        <h4>Read</h4>
+        <ul>
+          <li><a class="link" href="#featured">Featured essay</a></li>
+          <li><a class="link" href="#archive">Full archive</a></li>
+          <li><a class="link" href="#notes">Notes</a></li>
+          <li><a class="link" href="#reading">Reading log</a></li>
+          <li><a class="link" href="#about">Corrections</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Elsewhere</h4>
+        <ul>
+          <li><a class="link" href="#letter">The Letter</a></li>
+          <li><a class="link" href="#elsewhere">Published work</a></li>
+          <li><a class="link" href="#about">RSS feed</a></li>
+          <li><a class="link" href="#about">nell@farrow.works</a></li>
+          <li><a class="link" href="#about">Press and speaking</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot__bar">
+      <p>&copy; <span id="year">2026</span> Nell Farrow. Words are mine. Take the ideas.</p>
+      <p>Set in Fraunces and Newsreader. Built by hand, one file, no tracking.</p>
+      <a class="totop" href="#top">Back to top &uarr;</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- theme ---------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeBtn');
+  var stored = null;
+  try { stored = localStorage.getItem('nf-theme'); } catch(e){}
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  setTheme(stored || (prefersDark ? 'dark' : 'light'));
+
+  function setTheme(t){
+    root.setAttribute('data-theme', t);
+    themeBtn.textContent = (t === 'dark') ? 'Light' : 'Dark';
+    themeBtn.setAttribute('aria-label', 'Switch to ' + (t === 'dark' ? 'light' : 'dark') + ' theme');
+    try { localStorage.setItem('nf-theme', t); } catch(e){}
+  }
+  themeBtn.addEventListener('click', function(){
+    setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  /* ---------- mobile nav ---------- */
+  var nav = document.getElementById('nav');
+  var navBtn = document.getElementById('navBtn');
+  navBtn.addEventListener('click', function(){
+    var open = nav.classList.toggle('is-open');
+    navBtn.setAttribute('aria-expanded', String(open));
+    navBtn.textContent = open ? 'Close' : 'Menu';
+  });
+  nav.addEventListener('click', function(e){
+    if (e.target.tagName === 'A' && nav.classList.contains('is-open')){
+      nav.classList.remove('is-open');
+      navBtn.setAttribute('aria-expanded','false');
+      navBtn.textContent = 'Menu';
+    }
+  });
+
+  /* ---------- reading progress + sticky masthead ---------- */
+  var bar = document.getElementById('progress');
+  var masthead = document.getElementById('masthead');
+  var ticking = false;
+  function onScroll(){
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+      masthead.classList.toggle('is-stuck', h.scrollTop > 12);
+      ticking = false;
+    });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  /* ---------- scrollspy ---------- */
+  var links = Array.prototype.slice.call(nav.querySelectorAll('a'));
+  var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+  if ('IntersectionObserver' in window && targets.length){
+    var spy = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (!en.isIntersecting) return;
+        links.forEach(function(a){
+          a.setAttribute('aria-current', a.getAttribute('href') === '#' + en.target.id ? 'true' : 'false');
+        });
+      });
+    }, {rootMargin:'-45% 0px -50% 0px', threshold:0});
+    targets.forEach(function(t){ spy.observe(t); });
+  }
+
+  /* ---------- reveal on scroll ----------
+     IntersectionObserver drives the effect, but it only delivers while the page
+     is actually rendering. A tab opened in the background, or restored at a
+     scroll offset, can leave sections stuck at opacity 0. revealInView() is the
+     safety net: it measures rects directly and can be called at any time. */
+  var reveals = Array.prototype.slice.call(document.querySelectorAll('.rv'));
+
+  function revealInView(){
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    reveals.forEach(function(el){
+      if (el.classList.contains('is-in')) return;
+      var r = el.getBoundingClientRect();
+      if (r.top < vh * 0.94 && r.bottom > 0){ el.classList.add('is-in'); }
+    });
+  }
+
+  if ('IntersectionObserver' in window){
+    var ro = new IntersectionObserver(function(entries, obs){
+      entries.forEach(function(en){
+        if (en.isIntersecting){ en.target.classList.add('is-in'); obs.unobserve(en.target); }
+      });
+    }, {rootMargin:'0px 0px -8% 0px', threshold:0.06});
+    reveals.forEach(function(el){ ro.observe(el); });
+
+    revealInView();
+    window.addEventListener('load', revealInView);
+    window.addEventListener('resize', revealInView, {passive:true});
+    /* bound directly (not inside rAF) so it still works if frames are throttled,
+       and so a browser-restored scroll position never leaves the page blank */
+    window.addEventListener('scroll', revealInView, {passive:true});
+    document.addEventListener('visibilitychange', function(){
+      if (document.hidden) return;
+      revealInView();
+      onScroll(); /* progress bar + masthead can be stale after a frozen tab */
+    });
+  } else {
+    reveals.forEach(function(el){ el.classList.add('is-in'); });
+  }
+
+  /* ---------- archive filtering ---------- */
+  var chips = document.querySelectorAll('.chip');
+  var entries = Array.prototype.slice.call(document.querySelectorAll('.entry'));
+  var countEl = document.getElementById('count');
+
+  function applyFilter(tag){
+    var shown = 0;
+    entries.forEach(function(li){
+      var match = (tag === 'all' || li.getAttribute('data-tag') === tag);
+      li.classList.toggle('is-hidden', !match);
+      if (match) shown++;
+    });
+    countEl.textContent = shown + (shown === 1 ? ' shown' : ' shown');
+  }
+
+  Array.prototype.forEach.call(chips, function(chip){
+    chip.addEventListener('click', function(){
+      Array.prototype.forEach.call(chips, function(c){ c.setAttribute('aria-pressed','false'); });
+      chip.setAttribute('aria-pressed','true');
+      applyFilter(chip.getAttribute('data-filter'));
+    });
+  });
+  applyFilter('all');
+
+  /* ---------- bookshelf ---------- */
+  var books = [
+    {t:'The Rings of Saturn', c:'#3f4a3c', h:196, current:true},
+    {t:'Invisible Cities', c:'#8a4a2e', h:170},
+    {t:'Ways of Seeing', c:'#2f3a48', h:158},
+    {t:'A Field Guide to Getting Lost', c:'#6d3550', h:184},
+    {t:'The Death and Life of Great American Cities', c:'#8a7328', h:210},
+    {t:'Nightwalking', c:'#26332f', h:176},
+    {t:'The Poetics of Space', c:'#54406b', h:164},
+    {t:'Wanderlust', c:'#7a3b2c', h:192},
+    {t:'Landmarks', c:'#374a3f', h:180},
+    {t:'The Old Ways', c:'#2c3b52', h:200},
+    {t:'Station Eleven', c:'#6b4630', h:168},
+    {t:'Hard Rain Falling', c:'#42394f', h:154},
+    {t:'The Living Mountain', c:'#3d5148', h:188},
+    {t:'Orwell: Essays', c:'#5c3324', h:206}
+  ];
+  var shelf = document.getElementById('shelf');
+  books.forEach(function(b){
+    var el = document.createElement('div');
+    el.className = 'book' + (b.current ? ' book--current' : '');
+    el.setAttribute('role','listitem');
+    el.style.background = 'linear-gradient(100deg,' + b.c + ' 0%, ' + b.c + ' 62%, rgba(0,0,0,.25) 100%)';
+    el.style.height = b.h + 'px';
+    el.title = b.t + (b.current ? ' (reading now)' : '');
+    var s = document.createElement('span');
+    s.textContent = b.t;
+    el.appendChild(s);
+    shelf.appendChild(el);
+  });
+
+  /* ---------- newsletter ---------- */
+  var form = document.getElementById('signup');
+  var input = document.getElementById('email');
+  var msg = document.getElementById('formMsg');
+  var re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = input.value.trim();
+    if (!v){
+      msg.setAttribute('data-state','err');
+      msg.textContent = 'An email address would help.';
+      input.focus();
+      return;
+    }
+    if (!re.test(v)){
+      msg.setAttribute('data-state','err');
+      msg.textContent = 'That address does not look right. Check it once more.';
+      input.focus();
+      return;
+    }
+    msg.setAttribute('data-state','ok');
+    msg.textContent = 'Sending...';
+    setTimeout(function(){
+      msg.textContent = 'Done. Check ' + v + ' for a confirmation. Next issue goes out Sunday.';
+      form.querySelector('.field').style.display = 'none';
+    }, 700);
+  });
+
+  input.addEventListener('input', function(){
+    if (msg.getAttribute('data-state') === 'err'){ msg.textContent = ''; }
+  });
+
+  /* ---------- misc ---------- */
+  document.getElementById('year').textContent = new Date().getFullYear();
+})();
+</script>
+</body>
+</html>

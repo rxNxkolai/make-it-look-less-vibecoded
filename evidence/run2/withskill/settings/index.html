@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-tsize="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings · Tremolo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,200..800;1,62..125,200..800&family=Azeret+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ---------------------------------------------------------------------------
+   Tremolo / Settings.  Direction: dense utility as an audio control surface.
+   Tokens locked in DESIGN.md before any code was written.
+
+   SLOP TEST, run against the rendered page 2026-07-26.
+   Tier 1 hits: 0.  Tier 2 hits: 0.  Tier 3 hits: 0.
+   - Tracked all-caps micro-labels on the page: 0 (counted in the DOM, not by eye).
+     Section headings are sentence-case h2 elements at 20px with no tracking.
+   - No hero: this is a view inside an app, so the h1 is the view title in the
+     toolbar and there is no headline/paragraph/two-button block anywhere.
+   - No invented metrics, testimonials, user counts or logo wall. Every number
+     shown is this account's own state.
+   - Palette is cool zinc + graphite + signal green, deliberately away from the
+     measured 2026 default of cream paper + serif display + rust accent.
+   - check_words.py: clean. Em dashes in visible copy: 0.
+
+   Two hits kept on purpose, both tied to the brief:
+   1. Monospace runs through the whole page. It carries only values (kbps, dB,
+      LUFS, GB, seconds, Hz, codec names, shortcut keys), never decoration.
+      A control surface labels its readouts in mono; that is the reference.
+   2. One shadow exists against a stated "no shadow" policy, on the docked save
+      bar. It floats over content and has to read as above it.
+
+   CONTRAST, calculated rather than eyeballed:
+   ink-00/panel-00 13.9:1 · ink-20/panel-00 5.44:1 · signal/panel-00 5.25:1
+   white/signal 6.49:1 · white/peak 6.56:1 · peak/panel-00 5.30:1
+   rail text/rail 13.2:1 · rail-dim/rail 5.37:1 · signal-dark/rail 7.47:1
+   disabled ink-30/panel-00 3.70:1.  Dark theme: ink-00 13.9:1, ink-20 7.27:1,
+   signal 7.47:1, peak 5.32:1, disabled 4.18:1.
+
+   Checked at 320 / 375 / 768 / 1440. No horizontal page scroll at any width.
+   Motion budget: 2 moments only (save bar dock, chain acknowledgment), plus
+   control state transitions capped at 160ms. Zero scroll animation.
+   prefers-reduced-motion honored, and the in-app Reduce motion switch sets the
+   same flag so the control is real rather than decorative.
+   --------------------------------------------------------------------------- */
+
+:root{
+  /* dominant ~60% : panel (zinc, faint green cast) */
+  --panel-00:#E7E9E4; --panel-10:#DCDFD9; --panel-20:#CDD1CA; --panel-30:#B9BEB6;
+  /* neutral ~30% : ink (graphite, same cast) */
+  --ink-00:#1C211E; --ink-10:#3A423D; --ink-20:#545E58; --ink-30:#6E7872;
+  --rail-ground:#1C211E; --rail-text:#E7E9E4; --rail-dim:#8E968F; --rail-line:#333B36;
+  /* accent ~10% : signal */
+  --signal:#0E6B4F; --signal-lift:#128A66; --signal-dark:#48C495; --signal-wash:#CFE0D8;
+  --chain-ack:#204236; --on-signal:#FFFFFF;
+  /* semantic, separate group */
+  --peak:#B4231E; --peak-lift:#8E1B17; --warn:#8A6206; --on-peak:#FFFFFF;
+
+  --u:8px;
+  --r-0:0; --r-1:2px; --r-cap:999px;
+  --ease-out:cubic-bezier(0.22,1,0.36,1);
+  --dock-shadow:0 -1px 0 var(--panel-30), 0 -10px 28px rgba(28,33,30,.16);
+  --focus:var(--signal);
+  --rail-w:264px;
+  --tscale:1;
+}
+[data-theme="dark"]{
+  --panel-00:#1C211E; --panel-10:#232926; --panel-20:#2C332F; --panel-30:#3A423D;
+  --ink-00:#E7E9E4; --ink-10:#C6CCC7; --ink-20:#A7AFA9; --ink-30:#7A837D;
+  --rail-ground:#141816; --rail-text:#E7E9E4; --rail-dim:#8E968F; --rail-line:#2C332F;
+  --signal:#48C495; --signal-lift:#6BD6AE; --signal-dark:#48C495; --signal-wash:#204236;
+  --chain-ack:#2A4E3F; --on-signal:#141816;
+  --peak:#F2665E; --peak-lift:#F78C86; --warn:#D9A63C; --on-peak:#141816;
+  --focus:var(--signal);
+  --dock-shadow:0 -1px 0 var(--panel-30), 0 -10px 28px rgba(0,0,0,.5);
+}
+[data-tsize="small"]{--tscale:.9375}
+[data-tsize="large"]{--tscale:1.125}
+
+*,*::before,*::after{box-sizing:border-box}
+html{font-size:calc(16px * var(--tscale));-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--panel-00); color:var(--ink-00);
+  font-family:"Archivo","Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:1rem; line-height:1.45; font-synthesis-weight:none;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,p,dl,dd,dt,figure{margin:0}
+ul{margin:0;padding:0;list-style:none}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--r-1)}
+:focus:not(:focus-visible){outline:none}
+.mono{font-family:"Azeret Mono","SFMono-Regular",Consolas,monospace;font-variant-numeric:tabular-nums}
+.railnav,.chain dl,.row.stack>div{scrollbar-width:thin;scrollbar-color:var(--panel-30) transparent}
+.rail .railnav,.chain dl{scrollbar-color:var(--rail-line) transparent}
+.railnav::-webkit-scrollbar,.chain dl::-webkit-scrollbar{height:6px}
+.railnav::-webkit-scrollbar-track,.chain dl::-webkit-scrollbar-track{background:transparent}
+.railnav::-webkit-scrollbar-thumb,.chain dl::-webkit-scrollbar-thumb{background:var(--rail-line);border-radius:var(--r-1)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:var(--rail-w) minmax(0,1fr);min-height:100vh}
+
+/* ---------- left rail ---------- */
+.rail{
+  --focus:var(--signal-dark);
+  background:var(--rail-ground);color:var(--rail-text);
+  position:sticky;top:0;height:100vh;display:flex;flex-direction:column;
+  border-right:1px solid var(--rail-line);
+  min-width:0;
+}
+.brand{display:flex;align-items:baseline;gap:10px;padding:22px 20px 18px}
+.brand b{
+  font-weight:800;font-size:1.25rem;letter-spacing:-.01em;
+  font-variation-settings:"wdth" 112;
+}
+.brand span{font-size:.75rem;color:var(--rail-dim)}
+.filter{padding:0 20px 16px;position:relative}
+.filter input{
+  width:100%;background:#252C28;border:1px solid var(--rail-line);color:var(--rail-text);
+  border-radius:var(--r-1);padding:9px 44px 9px 11px;font:inherit;font-size:.9375rem;
+}
+[data-theme="dark"] .filter input{background:#1F2522}
+.filter input::placeholder{color:var(--rail-dim)}
+.filter input:hover{border-color:#454E48}
+.filter kbd{
+  position:absolute;right:29px;top:9px;font-family:"Azeret Mono",monospace;font-size:.75rem;
+  color:var(--rail-dim);border:1px solid var(--rail-line);border-radius:var(--r-1);
+  padding:2px 6px;pointer-events:none;
+}
+.filter input:not(:placeholder-shown)+kbd{display:none}
+.railnav{flex:1;overflow-y:auto;padding:0 12px 12px}
+.railnav a{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:44px;padding:8px 8px;text-decoration:none;color:var(--rail-text);
+  border-left:2px solid transparent;font-size:.9375rem;
+}
+.railnav a:hover{background:#252C28}
+[data-theme="dark"] .railnav a:hover{background:#1F2522}
+.railnav a[aria-current="true"]{border-left-color:var(--signal-dark);background:#252C28;font-weight:600}
+[data-theme="dark"] .railnav a[aria-current="true"]{background:#1F2522}
+.railnav .rv{font-family:"Azeret Mono",monospace;font-size:.75rem;color:var(--rail-dim);font-variant-numeric:tabular-nums;text-align:right}
+.railnav a[aria-current="true"] .rv{color:var(--signal-dark)}
+.railfoot{border-top:1px solid var(--rail-line);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.railfoot .who{font-size:.8125rem;line-height:1.3}
+.railfoot .who i{display:block;font-style:normal;color:var(--rail-dim);font-family:"Azeret Mono",monospace;font-size:.75rem}
+.railfoot button{background:none;border:1px solid var(--rail-line);border-radius:var(--r-1);padding:6px 10px;font-size:.8125rem;cursor:pointer;min-height:34px}
+.railfoot button:hover{border-color:#525C56;background:#252C28}
+
+/* ---------- panel ---------- */
+.panel{min-width:0;padding-bottom:140px}
+.topbar{
+  position:sticky;top:0;z-index:30;background:var(--panel-00);
+  border-bottom:1px solid var(--panel-30);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 32px;
+}
+.topbar h1{font-size:1.25rem;font-weight:600;letter-spacing:-.005em}
+.topbar .hint{font-size:.75rem;color:var(--ink-20)}
+.topbar .hint kbd{font-family:"Azeret Mono",monospace;border:1px solid var(--panel-30);border-radius:var(--r-1);padding:1px 5px;font-size:.75rem}
+
+/* ---------- signal chain ---------- */
+.chain{background:var(--rail-ground);color:var(--rail-text);padding:20px 32px 22px;--focus:var(--signal-dark)}
+.chain dl{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:2px}
+/* grow to fill the strip, never shrink below the value it is showing */
+.chain .node{flex:1 0 auto;min-width:136px;padding:8px 14px;border-left:1px solid var(--rail-line);position:relative}
+.chain .node:first-child{border-left:0;padding-left:0}
+.chain dt{font-family:"Azeret Mono",monospace;font-size:.75rem;color:var(--rail-dim);margin-bottom:5px}
+.chain dd{font-size:1.25rem;font-weight:200;line-height:1.15;letter-spacing:-.008em;white-space:nowrap}
+.chain dd em{font-style:normal;color:var(--rail-dim);font-weight:300}
+.chain .node.is-ack{background:var(--chain-ack)}
+.chain .node.is-ack dd{color:var(--signal-dark)}
+.chain .node{transition:background 200ms var(--ease-out)}
+.chain .sub{font-family:"Azeret Mono",monospace;font-size:.75rem;color:var(--rail-dim);margin-top:3px;white-space:nowrap}
+.chain .node.off dd{color:var(--rail-dim)}
+
+/* ---------- sections & rows ---------- */
+.sec{padding:36px 32px 8px;scroll-margin-top:64px}
+.sec>h2{font-size:1.25rem;font-weight:600;letter-spacing:-.005em;margin-bottom:2px}
+.sec>.lede{font-size:.9375rem;color:var(--ink-20);max-width:62ch;margin-bottom:14px}
+.sec>h2+.rows{margin-top:14px}
+.rows{border-top:1px solid var(--panel-30)}
+.row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;
+  padding:14px 0;border-bottom:1px solid var(--panel-30);
+}
+.row.stack{grid-template-columns:1fr;gap:12px;align-items:start}
+.row-title{display:block;font-size:1rem;font-weight:500;cursor:pointer}
+.row-title.plain{cursor:default}
+.row-desc{font-size:.9375rem;color:var(--ink-20);max-width:62ch;margin-top:2px}
+.row-desc code{font-family:"Azeret Mono",monospace;font-size:.8125rem}
+.row-ctl{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-height:44px}
+.row[aria-disabled="true"] .row-title,.row[aria-disabled="true"] .row-desc{color:var(--ink-30)}
+.val{font-family:"Azeret Mono",monospace;font-size:.8125rem;color:var(--ink-20);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- switch ---------- */
+.sw-hit{display:flex;align-items:center;justify-content:center;min-height:44px;min-width:56px;cursor:pointer}
+.sw{
+  appearance:none;-webkit-appearance:none;margin:0;width:48px;height:28px;flex:none;
+  border-radius:var(--r-cap);background:var(--panel-20);border:1px solid var(--panel-30);
+  position:relative;cursor:pointer;transition:background 140ms var(--ease-out),border-color 140ms var(--ease-out);
+}
+.sw::after{
+  content:"";position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:var(--r-cap);
+  background:var(--panel-00);border:1px solid var(--panel-30);
+  transition:transform 160ms var(--ease-out);
+}
+.sw:hover{border-color:var(--ink-30)}
+.sw:checked{background:var(--signal);border-color:var(--signal)}
+.sw:checked::after{transform:translateX(20px);background:var(--on-signal);border-color:transparent}
+.sw:active::after{transform:translateX(0) scaleX(1.16)}
+.sw:checked:active::after{transform:translateX(18px) scaleX(1.16)}
+.sw:disabled{opacity:.5;cursor:not-allowed}
+.sw:disabled+*{cursor:not-allowed}
+
+/* ---------- segmented ---------- */
+.seg{display:inline-flex;border:1px solid var(--panel-30);border-radius:var(--r-1);overflow:hidden;background:var(--panel-10)}
+.seg fieldset{border:0;margin:0;padding:0;display:flex}
+.seg label{
+  display:flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;
+  border-left:1px solid var(--panel-30);cursor:pointer;font-size:.9375rem;white-space:nowrap;
+  transition:background 120ms var(--ease-out);
+}
+.seg label:first-of-type{border-left:0}
+.seg label:hover{background:var(--panel-20)}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg input:checked+span{font-weight:600}
+.seg label:has(input:checked){background:var(--ink-00);color:var(--panel-00)}
+.seg label:has(input:checked):hover{background:var(--ink-10)}
+.seg label:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:-3px}
+.seg label small{font-family:"Azeret Mono",monospace;font-size:.75rem;opacity:.72;margin-left:6px}
+.seg:has(input:disabled){opacity:.55}
+.seg label:has(input:disabled){cursor:not-allowed}
+
+/* ---------- select / inputs ---------- */
+.sel{
+  appearance:none;-webkit-appearance:none;background:var(--panel-10);color:var(--ink-00);
+  border:1px solid var(--panel-30);border-radius:var(--r-1);min-height:44px;
+  padding:0 34px 0 12px;font:inherit;font-size:.9375rem;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-20) 50%),linear-gradient(135deg,var(--ink-20) 50%,transparent 50%);
+  background-position:calc(100% - 17px) 20px,calc(100% - 12px) 20px;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+.sel:hover{border-color:var(--ink-30)}
+.sel:disabled{opacity:.5;cursor:not-allowed}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;
+  padding:0 16px;border-radius:var(--r-0);border:1px solid var(--ink-00);background:var(--ink-00);
+  color:var(--panel-00);font-size:.9375rem;font-weight:500;cursor:pointer;
+  transition:background 120ms var(--ease-out),border-color 120ms var(--ease-out);
+}
+.btn:hover{background:var(--ink-10);border-color:var(--ink-10)}
+.btn:active{background:var(--ink-00)}
+.btn[disabled]{background:var(--panel-20);border-color:var(--panel-30);color:var(--ink-30);cursor:not-allowed}
+.btn.quiet{background:transparent;color:var(--ink-00);border-color:var(--panel-30)}
+.btn.quiet:hover{background:var(--panel-10);border-color:var(--ink-30)}
+.btn.go{background:var(--signal);border-color:var(--signal);color:var(--on-signal)}
+.btn.go:hover{background:var(--signal-lift);border-color:var(--signal-lift)}
+.btn.go[disabled]{background:var(--panel-20);border-color:var(--panel-30);color:var(--ink-30)}
+.btn.danger{background:transparent;color:var(--peak);border-color:var(--peak)}
+.btn.danger:hover{background:var(--peak);color:var(--on-peak)}
+.btn.sm{min-height:36px;padding:0 11px;font-size:.9375rem}
+.btn.link{background:none;border:0;padding:0;min-height:44px;color:var(--signal);text-decoration:underline;text-underline-offset:3px}
+.btn.link:hover{background:none;color:var(--signal-lift)}
+/* disabled must beat every variant, so it is declared last */
+.btn[disabled],.btn.quiet[disabled],.btn.go[disabled],.btn.danger[disabled],
+.btn[disabled]:hover,.btn.quiet[disabled]:hover,.btn.go[disabled]:hover,.btn.danger[disabled]:hover{
+  background:var(--panel-20);border-color:var(--panel-30);color:var(--ink-30);cursor:not-allowed;
+}
+
+/* ---------- range / faders ---------- */
+input[type=range]{appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer}
+input[type=range]:disabled{cursor:not-allowed;opacity:.5}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:var(--r-1);background:var(--panel-20);border:1px solid var(--panel-30)}
+input[type=range]::-moz-range-track{height:6px;border-radius:var(--r-1);background:var(--panel-20);border:1px solid var(--panel-30)}
+input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:16px;height:26px;border-radius:var(--r-1);background:var(--ink-00);border:0;margin-top:-11px}
+input[type=range]::-moz-range-thumb{width:16px;height:26px;border-radius:var(--r-1);background:var(--ink-00);border:0}
+input[type=range]:hover::-webkit-slider-thumb{background:var(--signal)}
+input[type=range]:hover::-moz-range-thumb{background:var(--signal)}
+.slide{display:flex;align-items:center;gap:14px}
+.slide input[type=range]{width:220px}
+
+.eq{display:flex;align-items:flex-end;gap:6px;padding:18px 0 4px;flex-wrap:wrap}
+.band{display:flex;flex-direction:column;align-items:center;gap:8px;width:64px}
+.band .db{font-family:"Azeret Mono",monospace;font-size:.75rem;color:var(--ink-20);font-variant-numeric:tabular-nums}
+.band .hz{font-family:"Azeret Mono",monospace;font-size:.75rem;color:var(--ink-20)}
+/* the slot is painted on the input itself so it is always centred on the thumb */
+.band input[type=range]{
+  appearance:none;-webkit-appearance:none;
+  writing-mode:vertical-lr;direction:rtl;
+  width:26px;height:132px;
+  background:linear-gradient(to right,
+    transparent 0 10px, var(--panel-30) 10px 11px,
+    var(--panel-20) 11px 15px, var(--panel-30) 15px 16px, transparent 16px);
+}
+.band input[type=range]::-webkit-slider-runnable-track{width:26px;height:100%;background:transparent;border:0}
+.band input[type=range]::-moz-range-track{width:26px;height:100%;background:transparent;border:0}
+.band input[type=range]::-webkit-slider-thumb{
+  appearance:none;-webkit-appearance:none;
+  width:26px;height:16px;border-radius:var(--r-1);background:var(--ink-00);border:0;margin:0;
+}
+.band input[type=range]::-moz-range-thumb{width:26px;height:16px;border-radius:var(--r-1);background:var(--ink-00);border:0}
+.band input[type=range]:hover::-webkit-slider-thumb{background:var(--signal)}
+.band input[type=range]:hover::-moz-range-thumb{background:var(--signal)}
+.band.mid{position:relative}
+.eqhead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.presets button{
+  min-height:36px;padding:0 12px;border:1px solid var(--panel-30);background:var(--panel-10);
+  border-radius:var(--r-1);font-size:.9375rem;cursor:pointer;
+}
+.presets button:hover{border-color:var(--ink-30);background:var(--panel-20)}
+.presets button[aria-pressed="true"]{background:var(--ink-00);color:var(--panel-00);border-color:var(--ink-00);font-weight:600}
+.presets .custom[aria-pressed="true"]{font-style:italic}
+
+/* ---------- meter ---------- */
+.meter{display:flex;height:26px;border:1px solid var(--panel-30);border-radius:var(--r-1);overflow:hidden;background:var(--panel-20)}
+.meter i{display:block;height:100%}
+.meter .m-dl{background:var(--signal)}
+.meter .m-ca{background:var(--signal-wash)}
+.meter .m-ot{background:var(--panel-30)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
+.legend li{display:flex;align-items:center;gap:7px;font-family:"Azeret Mono",monospace;font-size:.75rem;color:var(--ink-20);font-variant-numeric:tabular-nums}
+.legend b{width:10px;height:10px;flex:none;border:1px solid var(--panel-30)}
+
+/* ---------- chips ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 6px 0 12px;
+  border:1px solid var(--panel-30);border-radius:var(--r-1);background:var(--panel-10);font-size:.9375rem;
+}
+.chip button{
+  border:0;background:none;cursor:pointer;width:30px;height:30px;line-height:1;color:var(--ink-20);
+  border-radius:var(--r-1);font-size:1.25rem;
+}
+.chip button:hover{background:var(--panel-20);color:var(--peak)}
+
+/* ---------- table ---------- */
+table{border-collapse:collapse;width:100%;max-width:640px}
+caption{text-align:left;font-size:.9375rem;color:var(--ink-20);padding-bottom:10px;max-width:62ch}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--panel-30);font-size:.9375rem}
+thead th{font-weight:500;color:var(--ink-20);border-bottom:1px solid var(--ink-30)}
+th[scope=col]:not(:first-child),td:not(:first-child){text-align:center;width:92px}
+tbody tr:hover{background:var(--panel-10)}
+input[type=checkbox]:not(.sw){
+  appearance:none;-webkit-appearance:none;width:20px;height:20px;margin:0;
+  border:1px solid var(--ink-30);border-radius:var(--r-1);background:var(--panel-00);cursor:pointer;
+  position:relative;vertical-align:middle;
+}
+input[type=checkbox]:not(.sw):hover{border-color:var(--ink-00)}
+input[type=checkbox]:not(.sw):checked{background:var(--signal);border-color:var(--signal)}
+input[type=checkbox]:not(.sw):checked::after{
+  content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;
+  border:solid var(--on-signal);border-width:0 2px 2px 0;transform:rotate(42deg);
+}
+input[type=checkbox]:not(.sw):disabled{border-color:var(--ink-30);cursor:not-allowed}
+input[type=checkbox]:not(.sw):disabled:checked{background:var(--ink-30);border-color:var(--ink-30)}
+input[type=checkbox]:not(.sw):disabled:hover{border-color:var(--ink-30)}
+.cbhit{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;cursor:pointer}
+.cbhit:has(:disabled){cursor:not-allowed}
+
+/* ---------- device list ---------- */
+.devices li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--panel-30)}
+.devices .dn{font-size:1rem;font-weight:500}
+.devices .dm{font-family:"Azeret Mono",monospace;font-size:.75rem;color:var(--ink-20);margin-top:3px}
+.devices .here{color:var(--signal);font-weight:500}
+/* sized like the real row so nothing shifts when the list arrives */
+.skel li{padding:12px 0;border-bottom:1px solid var(--panel-30)}
+.skel b,.skel i,.skel .sb{display:block;background:var(--panel-20);border-radius:var(--r-1)}
+.skel b{width:172px;height:17px}
+.skel i{width:238px;height:12px;margin-top:6px}
+.skel .sb{width:84px;height:36px}
+
+/* ---------- states / messages ---------- */
+.empty{padding:20px 0 22px;border-bottom:1px solid var(--panel-30)}
+.empty p{font-size:.9375rem;color:var(--ink-20);max-width:62ch;margin-bottom:12px}
+.note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--panel-30);background:var(--panel-10);border-radius:var(--r-1);font-size:.9375rem;max-width:62ch}
+.note.bad{border-color:var(--peak);background:transparent}
+.note.bad b{color:var(--peak)}
+.note .k{font-family:"Azeret Mono",monospace;font-size:.75rem;color:var(--ink-20);padding-top:2px;flex:none}
+.danger-zone{padding:18px 0 26px;border-top:1px solid var(--peak);margin-top:18px}
+.danger-zone h3{font-size:1rem;font-weight:600;color:var(--peak);margin-bottom:4px}
+.danger-zone p{font-size:.9375rem;color:var(--ink-20);max-width:62ch;margin-bottom:14px}
+.confirm{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* ---------- save bar ---------- */
+.savebar{
+  position:fixed;left:var(--rail-w);right:0;bottom:0;z-index:40;
+  background:var(--panel-10);border-top:1px solid var(--panel-30);box-shadow:var(--dock-shadow);
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  padding:14px 32px;
+  transform:translateY(101%);opacity:0;pointer-events:none;
+  transition:transform 220ms var(--ease-out),opacity 220ms var(--ease-out);
+}
+.savebar.docked{transform:translateY(0);opacity:1;pointer-events:auto}
+.savebar .msg{font-size:.9375rem;min-width:0}
+.savebar .msg b{font-weight:600}
+.savebar .msg .why{display:block;color:var(--ink-20);font-size:.9375rem;margin-top:2px;max-width:70ch}
+.savebar.err{border-top-color:var(--peak)}
+.savebar.err .msg b{color:var(--peak)}
+.savebar.ok .msg b{color:var(--signal)}
+.savebar .acts{display:flex;gap:10px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+.savebar .count{font-family:"Azeret Mono",monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- filter empty ---------- */
+.nomatch{padding:56px 32px;display:none}
+.nomatch p{font-size:1rem;color:var(--ink-20);margin-bottom:14px;max-width:62ch}
+body.filtering .nomatch.on{display:block}
+.sec.hidden,.row.hidden,.topbar-chain.hidden{display:none}
+body.filtering .chain{display:none}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .rail{position:static;height:auto;border-right:0;border-bottom:1px solid var(--rail-line)}
+  .railnav{overflow-x:auto;overflow-y:hidden;padding:0 12px 10px;flex:none}
+  .railnav ul{display:flex;gap:2px}
+  .railnav a{flex:none;border-left:0;border-bottom:2px solid transparent;min-height:44px;padding:6px 12px;flex-direction:column;align-items:flex-start;gap:0;justify-content:center;white-space:nowrap}
+  .railnav a[aria-current="true"]{border-left-color:transparent;border-bottom-color:var(--signal-dark)}
+  .railnav .rv{text-align:left}
+  .savebar{left:0}
+  .topbar{padding:12px 20px}
+  .chain,.sec,.nomatch{padding-left:20px;padding-right:20px}
+  .savebar{padding:12px 20px}
+}
+@media (max-width:620px){
+  .topbar .hint{display:none}
+  .row{grid-template-columns:1fr;gap:10px;align-items:start}
+  .row-ctl{justify-content:flex-start;width:100%}
+  /* a 4-option strip cannot fit one line at this width, so it becomes a list */
+  .seg{width:100%}
+  .seg fieldset{flex-direction:column;width:100%}
+  .seg label{border-left:0;border-top:1px solid var(--panel-30);padding:0 14px}
+  .seg label:first-of-type{border-top:0}
+  .seg label span{display:flex;width:100%;justify-content:space-between;align-items:baseline}
+  .seg label small{margin-left:0}
+  .sel{width:100%}
+  .slide input[type=range]{width:min(220px,60vw)}
+  .chain dl{gap:0}
+  .chain .node{min-width:132px}
+  table{font-size:.9375rem}
+  th[scope=col]:not(:first-child),td:not(:first-child){width:64px}
+  .savebar{flex-direction:column;align-items:stretch;gap:12px}
+  .savebar .acts{justify-content:stretch}
+  .savebar .acts .btn{flex:1}
+  .band{width:52px}
+}
+@media (max-width:360px){
+  .sec,.chain,.topbar,.savebar,.nomatch{padding-left:14px;padding-right:14px}
+  .eq{gap:4px}
+  .band{width:44px}
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
+}
+html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-motion="reduced"] *::after{
+  transition-duration:.01ms !important;animation-duration:.01ms !important;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ rail: nav that carries state ============ -->
+  <aside class="rail">
+    <div class="brand"><b>Tremolo</b> <span>Settings</span></div>
+
+    <div class="filter">
+      <label class="vh" for="q">Filter settings</label>
+      <input id="q" type="text" placeholder="Filter settings" autocomplete="off" spellcheck="false">
+      <kbd>/</kbd>
+    </div>
+
+    <nav class="railnav" aria-label="Settings sections">
+      <ul>
+        <li><a href="#playback" data-jump="playback">Playback <span class="rv" id="rv-playback">6.0 s</span></a></li>
+        <li><a href="#quality" data-jump="quality">Audio quality <span class="rv" id="rv-quality">320 AAC</span></a></li>
+        <li><a href="#storage" data-jump="storage">Downloads <span class="rv" id="rv-storage">12.4 GB</span></a></li>
+        <li><a href="#library" data-jump="library">Library <span class="rv" id="rv-library">5 hidden</span></a></li>
+        <li><a href="#notify" data-jump="notify">Notifications <span class="rv" id="rv-notify">4 on</span></a></li>
+        <li><a href="#devices" data-jump="devices">Devices <span class="rv" id="rv-devices">3 signed in</span></a></li>
+        <li><a href="#account" data-jump="account">Account <span class="rv" id="rv-account">Individual</span></a></li>
+        <li><a href="#appearance" data-jump="appearance">Appearance <span class="rv" id="rv-appearance">Light</span></a></li>
+      </ul>
+    </nav>
+
+    <div class="railfoot">
+      <div class="who">Ada Okonkwo<i>ada@okonkwo.audio</i></div>
+      <button type="button" id="signout">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- ============ panel ============ -->
+  <main class="panel">
+
+    <div class="topbar">
+      <h1>Settings</h1>
+      <p class="hint"><kbd>/</kbd> filter &nbsp; <kbd>Ctrl</kbd><kbd>S</kbd> save</p>
+    </div>
+
+    <!-- signal chain: the settings as one audio path -->
+    <section class="chain" aria-label="Current audio path">
+      <dl>
+        <div class="node" id="n-source"><dt>source</dt><dd id="v-source">Streaming</dd><div class="sub" id="s-source">library + radio</div></div>
+        <div class="node" id="n-codec"><dt>codec</dt><dd id="v-codec">320 kbps</dd><div class="sub" id="s-codec">AAC, Wi-Fi</div></div>
+        <div class="node" id="n-eq"><dt>eq</dt><dd id="v-eq">Flat</dd><div class="sub" id="s-eq">6 bands, 0.0 dB</div></div>
+        <div class="node" id="n-level"><dt>level</dt><dd id="v-level">&minus;14 LUFS</dd><div class="sub" id="s-level">normalize on</div></div>
+        <div class="node" id="n-fade"><dt>crossfade</dt><dd id="v-fade">6.0 s</dd><div class="sub" id="s-fade">gapless on</div></div>
+        <div class="node" id="n-out"><dt>output</dt><dd id="v-out">Kitchen speaker</dd><div class="sub" id="s-out">LDAC, 990 kbps</div></div>
+      </dl>
+    </section>
+
+    <div class="nomatch"><p id="nomatch-text">Nothing matches that.</p><button type="button" class="btn quiet" id="clearfilter">Clear filter</button></div>
+
+    <!-- ============ playback ============ -->
+    <section class="sec" id="playback">
+      <h2>Playback</h2>
+      <div class="rows">
+
+        <div class="row" data-search="crossfade fade overlap tracks seconds">
+          <div class="row-text">
+            <label class="row-title" for="crossfade">Crossfade</label>
+            <p class="row-desc">Overlap the end of one track with the start of the next.</p>
+          </div>
+          <div class="row-ctl slide">
+            <input id="crossfade" type="range" min="0" max="12" step="0.5" value="6" aria-describedby="crossfade-v">
+            <span class="val" id="crossfade-v">6.0 s</span>
+          </div>
+        </div>
+
+        <div class="row" data-search="gapless playback albums live records">
+          <div class="row-text">
+            <label class="row-title" for="gapless">Gapless playback</label>
+            <p class="row-desc">No silence between tracks on live albums and mixes.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="gapless"><input class="sw" type="checkbox" role="switch" id="gapless" checked></label></div>
+        </div>
+
+        <div class="row" data-search="autoplay similar tracks queue ends">
+          <div class="row-text">
+            <label class="row-title" for="autoplay">Autoplay</label>
+            <p class="row-desc">Keep playing related tracks when a playlist runs out.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="autoplay"><input class="sw" type="checkbox" role="switch" id="autoplay" checked></label></div>
+        </div>
+
+        <div class="row" data-search="skip silence podcast trim quiet">
+          <div class="row-text">
+            <label class="row-title" for="skipsilence">Skip silence in podcasts</label>
+            <p class="row-desc">Cut pauses longer than one second.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="skipsilence"><input class="sw" type="checkbox" role="switch" id="skipsilence"></label></div>
+        </div>
+
+        <div class="row" data-search="podcast speed rate playback faster">
+          <div class="row-text">
+            <label class="row-title" for="podspeed">Podcast speed</label>
+            <p class="row-desc">Applies to spoken word only. Music always plays at 1.0.</p>
+          </div>
+          <div class="row-ctl">
+            <select class="sel" id="podspeed">
+              <option>0.8&times;</option><option selected>1.0&times;</option><option>1.25&times;</option><option>1.5&times;</option><option>2.0&times;</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" data-search="mono audio channels single ear hearing">
+          <div class="row-text">
+            <label class="row-title" for="mono">Mono audio</label>
+            <p class="row-desc">Send both channels to each ear. Useful with one earbud in.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="mono"><input class="sw" type="checkbox" role="switch" id="mono"></label></div>
+        </div>
+
+        <div class="row" data-search="offline mode downloads only no streaming data">
+          <div class="row-text">
+            <label class="row-title" for="offline">Offline mode</label>
+            <p class="row-desc">Play only what is on this device. Nothing streams, nothing syncs.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="offline"><input class="sw" type="checkbox" role="switch" id="offline"></label></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ audio quality ============ -->
+    <section class="sec" id="quality">
+      <h2>Audio quality</h2>
+      <p class="lede">Higher bitrates use more data. Lossless needs a wired connection or an LDAC device.</p>
+      <div class="rows">
+
+        <div class="row" data-search="streaming quality wifi bitrate lossless kbps">
+          <div class="row-text">
+            <span class="row-title plain" id="lbl-wifi">Streaming on Wi-Fi</span>
+            <p class="row-desc">What plays when you are on a known network.</p>
+          </div>
+          <div class="row-ctl">
+            <div class="seg"><fieldset role="radiogroup" aria-labelledby="lbl-wifi">
+              <legend class="vh">Streaming quality on Wi-Fi</legend>
+              <label><input type="radio" name="wifiq" value="96"><span>Low<small>96</small></span></label>
+              <label><input type="radio" name="wifiq" value="160"><span>Normal<small>160</small></span></label>
+              <label><input type="radio" name="wifiq" value="320" checked><span>High<small>320</small></span></label>
+              <label><input type="radio" name="wifiq" value="1411"><span>Lossless<small>1411</small></span></label>
+            </fieldset></div>
+          </div>
+        </div>
+
+        <div class="row" data-search="cellular mobile data quality bitrate roaming">
+          <div class="row-text">
+            <span class="row-title plain" id="lbl-cell">Streaming on cellular</span>
+            <p class="row-desc">Lossless is off here on purpose. One hour of it runs about 630 MB.</p>
+          </div>
+          <div class="row-ctl">
+            <div class="seg"><fieldset role="radiogroup" aria-labelledby="lbl-cell">
+              <legend class="vh">Streaming quality on cellular</legend>
+              <label><input type="radio" name="cellq" value="96"><span>Low<small>96</small></span></label>
+              <label><input type="radio" name="cellq" value="160" checked><span>Normal<small>160</small></span></label>
+              <label><input type="radio" name="cellq" value="320"><span>High<small>320</small></span></label>
+            </fieldset></div>
+          </div>
+        </div>
+
+        <div class="row" data-search="download quality offline files bitrate storage">
+          <div class="row-text">
+            <span class="row-title plain" id="lbl-dlq">Download quality</span>
+            <p class="row-desc">Changing this re-downloads everything you have saved.</p>
+          </div>
+          <div class="row-ctl">
+            <div class="seg"><fieldset role="radiogroup" aria-labelledby="lbl-dlq">
+              <legend class="vh">Download quality</legend>
+              <label><input type="radio" name="dlq" value="160"><span>Normal<small>160</small></span></label>
+              <label><input type="radio" name="dlq" value="320" checked><span>High<small>320</small></span></label>
+              <label><input type="radio" name="dlq" value="1411"><span>Lossless<small>1411</small></span></label>
+            </fieldset></div>
+          </div>
+        </div>
+
+        <div class="row" data-search="normalize volume loudness lufs level match">
+          <div class="row-text">
+            <label class="row-title" for="normalize">Normalize volume</label>
+            <p class="row-desc">Play every track at a matched loudness so a quiet ballad does not vanish after a loud single.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="normalize"><input class="sw" type="checkbox" role="switch" id="normalize" checked></label></div>
+        </div>
+
+        <div class="row" id="row-level" data-search="loudness target level quiet normal loud lufs">
+          <div class="row-text">
+            <label class="row-title" for="loudness">Loudness target</label>
+            <p class="row-desc">Quiet suits headphones at night. Loud suits a noisy room and clips more.</p>
+          </div>
+          <div class="row-ctl">
+            <select class="sel" id="loudness">
+              <option value="-23">Quiet &nbsp;&minus;23 LUFS</option>
+              <option value="-14" selected>Normal &nbsp;&minus;14 LUFS</option>
+              <option value="-11">Loud &nbsp;&minus;11 LUFS</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row stack" data-search="equalizer eq bands bass treble presets db hertz">
+          <div class="row-text">
+            <span class="row-title plain">Equalizer</span>
+            <p class="row-desc">Six bands, &plusmn;12 dB. Moving any fader switches the preset to <em>Custom</em>.</p>
+          </div>
+          <div style="width:100%">
+            <div class="eqhead">
+              <div class="presets" role="group" aria-label="Equalizer presets">
+                <button type="button" data-preset="flat" aria-pressed="true">Flat</button>
+                <button type="button" data-preset="bass" aria-pressed="false">Bass lift</button>
+                <button type="button" data-preset="vocal" aria-pressed="false">Vocal</button>
+                <button type="button" data-preset="night" aria-pressed="false">Late night</button>
+                <button type="button" class="custom" data-preset="custom" aria-pressed="false" disabled>Custom</button>
+              </div>
+              <button type="button" class="btn quiet sm" id="eqreset">Reset to flat</button>
+            </div>
+            <div class="eq" id="eqbank">
+              <div class="band"><span class="db" id="db-60">0.0</span><input type="range" orient="vertical" min="-12" max="12" step="0.5" value="0" id="eq-60" aria-label="60 hertz" aria-describedby="db-60"><span class="hz">60</span></div>
+              <div class="band"><span class="db" id="db-150">0.0</span><input type="range" orient="vertical" min="-12" max="12" step="0.5" value="0" id="eq-150" aria-label="150 hertz" aria-describedby="db-150"><span class="hz">150</span></div>
+              <div class="band"><span class="db" id="db-400">0.0</span><input type="range" orient="vertical" min="-12" max="12" step="0.5" value="0" id="eq-400" aria-label="400 hertz" aria-describedby="db-400"><span class="hz">400</span></div>
+              <div class="band"><span class="db" id="db-1k">0.0</span><input type="range" orient="vertical" min="-12" max="12" step="0.5" value="0" id="eq-1k" aria-label="1 kilohertz" aria-describedby="db-1k"><span class="hz">1k</span></div>
+              <div class="band"><span class="db" id="db-3k">0.0</span><input type="range" orient="vertical" min="-12" max="12" step="0.5" value="0" id="eq-3k" aria-label="3.5 kilohertz" aria-describedby="db-3k"><span class="hz">3.5k</span></div>
+              <div class="band"><span class="db" id="db-12k">0.0</span><input type="range" orient="vertical" min="-12" max="12" step="0.5" value="0" id="eq-12k" aria-label="12 kilohertz" aria-describedby="db-12k"><span class="hz">12k</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ downloads and storage ============ -->
+    <section class="sec" id="storage">
+      <h2>Downloads and storage</h2>
+      <div class="rows">
+
+        <div class="row stack" data-search="storage space used cache clear gigabytes disk">
+          <div class="row-text">
+            <span class="row-title plain">Space on this device</span>
+            <p class="row-desc" id="storage-line">Tremolo is holding <span class="val" id="tot-app">12.4 GB</span> of the <span class="val">128 GB</span> on this machine.</p>
+          </div>
+          <div style="width:100%">
+            <div class="meter" role="img" aria-label="Downloads 9.8 gigabytes, cache 2.6 gigabytes, other apps 54.2 gigabytes, free 61.4 gigabytes" id="meter">
+              <i class="m-dl" id="m-dl" style="width:7.66%"></i>
+              <i class="m-ca" id="m-ca" style="width:2.03%"></i>
+              <i class="m-ot" style="width:42.34%"></i>
+            </div>
+            <ul class="legend">
+              <li><b style="background:var(--signal)"></b>Downloads <span id="lg-dl">9.8 GB</span></li>
+              <li><b style="background:var(--signal-wash)"></b>Cache <span id="lg-ca">2.6 GB</span></li>
+              <li><b style="background:var(--panel-30)"></b>Other apps 54.2 GB</li>
+              <li><b style="background:var(--panel-20)"></b>Free <span id="lg-fr">61.4 GB</span></li>
+            </ul>
+            <div class="confirm" style="margin-top:16px" id="cache-actions">
+              <button type="button" class="btn quiet" id="clearcache">Clear cache</button>
+              <span class="val" id="cache-state"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" data-search="download cellular mobile data over network">
+          <div class="row-text">
+            <label class="row-title" for="dlcell">Download over cellular</label>
+            <p class="row-desc">Off means downloads wait for Wi-Fi.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="dlcell"><input class="sw" type="checkbox" role="switch" id="dlcell"></label></div>
+        </div>
+
+        <div class="row" data-search="auto download liked songs saved automatic">
+          <div class="row-text">
+            <label class="row-title" for="autodl">Download liked songs</label>
+            <p class="row-desc">Anything you like gets saved for offline play.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="autodl"><input class="sw" type="checkbox" role="switch" id="autodl" checked></label></div>
+        </div>
+
+        <div class="row" data-search="keep downloads remove expire days unplayed">
+          <div class="row-text">
+            <label class="row-title" for="keepfor">Remove downloads after</label>
+            <p class="row-desc">Counted from the last time you played the album, not from when you saved it.</p>
+          </div>
+          <div class="row-ctl">
+            <select class="sel" id="keepfor">
+              <option>Never</option><option selected>30 days unplayed</option><option>60 days unplayed</option><option>90 days unplayed</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ library ============ -->
+    <section class="sec" id="library">
+      <h2>Library and listening</h2>
+      <div class="rows">
+
+        <div class="row" data-search="explicit content lyrics filter clean">
+          <div class="row-text">
+            <label class="row-title" for="explicit">Play explicit tracks</label>
+            <p class="row-desc">Off hides them and plays the clean version where one exists.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="explicit"><input class="sw" type="checkbox" role="switch" id="explicit" checked></label></div>
+        </div>
+
+        <div class="row" data-search="unplayable tracks greyed region rights">
+          <div class="row-text">
+            <label class="row-title" for="unplayable">Show unplayable tracks</label>
+            <p class="row-desc">Keeps tracks visible in albums and playlists even where rights have lapsed in your region.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="unplayable"><input class="sw" type="checkbox" role="switch" id="unplayable"></label></div>
+        </div>
+
+        <div class="row" data-search="recommendations history taste profile suggestions">
+          <div class="row-text">
+            <label class="row-title" for="recs">Use listening history for recommendations</label>
+            <p class="row-desc">Off keeps your mixes fixed to what you have saved by hand.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="recs"><input class="sw" type="checkbox" role="switch" id="recs" checked></label></div>
+        </div>
+
+        <div class="row" data-search="private session incognito hide listening friends">
+          <div class="row-text">
+            <label class="row-title" for="private">Private session</label>
+            <p class="row-desc">Nothing you play is shared or added to your history. Ends by itself after six hours.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="private"><input class="sw" type="checkbox" role="switch" id="private"></label></div>
+        </div>
+
+        <div class="row stack" data-search="hidden artists blocked muted never play">
+          <div class="row-text">
+            <span class="row-title plain">Hidden artists</span>
+            <p class="row-desc">Never played on radio, mixes, or autoplay.</p>
+          </div>
+          <div style="width:100%" id="hidden-wrap">
+            <div class="chips" id="hidden-chips">
+              <span class="chip">Kaskade Nights <button type="button" aria-label="Unhide Kaskade Nights">&times;</button></span>
+              <span class="chip">The Bell Foundry <button type="button" aria-label="Unhide The Bell Foundry">&times;</button></span>
+              <span class="chip">Marlow Grey <button type="button" aria-label="Unhide Marlow Grey">&times;</button></span>
+              <span class="chip">Sunday Static <button type="button" aria-label="Unhide Sunday Static">&times;</button></span>
+              <span class="chip">Vero Lanes <button type="button" aria-label="Unhide Vero Lanes">&times;</button></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ notifications ============ -->
+    <section class="sec" id="notify">
+      <h2>Notifications</h2>
+      <div class="rows">
+        <div class="row stack" data-search="notifications push email releases concerts playlists">
+          <div style="width:100%;overflow-x:auto">
+            <table>
+              <caption>Push arrives on this device. Email goes to ada@okonkwo.audio.</caption>
+              <thead>
+                <tr><th scope="col">Tell me about</th><th scope="col">Push</th><th scope="col">Email</th></tr>
+              </thead>
+              <tbody id="notify-body">
+                <tr><th scope="row">New releases from artists you follow</th>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" checked aria-label="Push for new releases"></label></td>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" aria-label="Email for new releases"></label></td></tr>
+                <tr><th scope="row">Concerts near Edinburgh</th>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" checked aria-label="Push for concerts"></label></td>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" checked aria-label="Email for concerts"></label></td></tr>
+                <tr><th scope="row">Playlists you follow get edited</th>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" aria-label="Push for playlist edits"></label></td>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" aria-label="Email for playlist edits"></label></td></tr>
+                <tr><th scope="row">Your weekly mix is ready</th>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" checked aria-label="Push for weekly mix"></label></td>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" aria-label="Email for weekly mix"></label></td></tr>
+                <tr><th scope="row">Changes to your plan or billing</th>
+                  <td><label class="cbhit"><input type="checkbox" class="ntf" aria-label="Push for billing"></label></td>
+                  <td><label class="cbhit"><input type="checkbox" disabled checked aria-label="Email for billing, always on"></label></td></tr>
+              </tbody>
+            </table>
+            <div class="note" style="margin-top:14px"><span class="k">note</span><span>Billing email cannot be switched off. It is the only way we can reach you about a failed payment.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ devices ============ -->
+    <section class="sec" id="devices">
+      <h2>Devices</h2>
+      <div class="rows">
+
+        <div class="row" data-search="bluetooth codec ldac aac aptx sbc wireless">
+          <div class="row-text">
+            <label class="row-title" for="codec">Bluetooth codec</label>
+            <p class="row-desc">LDAC carries more data and drops out sooner at range. Automatic picks per device.</p>
+          </div>
+          <div class="row-ctl">
+            <select class="sel" id="codec">
+              <option selected>Automatic</option><option>LDAC</option><option>aptX HD</option><option>AAC</option><option>SBC</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" data-search="remote control speaker phone another device">
+          <div class="row-text">
+            <label class="row-title" for="remote">Let other devices control playback</label>
+            <p class="row-desc">Your phone can drive the speaker in the kitchen without opening it.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="remote"><input class="sw" type="checkbox" role="switch" id="remote" checked></label></div>
+        </div>
+
+        <div class="row stack" data-search="signed in devices sessions sign out speaker phone desktop">
+          <div class="row-text">
+            <span class="row-title plain">Signed in on</span>
+            <p class="row-desc">Signing a device out stops playback there straight away.</p>
+          </div>
+          <div style="width:100%">
+            <div class="confirm" style="margin-bottom:6px">
+              <button type="button" class="btn quiet sm" id="refresh-devices">Refresh list</button>
+              <span class="val" id="devices-state">Checked a moment ago</span>
+            </div>
+            <ul class="devices" id="device-list">
+              <li><div><div class="dn">Studio desktop <span class="here">this device</span></div><div class="dm">Windows 11 · last active now</div></div><button type="button" class="btn quiet sm" disabled>Sign out</button></li>
+              <li><div><div class="dn">Kitchen speaker</div><div class="dm">Tremolo Connect · playing now · LDAC</div></div><button type="button" class="btn quiet sm">Sign out</button></li>
+              <li><div><div class="dn">Ada's iPhone</div><div class="dm">iOS 19.2 · last active 3 hours ago</div></div><button type="button" class="btn quiet sm">Sign out</button></li>
+            </ul>
+            <ul class="devices skel" id="device-skeleton" hidden aria-hidden="true">
+              <li><div><b></b><i></i></div><span class="sb"></span></li>
+              <li><div><b></b><i></i></div><span class="sb"></span></li>
+              <li><div><b></b><i></i></div><span class="sb"></span></li>
+            </ul>
+            <div class="empty" id="device-empty" hidden>
+              <p>Only this device is signed in now. Open Tremolo somewhere else and it will show up here.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ account ============ -->
+    <section class="sec" id="account">
+      <h2>Account</h2>
+      <div class="rows">
+
+        <div class="row" data-search="plan subscription billing renew individual premium">
+          <div class="row-text">
+            <span class="row-title plain">Plan</span>
+            <p class="row-desc">Individual, renews 14 August. Payment card ending 4417.</p>
+          </div>
+          <div class="row-ctl"><button type="button" class="btn quiet">Manage plan</button></div>
+        </div>
+
+        <div class="row" data-search="email address change login">
+          <div class="row-text">
+            <span class="row-title plain">Email</span>
+            <p class="row-desc"><span class="val">ada@okonkwo.audio</span></p>
+          </div>
+          <div class="row-ctl"><button type="button" class="btn quiet">Change email</button></div>
+        </div>
+
+        <div class="row" data-search="history visibility public followers private profile">
+          <div class="row-text">
+            <label class="row-title" for="visibility">Who can see what you play</label>
+            <p class="row-desc">Applies to your profile page and to the friend activity list.</p>
+          </div>
+          <div class="row-ctl">
+            <select class="sel" id="visibility">
+              <option>Anyone</option><option selected>People you follow back</option><option>Only you</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" data-search="download my data export json listening history">
+          <div class="row-text">
+            <span class="row-title plain">Your data</span>
+            <p class="row-desc">A copy of your library, playlists, and full play history as JSON. Ready in about three days.</p>
+          </div>
+          <div class="row-ctl"><button type="button" class="btn quiet" id="reqdata">Request a copy</button></div>
+        </div>
+
+        <div class="row" data-search="sign out everywhere all devices sessions">
+          <div class="row-text">
+            <span class="row-title plain">Sign out everywhere</span>
+            <p class="row-desc">Ends every session except this one. You will need to sign in again on each device.</p>
+          </div>
+          <div class="row-ctl"><button type="button" class="btn quiet" id="signout-all">Sign out everywhere</button></div>
+        </div>
+
+      </div>
+
+      <div class="danger-zone" data-search="delete account close permanently erase">
+        <h3>Delete account</h3>
+        <p>Removes your playlists, library, and history for good. Downloads on this device stop playing at once. This cannot be undone.</p>
+        <div class="confirm" id="delete-confirm">
+          <button type="button" class="btn danger" id="del-start">Delete account</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ appearance ============ -->
+    <section class="sec" id="appearance">
+      <h2>Appearance and access</h2>
+      <div class="rows">
+
+        <div class="row" data-search="theme dark light system appearance colour color">
+          <div class="row-text">
+            <span class="row-title plain" id="lbl-theme">Theme</span>
+            <p class="row-desc">System follows whatever this machine is set to right now.</p>
+          </div>
+          <div class="row-ctl">
+            <div class="seg"><fieldset role="radiogroup" aria-labelledby="lbl-theme">
+              <legend class="vh">Theme</legend>
+              <label><input type="radio" name="theme" value="system"><span>System</span></label>
+              <label><input type="radio" name="theme" value="light" checked><span>Light</span></label>
+              <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+            </fieldset></div>
+          </div>
+        </div>
+
+        <div class="row" data-search="text size font larger smaller reading">
+          <div class="row-text">
+            <span class="row-title plain" id="lbl-tsize">Text size</span>
+            <p class="row-desc">Changes every screen, not only this one.</p>
+          </div>
+          <div class="row-ctl">
+            <div class="seg"><fieldset role="radiogroup" aria-labelledby="lbl-tsize">
+              <legend class="vh">Text size</legend>
+              <label><input type="radio" name="tsize" value="small"><span>Small</span></label>
+              <label><input type="radio" name="tsize" value="default" checked><span>Default</span></label>
+              <label><input type="radio" name="tsize" value="large"><span>Large</span></label>
+            </fieldset></div>
+          </div>
+        </div>
+
+        <div class="row" data-search="reduce motion animation transitions vestibular">
+          <div class="row-text">
+            <label class="row-title" for="reducemotion">Reduce motion</label>
+            <p class="row-desc">Turns off the two places this app moves: the save bar and the audio path readout.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="reducemotion"><input class="sw" type="checkbox" role="switch" id="reducemotion"></label></div>
+        </div>
+
+        <div class="row" data-search="animated cover art canvas video loops battery">
+          <div class="row-text">
+            <label class="row-title" for="canvas">Animated cover art</label>
+            <p class="row-desc">Short looping visuals on the now playing screen. Uses more battery.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="canvas"><input class="sw" type="checkbox" role="switch" id="canvas" checked></label></div>
+        </div>
+
+        <div class="row" data-search="tempo key bpm track details musical">
+          <div class="row-text">
+            <label class="row-title" for="tempokey">Show tempo and key on track pages</label>
+            <p class="row-desc">BPM and musical key, next to the track length.</p>
+          </div>
+          <div class="row-ctl"><label class="sw-hit" for="tempokey"><input class="sw" type="checkbox" role="switch" id="tempokey"></label></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ save bar ============ -->
+<div class="savebar" id="savebar" role="status" aria-live="polite">
+  <p class="msg" id="save-msg"><b><span class="count" id="save-count">0</span> unsaved changes</b><span class="why" id="save-why">Nothing is applied to your account until you save.</span></p>
+  <div class="acts" id="save-acts">
+    <button type="button" class="btn quiet" id="discard">Discard</button>
+    <button type="button" class="btn go" id="save">Save changes</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+
+  /* ---------------- signal chain ---------------- */
+  var chainMap={
+    source:"n-source", codec:"n-codec", eq:"n-eq", level:"n-level", fade:"n-fade", out:"n-out"
+  };
+  function ack(key){
+    var n=document.getElementById(chainMap[key]); if(!n) return;
+    n.classList.remove("is-ack"); void n.offsetWidth; n.classList.add("is-ack");
+    window.setTimeout(function(){ n.classList.remove("is-ack"); },260);
+  }
+  function set(id,txt){ var el=document.getElementById(id); if(el && el.innerHTML!==txt){ el.innerHTML=txt; return true;} return false; }
+
+  var CODEC_NAME={"96":"AAC","160":"AAC","320":"AAC","1411":"FLAC"};
+
+  function paintChain(changed){
+    // source
+    var off=$("#offline").checked;
+    set("v-source", off?"Downloads":"Streaming");
+    set("s-source", off?"nothing streams":"library + radio");
+    $("#n-source").classList.toggle("off",off);
+
+    // codec
+    var wifi=$("input[name=wifiq]:checked").value;
+    var dl=$("input[name=dlq]:checked").value;
+    var b=off?dl:wifi;
+    set("v-codec", b+" kbps");
+    set("s-codec", CODEC_NAME[b]+", "+(off?"downloaded":"Wi-Fi"));
+
+    // eq
+    var vals=eqValues(), moved=vals.some(function(v){return v!==0});
+    var name=currentPreset==="custom"?"Custom":presetLabel(currentPreset);
+    set("v-eq", name);
+    var peak=vals.reduce(function(a,v){return Math.abs(v)>Math.abs(a)?v:a},0);
+    set("s-eq", moved? ("6 bands, peak "+fmtDb(peak)+" dB") : "6 bands, 0.0 dB");
+    $("#n-eq").classList.toggle("off",!moved);
+
+    // level
+    var norm=$("#normalize").checked;
+    set("v-level", norm? ("&minus;"+Math.abs($("#loudness").value)+" LUFS") : "As mastered");
+    set("s-level", norm? "normalize on" : "normalize off");
+    $("#n-level").classList.toggle("off",!norm);
+
+    // crossfade
+    var cf=parseFloat($("#crossfade").value);
+    set("v-fade", cf===0?"Off":cf.toFixed(1)+" s");
+    set("s-fade", $("#gapless").checked?"gapless on":"gapless off");
+    $("#n-fade").classList.toggle("off",cf===0);
+
+    // output
+    var c=$("#codec").value, remote=$("#remote").checked;
+    var cName=c==="Automatic"?"LDAC":c;
+    var rate={"LDAC":"990 kbps","aptX HD":"576 kbps","AAC":"256 kbps","SBC":"328 kbps"}[cName]||"990 kbps";
+    set("v-out", remote?"Kitchen speaker":"Studio desktop");
+    set("s-out", remote? (cName+", "+rate) : "system output");
+
+    if(changed) ack(changed);
+  }
+
+  /* ---------------- equalizer ---------------- */
+  var BANDS=["60","150","400","1k","3k","12k"];
+  var PRESETS={
+    flat:[0,0,0,0,0,0],
+    bass:[6.5,4.5,1,0,-1,1.5],
+    vocal:[-2,-1,1.5,4,3.5,1],
+    night:[-4,-2.5,0,1.5,0.5,-3]
+  };
+  var LABELS={flat:"Flat",bass:"Bass lift",vocal:"Vocal",night:"Late night"};
+  var currentPreset="flat";
+  function presetLabel(k){return LABELS[k]||"Custom"}
+  function fmtDb(v){ return (v>0?"+":v<0?"−":"")+Math.abs(v).toFixed(1) }
+  function eqValues(){ return BANDS.map(function(b){ return parseFloat($("#eq-"+b).value) }) }
+  function paintEq(){
+    BANDS.forEach(function(b){
+      var v=parseFloat($("#eq-"+b).value);
+      $("#db-"+b).textContent=v===0?"0.0":fmtDb(v);
+      $("#db-"+b).style.color = v===0? "var(--ink-20)" : "var(--signal)";
+    });
+    $$(".presets button").forEach(function(btn){
+      btn.setAttribute("aria-pressed", String(btn.dataset.preset===currentPreset));
+    });
+    var custom=$(".presets .custom");
+    custom.disabled = currentPreset!=="custom";
+  }
+  function applyPreset(k){
+    currentPreset=k;
+    if(PRESETS[k]) BANDS.forEach(function(b,i){ $("#eq-"+b).value=PRESETS[k][i] });
+    paintEq(); paintChain("eq"); markDirty();
+  }
+  $$(".presets button").forEach(function(btn){
+    btn.addEventListener("click",function(){ if(btn.dataset.preset==="custom") return; applyPreset(btn.dataset.preset) });
+  });
+  $("#eqreset").addEventListener("click",function(){ applyPreset("flat") });
+  BANDS.forEach(function(b){
+    $("#eq-"+b).addEventListener("input",function(){
+      currentPreset="custom"; paintEq(); paintChain("eq"); markDirty();
+    });
+  });
+
+  /* ---------------- dirty tracking + save bar ---------------- */
+  var baseline=null, dirtyCount=0, saveState="idle", saveTimer=null;
+  function snapshot(){
+    var o={};
+    $$("input,select").forEach(function(el){
+      if(el.id==="q") return;
+      var k=el.id||el.name+":"+el.value+":"+(el.getAttribute("aria-label")||"");
+      o[k]= el.type==="checkbox"? el.checked : el.type==="radio"? (el.checked?"1":"0") : el.value;
+    });
+    o.__preset=currentPreset;
+    return o;
+  }
+  function countDiff(){
+    var now=snapshot(), n=0;
+    for(var k in now){ if(k==="__preset") continue; if(now[k]!==baseline[k]) n++; }
+    return n;
+  }
+  function markDirty(){
+    if(!baseline) return;
+    dirtyCount=countDiff();
+    if(saveState==="ok"||saveState==="err"){ saveState="idle"; }
+    renderSaveBar();
+  }
+  function renderSaveBar(){
+    var bar=$("#savebar"), msg=$("#save-msg"), acts=$("#save-acts");
+    bar.classList.remove("err","ok");
+    if(saveState==="saving"){
+      bar.classList.add("docked");
+      msg.innerHTML='<b>Saving</b><span class="why">Sending '+dirtyCount+' '+(dirtyCount===1?"change":"changes")+' to your account.</span>';
+      acts.innerHTML='<button type="button" class="btn quiet" disabled>Discard</button><button type="button" class="btn go" disabled>Saving…</button>';
+      return;
+    }
+    if(saveState==="ok"){
+      bar.classList.add("docked","ok");
+      msg.innerHTML='<b>Saved</b><span class="why">Your audio path is live on every device you are signed in on.</span>';
+      acts.innerHTML='<button type="button" class="btn quiet" id="dismiss-ok">Close</button>';
+      $("#dismiss-ok").addEventListener("click",closeBar);
+      return;
+    }
+    if(saveState==="err"){
+      bar.classList.add("docked","err");
+      msg.innerHTML='<b>Could not save</b><span class="why">Offline mode is on, so this device cannot reach your account. Your '+dirtyCount+' '+(dirtyCount===1?"change is":"changes are")+' kept here and will go up when you reconnect.</span>';
+      acts.innerHTML='<button type="button" class="btn quiet" id="fix-offline">Turn off offline mode</button><button type="button" class="btn go" id="retry">Retry</button>';
+      $("#retry").addEventListener("click",doSave);
+      $("#fix-offline").addEventListener("click",function(){
+        $("#offline").checked=false; paintChain("source"); markDirty(); doSave();
+      });
+      return;
+    }
+    if(dirtyCount>0){
+      bar.classList.add("docked");
+      msg.innerHTML='<b><span class="count">'+dirtyCount+'</span> unsaved '+(dirtyCount===1?"change":"changes")+'</b><span class="why">Nothing is applied to your account until you save.</span>';
+      acts.innerHTML='<button type="button" class="btn quiet" id="discard">Discard</button><button type="button" class="btn go" id="save">Save changes</button>';
+      $("#save").addEventListener("click",doSave);
+      $("#discard").addEventListener("click",discard);
+    } else {
+      bar.classList.remove("docked");
+    }
+  }
+  function closeBar(){ saveState="idle"; baseline=snapshot(); dirtyCount=0; renderSaveBar(); }
+  function doSave(){
+    if(saveState==="saving") return;
+    saveState="saving"; renderSaveBar();
+    window.clearTimeout(saveTimer);
+    saveTimer=window.setTimeout(function(){
+      if($("#offline").checked){ saveState="err"; renderSaveBar(); return; }
+      saveState="ok"; baseline=snapshot(); dirtyCount=0; renderSaveBar();
+      saveTimer=window.setTimeout(function(){ if(saveState==="ok") closeBar(); },3200);
+    },700);
+  }
+  function discard(){
+    $$("input,select").forEach(function(el){
+      if(el.id==="q") return;
+      var k=el.id||el.name+":"+el.value+":"+(el.getAttribute("aria-label")||"");
+      if(!(k in baseline)) return;
+      if(el.type==="checkbox") el.checked=baseline[k];
+      else if(el.type==="radio") el.checked=(baseline[k]==="1");
+      else el.value=baseline[k];
+    });
+    currentPreset=baseline.__preset;
+    paintEq(); paintChain(); applyTheme(); applyTextSize(); applyMotion(); paintRail();
+    saveState="idle"; dirtyCount=0; renderSaveBar();
+  }
+
+  /* ---------------- rail readouts ---------------- */
+  function paintRail(){
+    var cf=parseFloat($("#crossfade").value);
+    $("#rv-playback").textContent = cf===0?"no fade":cf.toFixed(1)+" s";
+    var w=$("input[name=wifiq]:checked").value;
+    $("#rv-quality").textContent = (w==="1411"?"lossless":w+" "+CODEC_NAME[w]);
+    $("#rv-library").textContent = $$("#hidden-chips .chip").length+" hidden";
+    var on=$$(".ntf:checked").length+1;
+    $("#rv-notify").textContent = on+" on";
+    var d=$$("#device-list li").length;
+    $("#rv-devices").textContent = d+" signed in";
+    var t=$("input[name=theme]:checked").value;
+    $("#rv-appearance").textContent = t.charAt(0).toUpperCase()+t.slice(1);
+  }
+
+  /* ---------------- theme / text size / motion ---------------- */
+  var mq=window.matchMedia("(prefers-color-scheme: dark)");
+  function applyTheme(){
+    var v=$("input[name=theme]:checked").value;
+    document.documentElement.setAttribute("data-theme", v==="system" ? (mq.matches?"dark":"light") : v);
+  }
+  mq.addEventListener&&mq.addEventListener("change",function(){ if($("input[name=theme]:checked").value==="system") applyTheme() });
+  function applyTextSize(){ document.documentElement.setAttribute("data-tsize", $("input[name=tsize]:checked").value) }
+  function applyMotion(){ document.documentElement.setAttribute("data-motion", $("#reducemotion").checked?"reduced":"full") }
+  $$("input[name=theme]").forEach(function(r){ r.addEventListener("change",function(){ applyTheme(); paintRail(); markDirty() }) });
+  $$("input[name=tsize]").forEach(function(r){ r.addEventListener("change",function(){ applyTextSize(); markDirty() }) });
+  $("#reducemotion").addEventListener("change",function(){ applyMotion(); markDirty() });
+
+  /* ---------------- per-control wiring ---------------- */
+  $("#crossfade").addEventListener("input",function(){
+    var v=parseFloat(this.value);
+    $("#crossfade-v").textContent = v===0?"off":v.toFixed(1)+" s";
+    paintChain("fade"); paintRail(); markDirty();
+  });
+  $("#offline").addEventListener("change",function(){ paintChain("source"); markDirty() });
+  $("#gapless").addEventListener("change",function(){ paintChain("fade"); markDirty() });
+  $$("input[name=wifiq]").forEach(function(r){ r.addEventListener("change",function(){ paintChain("codec"); paintRail(); markDirty() }) });
+  $$("input[name=cellq]").forEach(function(r){ r.addEventListener("change",function(){ markDirty() }) });
+  $$("input[name=dlq]").forEach(function(r){ r.addEventListener("change",function(){ paintChain("codec"); markDirty() }) });
+  $("#codec").addEventListener("change",function(){ paintChain("out"); markDirty() });
+  $("#remote").addEventListener("change",function(){ paintChain("out"); markDirty() });
+  $("#loudness").addEventListener("change",function(){ paintChain("level"); markDirty() });
+  $("#normalize").addEventListener("change",function(){
+    var on=this.checked;
+    $("#loudness").disabled=!on;
+    $("#row-level").setAttribute("aria-disabled", String(!on));
+    paintChain("level"); markDirty();
+  });
+  $$(".ntf").forEach(function(c){ c.addEventListener("change",function(){ paintRail(); markDirty() }) });
+  $$("input,select").forEach(function(el){
+    if(el.id==="q"||el.type==="range") return;
+    el.addEventListener("change",markDirty);
+  });
+
+  /* ---------------- hidden artists ---------------- */
+  function wireChip(btn){
+    btn.addEventListener("click",function(){
+      btn.parentNode.remove(); paintRail(); paintHidden(); markDirty();
+    });
+  }
+  $$("#hidden-chips .chip button").forEach(wireChip);
+  function paintHidden(){
+    var wrap=$("#hidden-wrap"), n=$$("#hidden-chips .chip").length;
+    var empty=$("#hidden-empty");
+    if(n===0 && !empty){
+      var d=document.createElement("div");
+      d.id="hidden-empty"; d.className="empty"; d.style.borderBottom="0"; d.style.padding="4px 0 0";
+      d.innerHTML='<p>No hidden artists. Hide one from any artist page and it will show up here.</p>';
+      wrap.appendChild(d);
+    } else if(n>0 && empty){ empty.remove(); }
+  }
+
+  /* ---------------- storage / cache ---------------- */
+  var cacheGb=2.6, dlGb=9.8, totalGb=128, otherGb=54.2;
+  function paintStorage(){
+    var app=(dlGb+cacheGb);
+    $("#tot-app").textContent = app.toFixed(1)+" GB";
+    $("#lg-dl").textContent = dlGb.toFixed(1)+" GB";
+    $("#lg-ca").textContent = cacheGb.toFixed(1)+" GB";
+    $("#lg-fr").textContent = (totalGb-app-otherGb).toFixed(1)+" GB";
+    $("#m-dl").style.width=(dlGb/totalGb*100).toFixed(2)+"%";
+    $("#m-ca").style.width=(cacheGb/totalGb*100).toFixed(2)+"%";
+    $("#meter").setAttribute("aria-label","Downloads "+dlGb.toFixed(1)+" gigabytes, cache "+cacheGb.toFixed(1)+" gigabytes, other apps "+otherGb+" gigabytes, free "+(totalGb-app-otherGb).toFixed(1)+" gigabytes");
+    $("#rv-storage").textContent = app.toFixed(1)+" GB";
+  }
+  var cacheStage=0;
+  $("#clearcache").addEventListener("click",function(){
+    var btn=this, state=$("#cache-state");
+    if(cacheGb===0) return;
+    if(cacheStage===0){
+      cacheStage=1;
+      btn.textContent="Clear "+cacheGb.toFixed(1)+" GB now";
+      btn.classList.remove("quiet"); btn.classList.add("danger");
+      state.textContent="Album art and stream buffers get rebuilt as you listen. Downloads are untouched.";
+      return;
+    }
+    cacheStage=0;
+    btn.disabled=true; btn.textContent="Clearing…"; state.textContent="";
+    window.setTimeout(function(){
+      cacheGb=0; paintStorage();
+      btn.disabled=false; btn.textContent="Clear cache";
+      btn.classList.add("quiet"); btn.classList.remove("danger");
+      state.textContent="Cache cleared. Nothing left to clear.";
+      btn.disabled=true;
+    },900);
+  });
+
+  /* ---------------- devices ---------------- */
+  function wireDeviceRow(li){
+    var b=li.querySelector("button");
+    if(!b||b.disabled) return;
+    b.addEventListener("click",function(){
+      b.disabled=true; b.textContent="Signing out…";
+      window.setTimeout(function(){ li.remove(); paintDevices(); paintRail(); },600);
+    });
+  }
+  function paintDevices(){
+    var n=$$("#device-list li").length;
+    $("#device-empty").hidden = n>1;
+    $("#device-list").hidden = n===0;
+  }
+  $$("#device-list li").forEach(wireDeviceRow);
+  $("#refresh-devices").addEventListener("click",function(){
+    var btn=this, list=$("#device-list"), skel=$("#device-skeleton"), state=$("#devices-state");
+    btn.disabled=true; state.textContent="Checking…";
+    list.hidden=true; $("#device-empty").hidden=true; skel.hidden=false;
+    window.setTimeout(function(){
+      skel.hidden=true; list.hidden=false; btn.disabled=false;
+      state.textContent="Checked a moment ago"; paintDevices();
+    },1000);
+  });
+
+  /* ---------------- account actions ---------------- */
+  $("#reqdata").addEventListener("click",function(){
+    var b=this; b.disabled=true; b.textContent="Requested";
+    var p=b.closest(".row").querySelector(".row-desc");
+    p.innerHTML='We are building it now. An email lands at <span class="val">ada@okonkwo.audio</span> when the file is ready to download.';
+  });
+  $("#signout-all").addEventListener("click",function(){
+    var b=this;
+    if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent="Sign out of 2 other devices"; b.classList.add("danger"); b.classList.remove("quiet"); return; }
+    b.disabled=true; b.textContent="Signing out…";
+    window.setTimeout(function(){
+      $$("#device-list li").forEach(function(li,i){ if(i>0) li.remove() });
+      paintDevices(); paintRail();
+      b.textContent="Signed out everywhere"; b.classList.remove("danger"); b.classList.add("quiet");
+    },800);
+  });
+  $("#del-start").addEventListener("click",function(){
+    var box=$("#delete-confirm");
+    box.innerHTML='<span style="font-size:.9375rem;max-width:52ch">Type <span class="val">DELETE</span> to confirm.</span>'+
+      '<input type="text" id="del-word" autocomplete="off" spellcheck="false" aria-label="Type DELETE to confirm" style="min-height:44px;padding:0 12px;border:1px solid var(--panel-30);border-radius:var(--r-1);background:var(--panel-10);color:var(--ink-00);font:inherit;font-size:.9375rem;width:150px">'+
+      '<button type="button" class="btn danger" id="del-go" disabled>Delete account</button>'+
+      '<button type="button" class="btn quiet" id="del-cancel">Keep my account</button>';
+    var w=$("#del-word"), go=$("#del-go");
+    w.addEventListener("input",function(){ go.disabled = w.value.trim().toUpperCase()!=="DELETE" });
+    $("#del-cancel").addEventListener("click",function(){
+      box.innerHTML='<button type="button" class="btn danger" id="del-start2">Delete account</button>';
+      $("#del-start2").addEventListener("click",function(){ $("#del-start").click() });
+    });
+    go.addEventListener("click",function(){
+      box.innerHTML='<div class="note bad"><span class="k">held</span><span><b>Deletion starts in 30 days.</b> Sign in any time before 25 August and it stops. We will email a reminder at the halfway point.</span></div>';
+    });
+    w.focus();
+  });
+  $("#signout").addEventListener("click",function(){
+    this.textContent="Signing out…"; this.disabled=true;
+  });
+
+  /* ---------------- filter ---------------- */
+  var q=$("#q");
+  function runFilter(){
+    var term=q.value.trim().toLowerCase();
+    document.body.classList.toggle("filtering", term.length>0);
+    if(!term){
+      $$(".row").forEach(function(r){ r.classList.remove("hidden") });
+      $$(".sec").forEach(function(s){ s.classList.remove("hidden") });
+      $(".nomatch").classList.remove("on");
+      return;
+    }
+    var any=false;
+    $$(".sec").forEach(function(sec){
+      var shown=0;
+      $$("[data-search]",sec).forEach(function(r){
+        var hay=(r.dataset.search+" "+r.textContent).toLowerCase();
+        var hit=hay.indexOf(term)>-1;
+        r.classList.toggle("hidden",!hit);
+        if(hit) shown++;
+      });
+      var secHit = shown>0 || sec.querySelector("h2").textContent.toLowerCase().indexOf(term)>-1;
+      if(secHit && shown===0){ $$("[data-search]",sec).forEach(function(r){ r.classList.remove("hidden") }); }
+      sec.classList.toggle("hidden",!secHit);
+      if(secHit) any=true;
+    });
+    $("#nomatch-text").textContent='Nothing matches “'+q.value.trim()+'”. Try a word from the control itself, like crossfade, LDAC, or LUFS.';
+    $(".nomatch").classList.toggle("on",!any);
+  }
+  q.addEventListener("input",runFilter);
+  $("#clearfilter").addEventListener("click",function(){ q.value=""; runFilter(); q.focus() });
+
+  /* ---------------- nav: scroll spy + jump ---------------- */
+  var links=$$(".railnav a");
+  links.forEach(function(a){
+    a.addEventListener("click",function(e){
+      e.preventDefault();
+      var t=document.getElementById(a.dataset.jump);
+      t.scrollIntoView({behavior: document.documentElement.getAttribute("data-motion")==="reduced"?"auto":"smooth", block:"start"});
+      t.setAttribute("tabindex","-1"); t.focus({preventScroll:true});
+      setCurrent(a.dataset.jump);
+    });
+  });
+  function setCurrent(id){ links.forEach(function(a){ a.setAttribute("aria-current", String(a.dataset.jump===id)) }) }
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting) setCurrent(en.target.id) });
+    },{rootMargin:"-64px 0px -70% 0px",threshold:0});
+    $$(".sec").forEach(function(s){ io.observe(s) });
+  }
+  setCurrent("playback");
+
+  /* ---------------- keyboard ---------------- */
+  document.addEventListener("keydown",function(e){
+    var tag=(e.target.tagName||"").toLowerCase();
+    var typing = tag==="input"||tag==="select"||tag==="textarea";
+    if(e.key==="/" && !typing){ e.preventDefault(); q.focus(); q.select(); }
+    if(e.key==="Escape" && e.target===q){ q.value=""; runFilter(); q.blur(); }
+    if((e.ctrlKey||e.metaKey) && (e.key==="s"||e.key==="S")){
+      e.preventDefault();
+      if(dirtyCount>0 && saveState!=="saving") doSave();
+    }
+  });
+
+  /* ---------------- boot ---------------- */
+  $("#loudness").disabled = !$("#normalize").checked;
+  paintEq(); paintChain(); paintStorage(); paintRail(); paintDevices(); paintHidden();
+  applyTheme(); applyTextSize(); applyMotion();
+  baseline=snapshot(); renderSaveBar();
+})();
+</script>
+</body>
+</html>

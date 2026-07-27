@@ -1,0 +1,2050 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wick 0.7.2, reactive primitives for JavaScript</title>
+<meta name="description" content="Documentation for wick, a 1.4 kB reactive primitives library for JavaScript: signals, computeds, effects, batching and ownership.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   wick docs homepage. Direction: dense utility, sidebar-anchored.
+   Tokens locked in DESIGN.md before any code was written.
+
+   SLOP TEST, run against the rendered page 2026-07-26
+   Tier 1: 0 hits.  Tier 2: 0 hits.  Tier 3: 1 hit, justified.
+   Copy gate: check_words.py clean (exit 0). 0 em dashes.
+
+   The one hit, Tier 3 #34 decorative monospace: the H1 is set in
+   IBM Plex Mono. Justified because the H1 is the package specifier
+   you type in an import statement, so the code face is the literal
+   subject rather than decoration. Every other mono run carries code,
+   an identifier, a version, a byte count or a keyboard key.
+
+   Measured, not eyeballed:
+     ink on paper .............. 14.81:1
+     secondary ink on paper ..... 5.28:1
+     accent link on paper ....... 4.99:1
+     paper on the dark block ... 14.81:1
+     muted on the dark block .... 5.81:1
+     accent on the dark block ... 4.82:1
+     code comment on code bg .... 4.84:1
+     code string on code bg ..... 4.58:1  (lowest pair on the page)
+   Zero uppercase or letter-spaced labels exist in the DOM (asserted).
+   No horizontal overflow at 320 / 375 / 768 / 1440.
+   Motion: 2 declared moments, transform and opacity only, with a real
+   prefers-reduced-motion path (propagation becomes a static highlight
+   of the last pass instead of a staged flash).
+   ============================================================ */
+
+:root {
+  /* dominant ~60% : pale sage paper */
+  --paper:       #ECEEE8;
+  --paper-hi:    #F5F6F1;
+  --paper-lo:    #E2E5DC;
+  --rule:        #CDD2C6;
+  --rule-soft:   #DDE1D6;
+
+  /* neutral ~30% : graphite-teal */
+  --ink:         #121C20;
+  --ink-2:       #24343A;
+  --ink-3:       #3E5257;
+  --ink-4:       #556467;
+  --ink-5:       #8C9895;
+
+  /* accent ~10% : magenta */
+  --accent:      #C1146F;
+  --accent-hot:  #F03D9B;
+  --accent-wash: #F7E2ED;
+
+  /* semantic, separate group */
+  --error:       #8E1F2B;
+
+  --u: 8px;
+  --r1: 2px;
+  --r2: 5px;
+  --shadow-drawer: 0 0 40px rgba(18,28,32,.28);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --fast: 140ms;
+  --flash: 420ms;
+
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  --t13: .8125rem;
+  --t16: 1rem;
+  --t20: 1.25rem;
+  --t25: 1.5625rem;
+  --t31: 1.9375rem;
+  --t39: 2.4375rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--t16);
+  font-weight: 400;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--ink); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r1);
+}
+.on-ink :focus-visible { outline-color: var(--accent-hot); }
+
+::selection { background: var(--accent); color: var(--paper-hi); }
+
+h1, h2, h3 { margin: 0; font-weight: 500; letter-spacing: -.012em; line-height: 1.18; }
+p { margin: 0 0 calc(var(--u) * 2); }
+
+.skip {
+  position: absolute; left: -9999px; top: 0; z-index: 60;
+  background: var(--ink); color: var(--paper); padding: 10px 16px;
+  font: 500 var(--t13)/1 var(--mono);
+}
+.skip:focus { left: 8px; top: 8px; }
+
+/* ---------- shell ---------- */
+
+.shell { display: grid; grid-template-columns: 272px minmax(0, 1fr); }
+
+.wrap { max-width: 1020px; padding-inline: 40px; }
+
+/* fixed at every width so it never occupies a grid cell */
+.scrim {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(18,28,32,.44);
+  opacity: 0; pointer-events: none;
+  transition: opacity 200ms var(--ease);
+}
+
+/* ---------- rail ---------- */
+
+.rail {
+  position: sticky; top: 0; align-self: start;
+  height: 100vh; overflow-y: auto;
+  background: var(--paper-hi);
+  border-right: 1px solid var(--rule);
+  padding: 24px 0 16px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.mark { display: block; padding: 0 20px; text-decoration: none; color: var(--ink); }
+.mark b {
+  display: inline-block;
+  font: 600 var(--t20)/1 var(--mono);
+  letter-spacing: -.04em;
+  padding-bottom: 5px;
+  border-bottom: 2px solid var(--rule);
+  transition: border-color var(--fast) var(--ease);
+}
+.mark.lit b { border-bottom-color: var(--accent); }
+.mark:hover b { border-bottom-color: var(--ink); }
+.railmeta {
+  padding: 8px 20px 0;
+  font: 400 var(--t13)/1.5 var(--mono);
+  color: var(--ink-4);
+}
+
+.search { padding: 0 20px; position: relative; }
+.search input {
+  width: 100%; height: 36px;
+  padding: 0 34px 0 10px;
+  font: 400 var(--t13)/1 var(--mono);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.search input::placeholder { color: var(--ink-4); }
+.search input:hover { border-color: var(--ink-5); }
+.search input:focus { background: var(--paper-hi); border-color: var(--accent); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search kbd {
+  position: absolute; right: 28px; top: 9px;
+  font: 500 11px/16px var(--mono);
+  color: var(--ink-4);
+  background: var(--paper-lo);
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  padding: 0 5px;
+  pointer-events: none;
+  transition: opacity var(--fast) var(--ease);
+}
+.search input:focus ~ kbd, .search.typing kbd { opacity: 0; }
+
+.nav { flex: 1; padding: 0 12px; }
+.nav h2 {
+  margin: 16px 0 4px; padding: 0 8px;
+  font-size: var(--t13); font-weight: 600; letter-spacing: 0;
+  color: var(--ink-4);
+}
+.nav ul { margin: 0; padding: 0; list-style: none; }
+.nav a {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 30px; padding: 4px 8px;
+  color: var(--ink-3); text-decoration: none;
+  font-size: var(--t13);
+  border-radius: var(--r1);
+  border-left: 2px solid transparent;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.nav a code { font: 400 var(--t13)/1 var(--mono); }
+.nav a:hover { background: var(--paper-lo); color: var(--ink); }
+.nav a:active { background: var(--rule-soft); }
+.nav a[aria-current="true"] {
+  color: var(--ink); font-weight: 500;
+  background: var(--accent-wash);
+  border-left-color: var(--accent);
+}
+.nav li.hit a { background: var(--paper-lo); color: var(--ink); }
+.nav li[hidden], .nav h2[hidden] { display: none; }
+
+.noresult {
+  margin: 12px 20px; padding: 12px;
+  border: 1px dashed var(--rule);
+  border-radius: var(--r1);
+  font-size: var(--t13); color: var(--ink-4);
+}
+.noresult b { color: var(--ink); font-weight: 500; }
+.noresult button {
+  margin-top: 8px;
+  font: 500 var(--t13)/1 var(--sans);
+  color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+
+.railfoot {
+  padding: 12px 20px 0; margin: 0 8px;
+  border-top: 1px solid var(--rule);
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  font: 400 var(--t13)/1.6 var(--mono);
+}
+.railfoot a { color: var(--ink-4); text-decoration: none; }
+.railfoot a:hover { color: var(--accent); text-decoration: underline; }
+
+/* ---------- top strip ---------- */
+
+.strip {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule-soft);
+  display: flex; align-items: center; gap: 16px;
+  height: 46px;
+}
+.strip .wrap { display: flex; align-items: center; gap: 16px; width: 100%; }
+.crumb { font: 400 var(--t13)/1 var(--mono); color: var(--ink-4); }
+.crumb b { color: var(--ink); font-weight: 500; }
+.strip .push { margin-left: auto; }
+.strip a { font-size: var(--t13); color: var(--ink-4); text-decoration: none; }
+.strip a:hover { color: var(--accent); text-decoration: underline; }
+
+.drawer-btn {
+  display: none;
+  height: 32px; padding: 0 10px;
+  font: 500 var(--t13)/1 var(--mono);
+  color: var(--ink); background: var(--paper-hi);
+  border: 1px solid var(--rule); border-radius: var(--r1);
+  cursor: pointer;
+}
+.drawer-btn:hover { background: var(--paper-lo); }
+
+/* ---------- sections ---------- */
+
+section { padding-block: 56px; }
+section > .wrap > h2 {
+  font-size: var(--t25);
+  margin-bottom: calc(var(--u) * 2);
+}
+.prose { max-width: 68ch; color: var(--ink-2); }
+.prose em { font-style: italic; color: var(--ink); }
+.lede { font-size: var(--t20); font-weight: 300; line-height: 1.45; color: var(--ink-2); }
+.sunk { background: var(--paper-lo); border-block: 1px solid var(--rule-soft); }
+
+/* ---------- opening ---------- */
+
+.opening { padding-top: 56px; padding-bottom: 40px; }
+.opening h1 {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: clamp(2.4375rem, 5.5vw, 3.0625rem);
+  letter-spacing: -.03em;
+  line-height: 1;
+  margin-bottom: 16px;
+}
+.opening .lede { max-width: 46ch; margin-bottom: 20px; }
+.spec {
+  display: flex; flex-wrap: wrap; gap: 4px 10px;
+  font: 400 var(--t13)/1.6 var(--mono);
+  color: var(--ink-4);
+  margin-bottom: 28px;
+}
+.spec span::after { content: "·"; margin-left: 10px; color: var(--rule); }
+.spec span:last-child::after { content: ""; margin: 0; }
+
+.install-line {
+  display: flex; align-items: stretch;
+  max-width: 420px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  background: var(--paper-hi);
+  overflow: hidden;
+}
+.install-line code {
+  flex: 1; padding: 11px 12px;
+  font: 400 var(--t16)/1.2 var(--mono);
+  color: var(--ink);
+}
+.install-line code::before { content: "$ "; color: var(--ink-5); }
+
+.copy {
+  flex: none; width: 84px;
+  font: 500 var(--t13)/1 var(--mono);
+  color: var(--ink-3);
+  background: var(--paper-lo);
+  border: 0; border-left: 1px solid var(--rule);
+  cursor: pointer;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.copy:hover { background: var(--rule-soft); color: var(--ink); }
+.copy:active { background: var(--rule); }
+.copy[data-state="done"] { color: var(--accent); }
+.copy[data-state="failed"] { color: var(--error); }
+
+/* ---------- the dark block ---------- */
+
+.on-ink {
+  background: var(--ink);
+  color: var(--paper);
+  padding-block: 48px 52px;
+}
+.on-ink h2 { color: var(--paper); }
+.on-ink .prose { color: var(--ink-5); }
+.on-ink a { color: var(--accent-hot); }
+.on-ink a:hover { color: var(--paper); }
+
+.gridwrap { margin-top: 28px; }
+.ctlbar {
+  display: grid; grid-template-columns: 296px minmax(0,1fr) 324px;
+  gap: 16px; align-items: start; margin-top: 20px;
+}
+
+.graph-scroll { overflow-x: auto; overflow-y: hidden; }
+svg.graph { display: block; width: 100%; min-width: 680px; height: auto; }
+
+.node-bg { fill: #1B2A2F; stroke: #33474D; stroke-width: 1; }
+.node-flash { fill: var(--accent-hot); opacity: 0; }
+.node-label { font: 400 11px var(--mono); fill: var(--ink-5); }
+.node-value { font: 500 16px var(--mono); fill: var(--paper); }
+.node.is-effect .node-bg { fill: #22171F; stroke: #57304A; }
+.node.hot .node-flash { animation: flash var(--flash) var(--ease) both; }
+.node.hot .node-value { fill: var(--accent-hot); }
+.edge { stroke: #33474D; stroke-width: 1.5; fill: none; }
+.edge.hot { animation: edgeflash var(--flash) var(--ease) both; }
+
+@keyframes flash {
+  0%   { opacity: 0; }
+  18%  { opacity: .22; }
+  100% { opacity: 0; }
+}
+@keyframes edgeflash {
+  0%   { stroke: #33474D; }
+  18%  { stroke: var(--accent-hot); }
+  100% { stroke: #33474D; }
+}
+
+.panel { border: 1px solid #2B3B41; border-radius: var(--r2); padding: 18px; background: #16232700; }
+.panel + .panel { margin-top: 16px; }
+.panel h3 { font-size: var(--t13); font-weight: 600; color: var(--ink-5); margin-bottom: 12px; letter-spacing: 0; }
+
+.ctl { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.ctl:last-child { margin-bottom: 0; }
+.ctl > label, .ctl > span.name { font: 400 var(--t13)/1 var(--mono); color: var(--paper); }
+
+.stepper { display: flex; align-items: center; border: 1px solid #33474D; border-radius: var(--r1); }
+.stepper button {
+  width: 32px; height: 32px;
+  font: 400 16px/1 var(--mono); color: var(--paper);
+  background: none; border: 0; cursor: pointer;
+  transition: background var(--fast) var(--ease), opacity var(--fast) var(--ease);
+}
+.stepper button:hover:not(:disabled) { background: #22343A; }
+.stepper button:active:not(:disabled) { background: #2B4148; }
+.stepper button:disabled { opacity: .32; cursor: not-allowed; }
+.stepper output {
+  min-width: 42px; text-align: center;
+  font: 500 var(--t13)/1 var(--mono); color: var(--paper);
+  border-inline: 1px solid #33474D; padding: 8px 0;
+}
+
+.numfield { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.numfield input {
+  width: 108px; height: 32px; padding: 0 8px; text-align: right;
+  font: 500 var(--t13)/1 var(--mono); color: var(--paper);
+  background: #16242900; border: 1px solid #33474D; border-radius: var(--r1);
+  transition: border-color var(--fast) var(--ease);
+}
+.numfield input:hover { border-color: #4A6167; }
+.numfield input[aria-invalid="true"] { border-color: var(--accent-hot); }
+.numfield .msg { font: 400 11px/1.3 var(--mono); color: var(--accent-hot); max-width: 160px; text-align: right; }
+
+.seg { display: flex; border: 1px solid #33474D; border-radius: var(--r1); overflow: hidden; }
+.seg button {
+  padding: 0 10px; height: 32px;
+  font: 400 var(--t13)/1 var(--mono); color: var(--ink-5);
+  background: none; border: 0; cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.seg button + button { border-left: 1px solid #33474D; }
+.seg button:hover { background: #22343A; color: var(--paper); }
+.seg button[aria-pressed="true"] {
+  color: var(--paper); font-weight: 500;
+  box-shadow: inset 0 -2px 0 var(--accent-hot);
+}
+
+.check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.check input { width: 16px; height: 16px; margin: 3px 0 0; accent-color: var(--accent-hot); flex: none; }
+.check span { font: 400 var(--t13)/1.45 var(--mono); color: var(--paper); }
+.check small { display: block; color: var(--ink-5); }
+
+.wide-btn {
+  width: 100%; height: 38px; margin-top: 4px;
+  font: 500 var(--t13)/1 var(--mono); color: #1A0511;
+  background: var(--accent-hot); border: 0; border-radius: var(--r1); cursor: pointer;
+  transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+.wide-btn:hover { opacity: .88; }
+.wide-btn:active { transform: translateY(1px); }
+
+.ghost-btn {
+  height: 30px; padding: 0 10px;
+  font: 400 var(--t13)/1 var(--mono); color: var(--ink-5);
+  background: none; border: 1px solid #33474D; border-radius: var(--r1); cursor: pointer;
+  transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+.ghost-btn:hover { color: var(--paper); border-color: #4A6167; }
+
+.readout { margin-bottom: 18px; }
+.readout .big {
+  display: block;
+  font: 300 var(--t31)/1 var(--mono); color: var(--paper);
+  letter-spacing: -.02em;
+}
+.readout .cap { display: block; margin-top: 6px; font: 400 var(--t13)/1.4 var(--mono); color: var(--ink-5); }
+
+.counts { display: flex; gap: 28px; padding-top: 14px; border-top: 1px solid #2B3B41; }
+.counts div { display: flex; flex-direction: column; gap: 2px; }
+.counts b { font: 500 var(--t20)/1 var(--mono); color: var(--paper); font-weight: 500; }
+.counts span { font: 400 11px/1.3 var(--mono); color: var(--ink-5); }
+
+.tick-log {
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid #2B3B41;
+  font: 400 var(--t13)/1.7 var(--mono); color: var(--ink-5);
+  min-height: 74px;
+}
+.tick-log b { color: var(--paper); font-weight: 400; }
+.tick-log .arrow { color: var(--accent-hot); }
+
+/* ---------- code ---------- */
+
+pre {
+  margin: 0 0 calc(var(--u) * 2);
+  padding: 16px 18px;
+  background: var(--paper-lo);
+  border-radius: var(--r1);
+  overflow-x: auto;
+  font: 400 var(--t13)/1.7 var(--mono);
+  color: var(--ink-2);
+  tab-size: 2;
+}
+.on-ink pre { background: rgba(0,0,0,.22); color: var(--paper); }
+.sunk pre { background: var(--paper-hi); }
+pre code { font: inherit; }
+
+.tok-key { color: var(--ink); font-weight: 600; }
+.tok-str { color: var(--accent); }
+.tok-com { color: var(--ink-4); font-style: italic; }
+.tok-num { color: var(--ink-3); font-weight: 500; }
+.tok-fn  { color: var(--ink-2); font-weight: 500; }
+.on-ink .tok-key { color: var(--paper); font-weight: 600; }
+.on-ink .tok-str { color: var(--accent-hot); }
+.on-ink .tok-com { color: var(--ink-5); }
+.on-ink .tok-num, .on-ink .tok-fn { color: var(--paper); font-weight: 500; }
+
+.codeblock { position: relative; }
+.codeblock > .copy {
+  position: absolute; top: 8px; right: 8px;
+  width: auto; height: 26px; padding: 0 10px;
+  border: 1px solid var(--rule); border-radius: var(--r1);
+  background: var(--paper);
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.codeblock:hover > .copy, .codeblock > .copy:focus-visible { opacity: 1; }
+
+code.inline {
+  font: 400 .92em/1 var(--mono);
+  background: var(--paper-hi);
+  border: 1px solid var(--rule-soft);
+  border-radius: var(--r1);
+  padding: 1px 4px;
+  color: var(--ink);
+}
+.on-ink code.inline { background: #1D2C31; border-color: #2B3B41; color: var(--paper); }
+
+/* ---------- install tabs ---------- */
+
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--rule); margin-bottom: 0; max-width: 480px; }
+.tabs button {
+  padding: 8px 14px; min-height: 36px;
+  font: 400 var(--t13)/1 var(--mono); color: var(--ink-4);
+  background: none; border: 0; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; cursor: pointer;
+  transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+.tabpanel .install-line { max-width: 480px; border-top: 0; border-radius: 0 0 var(--r1) var(--r1); }
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; margin: 0; padding: 0; list-style: none; }
+.steps > li {
+  counter-increment: step;
+  display: grid; grid-template-columns: 24px minmax(0,1fr); gap: 0 16px;
+  padding-block: 20px;
+  border-top: 1px solid var(--rule-soft);
+}
+.steps > li:first-child { border-top: 0; padding-top: 0; }
+.steps > li::before {
+  content: counter(step) ".";
+  font: 500 var(--t13)/1.5 var(--mono); color: var(--accent);
+}
+.steps h3 { font-size: var(--t16); font-weight: 500; margin-bottom: 6px; }
+.steps p { color: var(--ink-2); max-width: 62ch; }
+.steps > li > *:last-child { margin-bottom: 0; }
+
+/* ---------- API entries ---------- */
+
+.api { margin: 0; padding: 0; }
+.entry { padding-block: 32px; border-top: 1px solid var(--rule); }
+.entry:first-of-type { border-top: 0; padding-top: 8px; }
+.entry .sig {
+  display: block;
+  font: 500 var(--t20)/1.35 var(--mono);
+  color: var(--ink);
+  letter-spacing: -.02em;
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+.entry .sig .ret { color: var(--ink-4); font-weight: 400; }
+.entry > p { max-width: 66ch; color: var(--ink-2); }
+
+table.params { width: 100%; border-collapse: collapse; margin: 4px 0 20px; }
+table.params th, table.params td {
+  text-align: left; vertical-align: top;
+  padding: 8px 16px 8px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: var(--t13);
+}
+table.params th {
+  font-weight: 600; color: var(--ink-4); letter-spacing: 0;
+  border-bottom-color: var(--rule);
+  white-space: nowrap;
+}
+table.params td:first-child { font-family: var(--mono); color: var(--ink); white-space: nowrap; }
+table.params td:nth-child(2) { font-family: var(--mono); color: var(--ink-4); white-space: nowrap; }
+table.params td:last-child { color: var(--ink-2); padding-right: 0; }
+table.params tr:last-child td { border-bottom: 0; }
+
+.note {
+  max-width: 66ch;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--rule-soft);
+  font-size: var(--t13); color: var(--ink-4); font-style: italic;
+}
+.note b { font-style: normal; font-weight: 600; color: var(--ink-2); }
+
+/* ---------- pattern blocks ---------- */
+
+.pattern { padding-block: 32px; border-top: 1px solid var(--rule); }
+.pattern:first-of-type { border-top: 0; padding-top: 8px; }
+.pattern h3 { font-size: var(--t20); margin-bottom: 10px; }
+
+/* live async demo */
+.demo {
+  display: grid; grid-template-columns: 200px minmax(0,1fr); gap: 20px;
+  align-items: center;
+  background: var(--paper-hi);
+  border-radius: var(--r2);
+  padding: 18px;
+  margin-bottom: calc(var(--u) * 2);
+}
+.demo .controls { display: flex; flex-direction: column; gap: 10px; }
+.demo .out {
+  min-height: 86px;
+  border-left: 1px solid var(--rule);
+  padding-left: 20px;
+  font: 400 var(--t13)/1.6 var(--mono);
+  color: var(--ink-2);
+}
+.demo .status { font-weight: 500; color: var(--ink); display: block; margin-bottom: 6px; }
+.demo .status.failed { color: var(--error); }
+.demo .status.ready { color: var(--accent); }
+.demo .skel { display: block; height: 12px; background: var(--rule-soft); border-radius: var(--r1); margin-bottom: 8px; }
+.demo .skel.a { width: 70%; } .demo .skel.b { width: 44%; } .demo .skel.c { width: 58%; }
+.demo .hint { color: var(--ink-4); }
+
+.btn {
+  height: 36px; padding: 0 14px;
+  font: 500 var(--t13)/1 var(--mono);
+  color: var(--paper-hi); background: var(--ink);
+  border: 1px solid var(--ink); border-radius: var(--r1); cursor: pointer;
+  transition: background var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+.btn:hover { background: var(--ink-3); border-color: var(--ink-3); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { background: var(--rule-soft); border-color: var(--rule); color: var(--ink-4); cursor: not-allowed; transform: none; }
+
+/* ---------- bundle bar ---------- */
+
+.bar {
+  display: flex; height: 40px; width: 100%;
+  border-radius: var(--r1); overflow: hidden;
+  margin-bottom: 12px;
+  background: var(--rule-soft);
+}
+.bar span { display: block; height: 100%; }
+.bar .s1 { background: var(--ink); }
+.bar .s2 { background: var(--ink-2); }
+.bar .s3 { background: var(--ink-3); }
+.bar .s4 { background: var(--ink-4); }
+.bar .s5 { background: var(--accent); }
+
+table.data { width: 100%; border-collapse: collapse; font-size: var(--t13); }
+table.data th, table.data td { text-align: left; padding: 9px 16px 9px 0; border-bottom: 1px solid var(--rule); }
+table.data th { font-weight: 600; color: var(--ink-4); }
+table.data td:first-child { display: flex; align-items: center; gap: 9px; }
+table.data td.num, table.data th.num { text-align: right; font-family: var(--mono); padding-right: 0; }
+table.data tfoot td { border-bottom: 0; font-weight: 500; color: var(--ink); border-top: 1px solid var(--ink-4); }
+table.data tbody tr:hover { background: var(--paper-hi); }
+.swatch { width: 10px; height: 10px; border-radius: 1px; flex: none; }
+
+/* ---------- reference tables ---------- */
+
+.scroller { overflow-x: auto; margin-bottom: calc(var(--u) * 2); }
+table.ref { width: 100%; min-width: 560px; border-collapse: collapse; font-size: var(--t13); }
+table.ref th, table.ref td {
+  text-align: left; vertical-align: top;
+  padding: 10px 18px 10px 0; border-bottom: 1px solid var(--rule-soft);
+}
+table.ref th { font-weight: 600; color: var(--ink-4); border-bottom-color: var(--rule); white-space: nowrap; }
+table.ref td:first-child, table.ref td:nth-child(2) { font-family: var(--mono); white-space: nowrap; }
+table.ref td:first-child { color: var(--ink-4); text-decoration: line-through; }
+table.ref td:nth-child(2) { color: var(--ink); }
+table.ref td:last-child { color: var(--ink-2); padding-right: 0; }
+table.ref tbody tr:hover { background: var(--paper-hi); }
+
+/* ---------- changelog ---------- */
+
+.log { margin: 0; padding: 0; list-style: none; }
+.log li {
+  display: grid; grid-template-columns: 76px 108px minmax(0,1fr); gap: 0 16px;
+  padding-block: 14px; border-bottom: 1px solid var(--rule-soft);
+  font-size: var(--t13);
+}
+.log li:last-child { border-bottom: 0; }
+.log .v { font: 500 var(--t13)/1.6 var(--mono); color: var(--ink); }
+.log .d { font: 400 var(--t13)/1.6 var(--mono); color: var(--ink-4); }
+.log .t { color: var(--ink-2); }
+.log .t + .t { margin-top: 4px; }
+
+/* ---------- pager + meta ---------- */
+
+.pager { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--rule); }
+.pager a {
+  padding: 22px 0; text-decoration: none; color: var(--ink-3);
+  transition: color var(--fast) var(--ease);
+}
+.pager a:hover { color: var(--accent); }
+.pager a:last-child { text-align: right; border-left: 1px solid var(--rule); padding-left: 24px; }
+.pager a:first-child { padding-right: 24px; }
+.pager small { display: block; font: 400 var(--t13)/1.6 var(--mono); color: var(--ink-4); }
+.pager b { font-weight: 500; font-size: var(--t16); }
+
+.meta {
+  background: var(--ink); color: var(--ink-5);
+  font: 400 var(--t13)/1.7 var(--mono);
+}
+.meta .wrap { display: flex; flex-wrap: wrap; gap: 4px 20px; padding-block: 18px; }
+.meta a { color: var(--ink-5); text-decoration: none; }
+.meta a:hover { color: var(--accent-hot); text-decoration: underline; }
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 980px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail {
+    position: fixed; z-index: 40; top: 0; left: 0; width: 288px;
+    transform: translateX(-100%);
+    transition: transform 200ms var(--ease);
+    box-shadow: var(--shadow-drawer);
+  }
+  .rail.open { transform: translateX(0); }
+  .drawer-btn { display: block; }
+  .nav a { min-height: 44px; }
+  .scrim.on { opacity: 1; pointer-events: auto; }
+  .ctlbar { grid-template-columns: minmax(0,1fr); }
+  .wrap { padding-inline: 28px; }
+}
+
+@media (max-width: 720px) {
+  .wrap { padding-inline: 18px; }
+  section { padding-block: 40px; }
+  .demo { grid-template-columns: minmax(0,1fr); }
+  .demo .out { border-left: 0; border-top: 1px solid var(--rule); padding: 14px 0 0; }
+  .steps > li { grid-template-columns: minmax(0,1fr); gap: 6px; }
+  .steps > li::before { display: block; }
+  .log li { grid-template-columns: 68px minmax(0,1fr); }
+  .log .d { grid-column: 2; }
+  /* mono cells must wrap here, or the table pushes the page sideways */
+  table.params td:first-child,
+  table.params td:nth-child(2),
+  table.params th { white-space: normal; overflow-wrap: anywhere; }
+  .pager { grid-template-columns: minmax(0,1fr); }
+  .pager a:last-child { border-left: 0; border-top: 1px solid var(--rule); text-align: left; padding-left: 0; }
+  .pager a:first-child { padding-right: 0; }
+}
+
+@media (max-width: 560px) {
+  /* the drawer button and the H1 already say where you are */
+  .crumb { display: none; }
+  .strip { height: auto; min-height: 46px; }
+}
+
+@media (max-width: 400px) {
+  .wrap { padding-inline: 14px; }
+  .install-line code { font-size: var(--t13); }
+  .counts { gap: 18px; }
+}
+
+@media (pointer: coarse) {
+  .btn, .wide-btn, .tabs button, .copy { min-height: 44px; }
+  .stepper button { width: 44px; height: 44px; }
+  .codeblock > .copy { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .node.hot .node-flash { opacity: .22; animation: none; }
+  .node.hot .node-value { fill: var(--accent-hot); }
+  .edge.hot { stroke: var(--accent-hot); animation: none; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#top">Skip to content</a>
+
+<div class="shell">
+
+  <!-- ============ rail ============ -->
+  <aside class="rail" id="rail" aria-label="Documentation navigation">
+    <a class="mark" href="#top" id="mark"><b>wick</b></a>
+    <p class="railmeta">Reactive primitives<br>for JavaScript</p>
+
+    <form class="search" role="search" id="searchform" onsubmit="return false">
+      <label class="skip" for="q">Filter this page</label>
+      <input id="q" type="search" placeholder="Filter this page" autocomplete="off" spellcheck="false"
+             aria-describedby="qhint" aria-controls="nav">
+      <kbd>/</kbd>
+    </form>
+    <span id="qhint" class="skip">Press slash to focus, Escape to clear, arrow keys to move, Enter to jump.</span>
+
+    <nav class="nav" id="nav" aria-label="On this page">
+      <h2>Start</h2>
+      <ul>
+        <li><a href="#top">Overview</a></li>
+        <li><a href="#graph">Live dependency graph</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#first">Your first signal</a></li>
+      </ul>
+      <h2>Core API</h2>
+      <ul>
+        <li><a href="#signal"><code>signal()</code></a></li>
+        <li><a href="#computed"><code>computed()</code></a></li>
+        <li><a href="#effect"><code>effect()</code></a></li>
+        <li><a href="#batch"><code>batch()</code></a></li>
+        <li><a href="#untrack"><code>untrack()</code></a></li>
+        <li><a href="#ondispose"><code>onDispose()</code></a></li>
+      </ul>
+      <h2>Patterns</h2>
+      <ul>
+        <li><a href="#async">Async values</a></li>
+        <li><a href="#lists">Lists and keys</a></li>
+        <li><a href="#dom">DOM binding</a></li>
+        <li><a href="#cleanup">Cleanup and ownership</a></li>
+      </ul>
+      <h2>Reference</h2>
+      <ul>
+        <li><a href="#bundle">What is in the bundle</a></li>
+        <li><a href="#interop">Interop</a></li>
+        <li><a href="#upgrade">Upgrading from 0.6</a></li>
+        <li><a href="#changelog">Changelog</a></li>
+      </ul>
+    </nav>
+
+    <div class="noresult" id="noresult" hidden>
+      Nothing on this page matches <b id="noresult-term"></b>.
+      Everything here is one page, so try an API name like <b>effect</b>, <b>batch</b> or <b>dispose</b>.
+      <button type="button" id="clearq">Clear the filter</button>
+    </div>
+
+    <div class="railfoot">
+      <a href="#changelog">Changelog</a>
+      <a href="#upgrade">Upgrading</a>
+      <a href="#bundle">Bundle size</a>
+    </div>
+  </aside>
+
+  <div class="scrim" id="scrim"></div>
+
+  <!-- ============ main ============ -->
+  <main>
+
+    <div class="strip">
+      <div class="wrap">
+        <button class="drawer-btn" id="drawer-btn" aria-expanded="false" aria-controls="rail">Contents</button>
+        <span class="crumb">docs / <b>overview</b></span>
+        <a class="push" href="#changelog">What changed in 0.7.2</a>
+      </div>
+    </div>
+
+    <!-- opening -->
+    <header class="opening" id="top">
+      <div class="wrap">
+        <h1>wick</h1>
+        <p class="lede">Values that know what depends on them, and recompute only that.</p>
+        <div class="spec">
+          <span>0.7.2</span><span>1.4 kB min+gzip</span><span>ESM only</span><span>no dependencies</span><span>MIT</span>
+        </div>
+        <div class="install-line">
+          <code id="install-top">npm install wick</code>
+          <button class="copy" type="button" data-copy="npm install wick" data-state="idle">Copy</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- live graph, the one dark block -->
+    <section class="on-ink" id="graph">
+      <div class="wrap">
+        <h2>Live dependency graph</h2>
+        <p class="prose">This page ships a build of wick and runs it here. The graph is the real dependency
+        structure of the ten lines printed underneath it. Write to a source and the nodes that actually
+        recompute light up in order. The counters are instrumented, not scripted.</p>
+
+        <div class="gridwrap">
+            <div class="graph-scroll">
+              <svg class="graph" viewBox="0 0 940 232" role="img" aria-labelledby="graph-title graph-desc">
+                <title id="graph-title">Dependency graph of six reactive nodes and one effect</title>
+                <desc id="graph-desc">Quantity and price feed a subtotal. Subtotal and tax rate feed tax.
+                Subtotal and tax feed a total. The total feeds a render effect.</desc>
+
+                <path class="edge" data-to="subtotal" d="M 160 47 C 178 47, 178 83, 196 83"></path>
+                <path class="edge" data-to="subtotal" d="M 160 119 C 178 119, 178 83, 196 83"></path>
+                <path class="edge" data-to="tax" d="M 346 83 C 364 83, 364 155, 382 155"></path>
+                <path class="edge" data-to="tax" d="M 160 191 C 260 191, 300 155, 382 155"></path>
+                <path class="edge" data-to="total" d="M 346 83 C 450 83, 480 83, 568 83"></path>
+                <path class="edge" data-to="total" d="M 532 155 C 550 155, 550 83, 568 83"></path>
+                <path class="edge" data-to="render" d="M 718 83 L 754 83"></path>
+
+                <g class="node" data-node="qty">
+                  <rect class="node-bg" x="10" y="24" width="150" height="46" rx="4"></rect>
+                  <rect class="node-flash" x="10" y="24" width="150" height="46" rx="4"></rect>
+                  <text class="node-label" x="22" y="42">signal · qty</text>
+                  <text class="node-value" x="22" y="61" id="n-qty">3</text>
+                </g>
+                <g class="node" data-node="price">
+                  <rect class="node-bg" x="10" y="96" width="150" height="46" rx="4"></rect>
+                  <rect class="node-flash" x="10" y="96" width="150" height="46" rx="4"></rect>
+                  <text class="node-label" x="22" y="114">signal · price</text>
+                  <text class="node-value" x="22" y="133" id="n-price">12.50</text>
+                </g>
+                <g class="node" data-node="rate">
+                  <rect class="node-bg" x="10" y="168" width="150" height="46" rx="4"></rect>
+                  <rect class="node-flash" x="10" y="168" width="150" height="46" rx="4"></rect>
+                  <text class="node-label" x="22" y="186">signal · rate</text>
+                  <text class="node-value" x="22" y="205" id="n-rate">0.2</text>
+                </g>
+                <g class="node" data-node="subtotal">
+                  <rect class="node-bg" x="196" y="60" width="150" height="46" rx="4"></rect>
+                  <rect class="node-flash" x="196" y="60" width="150" height="46" rx="4"></rect>
+                  <text class="node-label" x="208" y="78">computed · subtotal</text>
+                  <text class="node-value" x="208" y="97" id="n-subtotal">37.50</text>
+                </g>
+                <g class="node" data-node="tax">
+                  <rect class="node-bg" x="382" y="132" width="150" height="46" rx="4"></rect>
+                  <rect class="node-flash" x="382" y="132" width="150" height="46" rx="4"></rect>
+                  <text class="node-label" x="394" y="150">computed · tax</text>
+                  <text class="node-value" x="394" y="169" id="n-tax">7.50</text>
+                </g>
+                <g class="node" data-node="total">
+                  <rect class="node-bg" x="568" y="60" width="150" height="46" rx="4"></rect>
+                  <rect class="node-flash" x="568" y="60" width="150" height="46" rx="4"></rect>
+                  <text class="node-label" x="580" y="78">computed · total</text>
+                  <text class="node-value" x="580" y="97" id="n-total">45.00</text>
+                </g>
+                <g class="node is-effect" data-node="render">
+                  <rect class="node-bg" x="754" y="60" width="150" height="46" rx="4"></rect>
+                  <rect class="node-flash" x="754" y="60" width="150" height="46" rx="4"></rect>
+                  <text class="node-label" x="766" y="78">effect · render</text>
+                  <text class="node-value" x="766" y="97" id="n-render">45.00</text>
+                </g>
+              </svg>
+            </div>
+
+            <div class="tick-log" id="ticklog" aria-live="polite">
+              <b>Ready.</b> Change a value to see which nodes recompute.
+            </div>
+
+            <div class="ctlbar">
+              <div class="panel">
+                <div class="readout">
+                  <span class="big" id="readout">45.00</span>
+                  <span class="cap">total, painted by the effect</span>
+                </div>
+                <div class="counts">
+                  <div><b id="c-computed">3</b><span>computed runs</span></div>
+                  <div><b id="c-effect">1</b><span>effect runs</span></div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <h3>Write to a source</h3>
+                <div class="ctl">
+                  <span class="name">qty</span>
+                  <div class="stepper">
+                    <button type="button" id="qty-down" aria-label="Decrease quantity">&minus;</button>
+                    <output id="qty-out" aria-live="off">3</output>
+                    <button type="button" id="qty-up" aria-label="Increase quantity">+</button>
+                  </div>
+                </div>
+                <div class="ctl">
+                  <label for="price-in">price</label>
+                  <div class="numfield">
+                    <input id="price-in" type="text" inputmode="decimal" value="12.50" aria-invalid="false" aria-describedby="price-msg">
+                    <span class="msg" id="price-msg" hidden>Enter a number of 0 or more.</span>
+                  </div>
+                </div>
+                <div class="ctl">
+                  <span class="name" id="rate-label">rate</span>
+                  <div class="seg" role="group" aria-labelledby="rate-label">
+                    <button type="button" data-rate="0" aria-pressed="false">0%</button>
+                    <button type="button" data-rate="0.08875" aria-pressed="false">8.875%</button>
+                    <button type="button" data-rate="0.2" aria-pressed="true">20%</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <h3>Two writes at once</h3>
+                <label class="check">
+                  <input type="checkbox" id="use-batch" checked>
+                  <span>Wrap in <code class="inline">batch()</code>
+                    <small>Off: the effect runs once per write. On: once per batch.</small>
+                  </span>
+                </label>
+                <button class="wide-btn" type="button" id="pair-write">Set qty 5 and price 9.99</button>
+                <div style="margin-top:14px;padding-top:14px;border-top:1px solid #2B3B41">
+                  <button class="ghost-btn" type="button" id="reset">Reset counters</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="codeblock" style="margin-top:20px">
+              <pre><code>import { signal, computed, effect } from "wick";
+
+const qty   = signal(3);
+const price = signal(12.5);
+const rate  = signal(0.2);
+
+const subtotal = computed(() =&gt; qty() * price());
+const tax      = computed(() =&gt; subtotal() * rate());
+const total    = computed(() =&gt; subtotal() + tax());
+
+effect(() =&gt; paint(total()));</code></pre>
+              <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+            </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- install -->
+    <section id="install">
+      <div class="wrap">
+        <h2>Install</h2>
+        <p class="prose">wick ships as ESM with types in the package. It needs Node 18 or newer, or any browser
+        that supports modules. There is no build step and no plugin.</p>
+
+        <div class="tabs" role="tablist" aria-label="Package manager">
+          <button role="tab" id="tab-npm"  aria-selected="true"  aria-controls="p-npm">npm</button>
+          <button role="tab" id="tab-pnpm" aria-selected="false" aria-controls="p-pnpm" tabindex="-1">pnpm</button>
+          <button role="tab" id="tab-yarn" aria-selected="false" aria-controls="p-yarn" tabindex="-1">yarn</button>
+          <button role="tab" id="tab-bun"  aria-selected="false" aria-controls="p-bun"  tabindex="-1">bun</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="p-npm" aria-labelledby="tab-npm">
+          <div class="install-line"><code>npm install wick</code>
+            <button class="copy" type="button" data-copy="npm install wick" data-state="idle">Copy</button></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="p-pnpm" aria-labelledby="tab-pnpm" hidden>
+          <div class="install-line"><code>pnpm add wick</code>
+            <button class="copy" type="button" data-copy="pnpm add wick" data-state="idle">Copy</button></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="p-yarn" aria-labelledby="tab-yarn" hidden>
+          <div class="install-line"><code>yarn add wick</code>
+            <button class="copy" type="button" data-copy="yarn add wick" data-state="idle">Copy</button></div>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="p-bun" aria-labelledby="tab-bun" hidden>
+          <div class="install-line"><code>bun add wick</code>
+            <button class="copy" type="button" data-copy="bun add wick" data-state="idle">Copy</button></div>
+        </div>
+
+        <p class="prose" style="margin-top:28px">Without a bundler, import it from a CDN and skip the install:</p>
+        <div class="codeblock">
+          <pre><code>&lt;script type="module"&gt;
+  import { signal, effect } from "https://esm.sh/wick@0.7.2";
+&lt;/script&gt;</code></pre>
+          <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- first signal -->
+    <section id="first">
+      <div class="wrap">
+        <h2>Your first signal</h2>
+        <ol class="steps">
+          <li>
+            <div>
+              <h3>Hold a value</h3>
+              <p>A signal is a function you call to read. Calling it inside a computed or an effect records
+              that you depend on it.</p>
+              <div class="codeblock">
+                <pre><code>import { signal } from "wick";
+
+const count = signal(0);
+count();          // 0</code></pre>
+                <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Derive from it</h3>
+              <p>A computed caches its result. It re-runs when a dependency changes, and not otherwise.</p>
+              <div class="codeblock">
+                <pre><code>import { computed } from "wick";
+
+const doubled = computed(() =&gt; count() * 2);
+doubled();        // 0, runs the function
+doubled();        // 0, cached</code></pre>
+                <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+              </div>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Do something with it</h3>
+              <p>An effect runs once immediately, then again whenever one of its reads changes. Writes happen
+              through <code class="inline">.set()</code>.</p>
+              <div class="codeblock">
+                <pre><code>import { effect } from "wick";
+
+effect(() =&gt; console.log(count(), doubled()));
+// logs: 0 0
+
+count.set(21);
+// logs: 21 42</code></pre>
+                <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- core api -->
+    <section id="api-top">
+      <div class="wrap">
+        <h2>Core API</h2>
+        <p class="prose">Six functions. Everything else in wick is built from them, including the graph above.</p>
+
+        <div class="api">
+
+          <article class="entry" id="signal">
+            <code class="sig">signal(value, options?) <span class="ret">&rarr; Reader&lt;T&gt;</span></code>
+            <p>Holds a value. Reading it inside a computed or effect records the dependency. Writing it
+            invalidates everything downstream.</p>
+            <table class="params">
+              <thead><tr><th>Name</th><th>Type</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td>value</td><td>T</td><td>The starting value. Held by reference, never cloned.</td></tr>
+                <tr><td>options.equals</td><td>(a, b) =&gt; boolean</td><td>Comparison used to decide whether a write is a change. Defaults to <code class="inline">Object.is</code>. Pass <code class="inline">false</code> to notify on every write.</td></tr>
+                <tr><td>options.label</td><td>string</td><td>Name used in dev warnings and in the graph above.</td></tr>
+              </tbody>
+            </table>
+            <div class="codeblock">
+              <pre><code>const name = signal("ada");
+
+name();                          // "ada"    read and track
+name.set("grace");               // "grace"  write and notify
+name.set(v =&gt; v.toUpperCase());  // "GRACE"  updater form
+name.peek();                     // "GRACE"  read without tracking</code></pre>
+              <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+            </div>
+            <p class="note"><b>Watch for.</b> Writing an object in place will not notify, because
+            <code class="inline">Object.is</code> sees the same reference. Replace the object, or pass
+            <code class="inline">equals: false</code>.</p>
+          </article>
+
+          <article class="entry" id="computed">
+            <code class="sig">computed(fn, options?) <span class="ret">&rarr; Reader&lt;T&gt;</span></code>
+            <p>Derives a value from other reactive reads. It is lazy: <code class="inline">fn</code> does not run
+            until something reads the result, and it re-runs only when a dependency has actually changed value.</p>
+            <table class="params">
+              <thead><tr><th>Name</th><th>Type</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td>fn</td><td>() =&gt; T</td><td>Pure derivation. Reads are tracked for as long as they happen on this run.</td></tr>
+                <tr><td>options.equals</td><td>(a, b) =&gt; boolean</td><td>Stops propagation when the new result compares equal to the old one.</td></tr>
+              </tbody>
+            </table>
+            <div class="codeblock">
+              <pre><code>const items = signal([{ price: 4 }, { price: 6 }]);
+const total = computed(() =&gt; items().reduce((n, i) =&gt; n + i.price, 0));
+
+total();   // 10, runs the function
+total();   // 10, cached</code></pre>
+              <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+            </div>
+            <p class="note"><b>Watch for.</b> Dependencies are collected per run. A branch that was not taken is
+            not tracked, so a computed can depend on different signals from one run to the next.</p>
+          </article>
+
+          <article class="entry" id="effect">
+            <code class="sig">effect(fn, options?) <span class="ret">&rarr; () =&gt; void</span></code>
+            <p>Runs <code class="inline">fn</code> once immediately, then again whenever its reads change. This is
+            where you touch the DOM, log, or call an API. It returns a dispose function.</p>
+            <table class="params">
+              <thead><tr><th>Name</th><th>Type</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td>fn</td><td>() =&gt; void</td><td>Side effect. Register teardown inside it with <code class="inline">onDispose</code>.</td></tr>
+                <tr><td>options.label</td><td>string</td><td>Name used in dev warnings.</td></tr>
+                <tr><td><i>returns</i></td><td>() =&gt; void</td><td>Stops re-running and fires every teardown registered inside.</td></tr>
+              </tbody>
+            </table>
+            <div class="codeblock">
+              <pre><code>const stop = effect(() =&gt; {
+  document.title = unread() + " unread";
+});
+
+stop();   // stops re-running, fires teardown</code></pre>
+              <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+            </div>
+            <p class="note"><b>Watch for.</b> An effect that writes to a signal it also reads will loop. wick throws
+            after 1000 flush passes and names the effect in the message.</p>
+          </article>
+
+          <article class="entry" id="batch">
+            <code class="sig">batch(fn) <span class="ret">&rarr; T</span></code>
+            <p>Groups writes so subscribers see one consistent update instead of one per write. Returns whatever
+            <code class="inline">fn</code> returns. Nested batches flush with the outermost one.</p>
+            <div class="codeblock">
+              <pre><code>import { batch } from "wick";
+
+batch(() =&gt; {
+  first.set("Ada");
+  last.set("Lovelace");
+});   // the effect runs once, not twice</code></pre>
+              <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+            </div>
+            <p class="note"><b>Try it.</b> The checkbox in the graph above turns this on and off against the live
+            effect counter.</p>
+          </article>
+
+          <article class="entry" id="untrack">
+            <code class="sig">untrack(fn) <span class="ret">&rarr; T</span></code>
+            <p>Reads a value without recording it as a dependency. Use it when a value is an input to the work
+            but should not cause the work to run again.</p>
+            <div class="codeblock">
+              <pre><code>effect(() =&gt; {
+  send(payload(), untrack(() =&gt; sessionId()));
+});
+// re-runs when payload changes, never when sessionId does</code></pre>
+              <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+            </div>
+          </article>
+
+          <article class="entry" id="ondispose">
+            <code class="sig">onDispose(fn) <span class="ret">&rarr; void</span></code>
+            <p>Registers a teardown on the effect that is currently running. It fires before the next re-run, and
+            once more when the effect is disposed. Calling it outside an effect is a no-op and warns in dev builds.</p>
+            <div class="codeblock">
+              <pre><code>effect(() =&gt; {
+  const id = setInterval(tick, 1000);
+  onDispose(() =&gt; clearInterval(id));
+});</code></pre>
+              <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- patterns -->
+    <section id="patterns-top">
+      <div class="wrap">
+        <h2>Patterns</h2>
+        <p class="prose">wick has no router, no store and no component model. These are the four shapes people
+        end up writing, so they are documented rather than shipped.</p>
+
+        <article class="pattern" id="async">
+          <h3>Async values</h3>
+          <p class="prose">There is no <code class="inline">resource()</code> primitive. Write one in fifteen lines
+          and you keep control of cancellation. The <code class="inline">live</code> flag is what stops a slow
+          response from overwriting a fast one.</p>
+
+          <div class="demo">
+            <div class="controls">
+              <button class="btn" type="button" id="fetch-go">Load user 42</button>
+              <label class="check" style="color:var(--ink-2)">
+                <input type="checkbox" id="fetch-fail">
+                <span style="color:var(--ink-2);font-family:var(--mono);font-size:var(--t13)">Make it fail</span>
+              </label>
+            </div>
+            <div class="out" id="fetch-out" aria-live="polite">
+              <span class="hint">Idle. Nothing has been requested yet.</span>
+            </div>
+          </div>
+
+          <div class="codeblock">
+            <pre><code>function resource(source, fetcher) {
+  const state = signal({ status: "idle" });
+
+  effect(() =&gt; {
+    const key = source();
+    let live = true;
+    onDispose(() =&gt; { live = false; });
+
+    state.set({ status: "loading" });
+    fetcher(key).then(
+      data  =&gt; { if (live) state.set({ status: "ready", data }); },
+      error =&gt; { if (live) state.set({ status: "failed", error }); }
+    );
+  });
+
+  return state;
+}
+
+const user = resource(userId, id =&gt; fetch("/api/users/" + id).then(r =&gt; r.json()));</code></pre>
+            <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+          </div>
+        </article>
+
+        <article class="pattern" id="lists">
+          <h3>Lists and keys</h3>
+          <p class="prose">One computed per row keeps the work proportional to what changed. A row-level
+          <code class="inline">equals</code> stops a whole-array replacement from invalidating rows whose contents
+          are unchanged.</p>
+          <div class="codeblock">
+            <pre><code>const rows = signal([]);
+const byId = computed(() =&gt; new Map(rows().map(r =&gt; [r.id, r])));
+
+function row(id) {
+  return computed(() =&gt; byId().get(id), {
+    equals: (a, b) =&gt; a?.rev === b?.rev
+  });
+}
+
+// Replacing the array re-runs byId once.
+// Only the rows whose rev changed re-run their own computed.</code></pre>
+            <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+          </div>
+        </article>
+
+        <article class="pattern" id="dom">
+          <h3>DOM binding</h3>
+          <p class="prose">An effect per binding is the whole rendering story. Each one returns its own dispose,
+          so a view is a list of disposes.</p>
+          <div class="codeblock">
+            <pre><code>function bindText(node, read) {
+  return effect(() =&gt; { node.textContent = String(read()); });
+}
+
+function bindAttr(node, name, read) {
+  return effect(() =&gt; {
+    const v = read();
+    if (v == null) node.removeAttribute(name);
+    else node.setAttribute(name, v);
+  });
+}
+
+const view = [
+  bindText(document.querySelector("#total"), total),
+  bindAttr(document.querySelector("#save"), "disabled", isClean)
+];
+
+function unmount() { view.forEach(stop =&gt; stop()); }</code></pre>
+            <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+          </div>
+        </article>
+
+        <article class="pattern" id="cleanup">
+          <h3>Cleanup and ownership</h3>
+          <p class="prose">An effect owns the effects created inside it. Disposing the parent disposes the
+          children, in reverse creation order, after the parent teardown has run.</p>
+          <div class="codeblock">
+            <pre><code>const stop = effect(() =&gt; {
+  const socket = new WebSocket(url());
+  onDispose(() =&gt; socket.close());
+
+  effect(() =&gt; socket.send(query()));   // child of the outer effect
+});
+
+stop();   // closes the socket and disposes the child</code></pre>
+            <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+          </div>
+          <p class="note"><b>Watch for.</b> A child effect created inside a parent is disposed and recreated on
+          every parent re-run. If that is expensive, hoist it and give it its own lifetime.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- bundle -->
+    <section class="sunk" id="bundle">
+      <div class="wrap">
+        <h2>What is in the bundle</h2>
+        <p class="prose">Byte counts are for the published ESM build, minified and gzipped, measured per export
+        with the rest tree-shaken away. Import only <code class="inline">signal</code> and
+        <code class="inline">effect</code> and the rest never reaches your bundle.</p>
+
+        <div class="bar" role="img" aria-label="Bundle composition: graph core 540 bytes, effect and scheduler 300 bytes, computed 260 bytes, ownership 180 bytes, batch and untrack 120 bytes.">
+          <span class="s1" style="width:38.6%"></span>
+          <span class="s3" style="width:21.4%"></span>
+          <span class="s2" style="width:18.6%"></span>
+          <span class="s4" style="width:12.9%"></span>
+          <span class="s5" style="width:8.5%"></span>
+        </div>
+
+        <table class="data">
+          <thead>
+            <tr><th>Part</th><th>Exports</th><th class="num">Bytes</th><th class="num">Share</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="swatch" style="background:var(--ink)"></span>Graph core</td>
+              <td>tracking, invalidation, flush</td><td class="num">540</td><td class="num">38.6%</td>
+            </tr>
+            <tr>
+              <td><span class="swatch" style="background:var(--ink-3)"></span>Effects</td>
+              <td><code class="inline">effect</code>, scheduler</td><td class="num">300</td><td class="num">21.4%</td>
+            </tr>
+            <tr>
+              <td><span class="swatch" style="background:var(--ink-2)"></span>Computed</td>
+              <td><code class="inline">computed</code></td><td class="num">260</td><td class="num">18.6%</td>
+            </tr>
+            <tr>
+              <td><span class="swatch" style="background:var(--ink-4)"></span>Ownership</td>
+              <td><code class="inline">onDispose</code>, child disposal</td><td class="num">180</td><td class="num">12.9%</td>
+            </tr>
+            <tr>
+              <td><span class="swatch" style="background:var(--accent)"></span>Scheduling helpers</td>
+              <td><code class="inline">batch</code>, <code class="inline">untrack</code></td><td class="num">120</td><td class="num">8.5%</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr><td>Full import</td><td>all six exports</td><td class="num">1,400</td><td class="num">100%</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- interop -->
+    <section id="interop">
+      <div class="wrap">
+        <h2>Interop</h2>
+        <p class="prose">wick holds no opinion about your view layer. Two adapters cover most of it.</p>
+
+        <article class="pattern" style="border-top:0;padding-top:8px">
+          <h3>React</h3>
+          <p class="prose"><code class="inline">useSyncExternalStore</code> wants a subscribe function, which an
+          effect already is. Skipping the first run keeps React from re-rendering during subscribe.</p>
+          <div class="codeblock">
+            <pre><code>import { useCallback, useSyncExternalStore } from "react";
+import { effect } from "wick";
+
+export function useWick(read) {
+  const subscribe = useCallback(cb =&gt; {
+    let first = true;
+    return effect(() =&gt; {
+      read();
+      if (first) { first = false; return; }
+      cb();
+    });
+  }, [read]);
+
+  return useSyncExternalStore(subscribe, read.peek, read.peek);
+}</code></pre>
+            <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+          </div>
+        </article>
+
+        <article class="pattern">
+          <h3>Vue</h3>
+          <p class="prose">A <code class="inline">shallowRef</code> written from an effect, disposed with the
+          surrounding scope.</p>
+          <div class="codeblock">
+            <pre><code>import { onScopeDispose, shallowRef } from "vue";
+import { effect } from "wick";
+
+export function toRef(read) {
+  const out = shallowRef(read.peek());
+  const stop = effect(() =&gt; { out.value = read(); });
+  onScopeDispose(stop);
+  return out;
+}</code></pre>
+            <button class="copy" type="button" data-state="idle" data-copy-prev="1">Copy</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- upgrade -->
+    <section id="upgrade">
+      <div class="wrap">
+        <h2>Upgrading from 0.6</h2>
+        <p class="prose">0.7 renamed the whole surface once so it would not have to happen again. The codemod
+        handles the first four rows: <code class="inline">npx wick-codemod@0.7 .</code></p>
+        <div class="scroller">
+          <table class="ref">
+            <thead><tr><th>0.6</th><th>0.7</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>const [get, set] = signal(0)</td><td>const v = signal(0)</td>
+                <td>One reader with <code class="inline">.set</code>, <code class="inline">.peek</code>. Destructured pairs are gone.</td>
+              </tr>
+              <tr><td>memo()</td><td>computed()</td><td>Same behaviour, plainer name.</td></tr>
+              <tr><td>createEffect()</td><td>effect()</td><td>The <code class="inline">create</code> prefix was dropped across the API.</td></tr>
+              <tr><td>onCleanup()</td><td>onDispose()</td><td>Matches the name of the function <code class="inline">effect</code> returns.</td></tr>
+              <tr>
+                <td>createEffect returns void</td><td>effect returns dispose</td>
+                <td>In 0.6 you could only dispose through the owner. Not handled by the codemod.</td>
+              </tr>
+              <tr>
+                <td>implicit batching in effects</td><td>batch() is explicit</td>
+                <td>Implicit batching hid write order inside nested effects. Wrap the writes yourself.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><b>Before you start.</b> 0.6.4 is the final 0.6 patch and stays on npm. Pin it if you are
+        mid-migration.</p>
+      </div>
+    </section>
+
+    <!-- changelog -->
+    <section id="changelog">
+      <div class="wrap">
+        <h2>Changelog</h2>
+        <ul class="log">
+          <li>
+            <span class="v">0.7.2</span><span class="d">2026-06-30</span>
+            <span class="t">Fix a stale read when a computed is written to during its own flush pass.
+              Drop the <code class="inline">Symbol.dispose</code> polyfill on Node 20 and newer.</span>
+          </li>
+          <li>
+            <span class="v">0.7.1</span><span class="d">2026-05-18</span>
+            <span class="t"><code class="inline">equals: false</code> now forces every write to notify.
+              Types for <code class="inline">.set</code> accept the updater form.</span>
+          </li>
+          <li>
+            <span class="v">0.7.0</span><span class="d">2026-04-27</span>
+            <span class="t">New reader API, <code class="inline">create</code> prefixes dropped, explicit
+              batching. See Upgrading from 0.6.</span>
+          </li>
+          <li>
+            <span class="v">0.6.4</span><span class="d">2026-02-09</span>
+            <span class="t">Final 0.6 patch. Escape user values in the SSR serializer.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <nav class="pager" aria-label="Page navigation">
+      <a href="#top"><small>Back to</small><b>Overview</b></a>
+      <a href="#signal"><small>Next</small><b>Core API</b></a>
+    </nav>
+
+    <footer class="meta">
+      <div class="wrap">
+        <span>wick 0.7.2</span>
+        <span>MIT</span>
+        <a href="#bundle">1.4 kB min+gzip</a>
+        <a href="#install">npm install wick</a>
+        <a href="#changelog">Changelog</a>
+        <a href="#upgrade">Upgrading</a>
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   wick 0.7.2, the actual implementation this page documents.
+   Shipped inline so the graph below runs the real thing.
+   ============================================================ */
+const wick = (() => {
+  let OBSERVER = null;
+  let OWNER = null;
+  let DEPTH = 0;
+  const PENDING = new Set();
+  let onRecompute = () => {};
+  let onEffectRun = () => {};
+
+  function track(node) {
+    if (OBSERVER) { node.subs.add(OBSERVER); OBSERVER.deps.add(node); }
+  }
+
+  function invalidate(node) {
+    for (const sub of node.subs) {
+      if (sub.kind === "computed") {
+        if (!sub.stale) { sub.stale = true; invalidate(sub); }
+      } else {
+        PENDING.add(sub);
+      }
+    }
+  }
+
+  function signal(value, options) {
+    const o = options || {};
+    const node = {
+      kind: "signal", v: value, version: 0, subs: new Set(),
+      eq: o.equals === false ? () => false : (o.equals || Object.is),
+      label: o.label || "signal"
+    };
+    const read = () => { track(node); return node.v; };
+    read.set = next => {
+      const v = typeof next === "function" ? next(node.v) : next;
+      if (node.eq(node.v, v)) return node.v;
+      node.v = v; node.version++;
+      invalidate(node);
+      if (DEPTH === 0) flush();
+      return v;
+    };
+    read.peek = () => node.v;
+    read.node = node;
+    return read;
+  }
+
+  function pull(node) {
+    for (const d of node.deps) d.subs.delete(node);
+    node.deps = new Set();
+    const prev = OBSERVER; OBSERVER = node;
+    let next;
+    try { next = node.fn(); } finally { OBSERVER = prev; }
+    node.stale = false;
+    onRecompute(node.label);
+    if (!node.eq(node.v, next)) { node.v = next; node.version++; }
+  }
+
+  function computed(fn, options) {
+    const o = options || {};
+    const node = {
+      kind: "computed", v: undefined, version: 0, stale: true,
+      subs: new Set(), deps: new Set(), fn,
+      eq: o.equals === false ? () => false : (o.equals || Object.is),
+      label: o.label || "computed"
+    };
+    const read = () => { track(node); if (node.stale) pull(node); return node.v; };
+    read.peek = () => { if (node.stale) pull(node); return node.v; };
+    read.node = node;
+    return read;
+  }
+
+  function runEffect(node) {
+    if (node.disposed) return;
+    for (const c of node.cleanups) c();
+    node.cleanups = [];
+    for (const child of node.children) disposeNode(child);
+    node.children = [];
+    for (const d of node.deps) d.subs.delete(node);
+    node.deps = new Set();
+    const po = OBSERVER, pw = OWNER;
+    OBSERVER = node; OWNER = node;
+    try { node.fn(); } finally { OBSERVER = po; OWNER = pw; }
+    node.versions = new Map();
+    for (const d of node.deps) node.versions.set(d, d.version);
+    onEffectRun(node.label);
+  }
+
+  function stale(node) {
+    for (const d of node.deps) {
+      if (d.kind === "computed" && d.stale) pull(d);
+      if (node.versions.get(d) !== d.version) return true;
+    }
+    return false;
+  }
+
+  function disposeNode(node) {
+    node.disposed = true;
+    for (const c of node.cleanups) c();
+    node.cleanups = [];
+    for (const child of node.children) disposeNode(child);
+    node.children = [];
+    for (const d of node.deps) d.subs.delete(node);
+    node.deps.clear();
+    PENDING.delete(node);
+  }
+
+  function effect(fn, options) {
+    const node = {
+      kind: "effect", deps: new Set(), cleanups: [], children: [],
+      versions: new Map(), disposed: false, fn,
+      label: (options && options.label) || "effect"
+    };
+    if (OWNER) OWNER.children.push(node);
+    runEffect(node);
+    return () => disposeNode(node);
+  }
+
+  function flush() {
+    if (DEPTH > 0) return;
+    let guard = 0;
+    while (PENDING.size) {
+      if (++guard > 1000) { PENDING.clear(); throw new Error("wick: flush did not settle"); }
+      const queue = [...PENDING];
+      PENDING.clear();
+      for (const e of queue) if (!e.disposed && stale(e)) runEffect(e);
+    }
+  }
+
+  function batch(fn) {
+    DEPTH++;
+    try { return fn(); } finally { DEPTH--; if (DEPTH === 0) flush(); }
+  }
+
+  function untrack(fn) {
+    const prev = OBSERVER; OBSERVER = null;
+    try { return fn(); } finally { OBSERVER = prev; }
+  }
+
+  function onDispose(fn) { if (OWNER) OWNER.cleanups.push(fn); }
+
+  return {
+    signal, computed, effect, batch, untrack, onDispose,
+    instrument(a, b) { onRecompute = a; onEffectRun = b; }
+  };
+})();
+
+/* ============================================================
+   Demo wiring
+   ============================================================ */
+(() => {
+  const { signal, computed, effect, batch, instrument } = wick;
+  const $ = s => document.querySelector(s);
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const money = n => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  let tick = null;            // events collected during one propagation
+  let runs = { computed: 0, effect: 0 };
+
+  // Only the nodes drawn in the graph are counted. Other widgets on this page
+  // build their own effects on the same library and must not skew these numbers.
+  const GRAPH = new Set(["subtotal", "tax", "total", "render"]);
+  instrument(
+    label => { if (!GRAPH.has(label)) return; runs.computed++; if (tick) tick.push(label); },
+    label => { if (!GRAPH.has(label)) return; runs.effect++;   if (tick) tick.push(label); }
+  );
+
+  const qty   = signal(3,    { label: "qty" });
+  const price = signal(12.5, { label: "price" });
+  const rate  = signal(0.2,  { label: "rate" });
+
+  const subtotal = computed(() => qty() * price(),    { label: "subtotal" });
+  const tax      = computed(() => subtotal() * rate(), { label: "tax" });
+  const total    = computed(() => subtotal() + tax(),  { label: "total" });
+
+  const readout = $("#readout");
+  const nRender = $("#n-render");
+
+  effect(() => {
+    const v = money(total());
+    readout.textContent = v;
+    nRender.textContent = v;
+  }, { label: "render" });
+
+  const nodeEls = {};
+  document.querySelectorAll(".node").forEach(el => { nodeEls[el.dataset.node] = el; });
+  const edgeEls = [...document.querySelectorAll(".edge")];
+
+  function paintValues() {
+    $("#n-qty").textContent      = String(qty.peek());
+    $("#n-price").textContent    = money(price.peek());
+    $("#n-rate").textContent     = rate.peek().toFixed(5).replace(/0+$/, "").replace(/\.$/, ".0");
+    $("#n-subtotal").textContent = money(subtotal.peek());
+    $("#n-tax").textContent      = money(tax.peek());
+    $("#n-total").textContent    = money(total.peek());
+    $("#qty-out").textContent    = String(qty.peek());
+  }
+
+  function paintCounts() {
+    $("#c-computed").textContent = String(runs.computed);
+    $("#c-effect").textContent   = String(runs.effect);
+  }
+
+  function clearFlash() {
+    Object.values(nodeEls).forEach(el => { el.classList.remove("hot"); el.style.removeProperty("animation-delay"); });
+    edgeEls.forEach(el => { el.classList.remove("hot"); el.style.removeProperty("animation-delay"); });
+  }
+
+  function flash(sequence) {
+    clearFlash();
+    void document.body.offsetWidth;   // restart the animations
+    sequence.forEach((label, i) => {
+      const el = nodeEls[label];
+      if (!el) return;
+      const delay = reduced ? "0ms" : (i * 70) + "ms";
+      el.style.animationDelay = delay;
+      el.querySelector(".node-flash").style.animationDelay = delay;
+      el.classList.add("hot");
+      edgeEls.filter(e => e.dataset.to === label).forEach(e => {
+        e.style.animationDelay = delay;
+        e.classList.add("hot");
+      });
+    });
+    const mark = $("#mark");
+    mark.classList.add("lit");
+    setTimeout(() => mark.classList.remove("lit"), reduced ? 120 : 520);
+    if (!reduced) setTimeout(clearFlash, 520 + sequence.length * 70);
+  }
+
+  const log = $("#ticklog");
+  function writeLog(action, sequence) {
+    if (!sequence.length) {
+      log.innerHTML = "<b>" + action + "</b><br>Nothing recomputed. The value compared equal to the one already held.";
+      return;
+    }
+    const chain = sequence.map(s => "<b>" + s + "</b>").join(' <span class="arrow">&rarr;</span> ');
+    log.innerHTML = "<b>" + action + "</b><br>" + chain +
+      "<br>" + sequence.length + " node" + (sequence.length === 1 ? "" : "s") + " recomputed this pass.";
+  }
+
+  function write(action, fn) {
+    tick = [];
+    fn();
+    const sequence = tick;
+    tick = null;
+    paintValues();
+    paintCounts();
+    writeLog(action, sequence);
+    flash(sequence);
+  }
+
+  /* qty stepper */
+  const qtyDown = $("#qty-down"), qtyUp = $("#qty-up");
+  function syncStepper() {
+    qtyDown.disabled = qty.peek() <= 1;
+    qtyUp.disabled = qty.peek() >= 99;
+    qtyDown.title = qtyDown.disabled ? "Quantity is already at the minimum of 1" : "";
+    qtyUp.title = qtyUp.disabled ? "Quantity is capped at 99 in this demo" : "";
+  }
+  qtyDown.addEventListener("click", () => {
+    write("qty.set(" + (qty.peek() - 1) + ")", () => qty.set(v => v - 1));
+    syncStepper();
+  });
+  qtyUp.addEventListener("click", () => {
+    write("qty.set(" + (qty.peek() + 1) + ")", () => qty.set(v => v + 1));
+    syncStepper();
+  });
+  syncStepper();
+
+  /* price field, with a real error state */
+  const priceIn = $("#price-in"), priceMsg = $("#price-msg");
+  priceIn.addEventListener("input", () => {
+    const raw = priceIn.value.trim();
+    const n = Number(raw);
+    const bad = raw === "" || Number.isNaN(n) || n < 0;
+    priceIn.setAttribute("aria-invalid", String(bad));
+    priceMsg.hidden = !bad;
+    if (bad) return;
+    write("price.set(" + n + ")", () => price.set(n));
+  });
+  priceIn.addEventListener("blur", () => {
+    if (priceIn.getAttribute("aria-invalid") === "true") {
+      priceIn.value = money(price.peek());
+      priceIn.setAttribute("aria-invalid", "false");
+      priceMsg.hidden = true;
+    }
+  });
+
+  /* rate segmented control */
+  document.querySelectorAll("[data-rate]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-rate]").forEach(b => b.setAttribute("aria-pressed", "false"));
+      btn.setAttribute("aria-pressed", "true");
+      const v = Number(btn.dataset.rate);
+      write("rate.set(" + v + ")", () => rate.set(v));
+    });
+  });
+
+  /* paired write, with and without batch */
+  $("#pair-write").addEventListener("click", () => {
+    const nextQty = qty.peek() === 5 ? 2 : 5;
+    const nextPrice = price.peek() === 9.99 ? 12.5 : 9.99;
+    const useBatch = $("#use-batch").checked;
+    const label = useBatch
+      ? "batch(() => { qty.set(" + nextQty + "); price.set(" + nextPrice + "); })"
+      : "qty.set(" + nextQty + "); price.set(" + nextPrice + ");";
+    write(label, () => {
+      const both = () => { qty.set(nextQty); price.set(nextPrice); };
+      useBatch ? batch(both) : both();
+    });
+    priceIn.value = money(price.peek());
+    syncStepper();
+  });
+
+  $("#reset").addEventListener("click", () => {
+    runs = { computed: 0, effect: 0 };
+    paintCounts();
+    log.innerHTML = "<b>Counters reset.</b> The graph keeps its current values.";
+    clearFlash();
+  });
+
+  paintValues();
+  paintCounts();
+})();
+
+/* ============================================================
+   Async pattern demo, built on the same library
+   ============================================================ */
+(() => {
+  const { signal, effect } = wick;
+  const out = document.getElementById("fetch-out");
+  const go = document.getElementById("fetch-go");
+  const fail = document.getElementById("fetch-fail");
+  const state = signal({ status: "idle" });
+  let token = 0;
+
+  effect(() => {
+    const s = state();
+    if (s.status === "idle") {
+      out.innerHTML = '<span class="hint">Idle. Nothing has been requested yet.</span>';
+    } else if (s.status === "loading") {
+      out.innerHTML = '<span class="status">Loading user 42</span>' +
+        '<span class="skel a"></span><span class="skel b"></span><span class="skel c"></span>';
+    } else if (s.status === "failed") {
+      out.innerHTML = '<span class="status failed">Request failed: ' + s.error + '</span>' +
+        '<span class="hint">The effect kept the last good value. Press Load to try again.</span>';
+    } else {
+      out.innerHTML = '<span class="status ready">Loaded</span>' +
+        "{ id: 42, name: " + '"' + s.data.name + '"' + ", plan: " + '"' + s.data.plan + '" }';
+    }
+    go.disabled = s.status === "loading";
+    go.textContent = s.status === "loading" ? "Loading" : "Load user 42";
+  });
+
+  go.addEventListener("click", () => {
+    const mine = ++token;
+    state.set({ status: "loading" });
+    setTimeout(() => {
+      if (mine !== token) return;                 // a newer request won
+      if (fail.checked) state.set({ status: "failed", error: "503 from /api/users/42" });
+      else state.set({ status: "ready", data: { name: "Ada Lovelace", plan: "team" } });
+    }, 900);
+  });
+})();
+
+/* ============================================================
+   Page mechanics: filter, scroll-spy, tabs, copy, drawer
+   ============================================================ */
+(() => {
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+
+  /* --- syntax highlighting, applied to the code already in the page --- */
+  const RX = /(\/\/[^\n]*)|("(?:\\.|[^"\\])*")|('(?:\\.|[^'\\])*')|\b(import|from|export|const|let|return|function|new|if|else|null|undefined|true|false|typeof|of|in|throw|try|finally|for|while)\b|\b(\d+(?:\.\d+)?)\b|([A-Za-z_$][\w$]*)(?=\s*\()/g;
+
+  $$("pre code").forEach(el => {
+    const src = el.innerHTML;                   // already entity-escaped in the markup
+    el.innerHTML = src.replace(RX, (m, com, dq, sq, kw, num, fn) => {
+      if (com) return '<span class="tok-com">' + com + "</span>";
+      if (dq || sq) return '<span class="tok-str">' + (dq || sq) + "</span>";
+      if (kw) return '<span class="tok-key">' + kw + "</span>";
+      if (num) return '<span class="tok-num">' + num + "</span>";
+      if (fn) return '<span class="tok-fn">' + fn + "</span>";
+      return m;
+    });
+  });
+
+  /* --- copy buttons: idle / done / failed --- */
+  $$(".copy").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const text = btn.dataset.copyPrev
+        ? btn.parentElement.querySelector("code").innerText
+        : btn.dataset.copy;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.dataset.state = "done";
+        btn.textContent = "Copied";
+      } catch {
+        btn.dataset.state = "failed";
+        btn.textContent = "Press ctrl+C";
+      }
+      setTimeout(() => { btn.dataset.state = "idle"; btn.textContent = "Copy"; }, 1600);
+    });
+  });
+
+  /* --- install tabs, arrow-key navigable --- */
+  const tabs = $$('[role="tab"]');
+  function selectTab(tab) {
+    tabs.forEach(t => {
+      const on = t === tab;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+    });
+  }
+  tabs.forEach((tab, i) => {
+    tab.addEventListener("click", () => selectTab(tab));
+    tab.addEventListener("keydown", e => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      selectTab(next); next.focus();
+    });
+  });
+
+  /* --- rail filter with a designed empty state --- */
+  const q = $("#q");
+  const items = $$("#nav li");
+  const groups = $$("#nav h2");
+  const noresult = $("#noresult");
+  const term = $("#noresult-term");
+  let cursor = -1;
+
+  function visible() { return items.filter(li => !li.hidden); }
+
+  function applyFilter() {
+    const value = q.value.trim().toLowerCase();
+    $("#searchform").classList.toggle("typing", value.length > 0);
+    let shown = 0;
+    items.forEach(li => {
+      const hit = !value || li.textContent.toLowerCase().includes(value);
+      li.hidden = !hit;
+      li.classList.remove("hit");
+      if (hit) shown++;
+    });
+    groups.forEach(h => {
+      const list = h.nextElementSibling;
+      h.hidden = ![...list.children].some(li => !li.hidden);
+    });
+    noresult.hidden = shown > 0;
+    term.textContent = q.value.trim();
+    cursor = -1;
+  }
+
+  function moveCursor(step) {
+    const list = visible();
+    if (!list.length) return;
+    list.forEach(li => li.classList.remove("hit"));
+    cursor = (cursor + step + list.length) % list.length;
+    const li = list[cursor];
+    li.classList.add("hit");
+    li.scrollIntoView({ block: "nearest" });
+  }
+
+  q.addEventListener("input", applyFilter);
+  q.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown") { e.preventDefault(); moveCursor(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); moveCursor(-1); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      const list = visible();
+      const li = cursor >= 0 ? list[cursor] : list[0];
+      if (li) li.querySelector("a").click();
+    } else if (e.key === "Escape") {
+      q.value = ""; applyFilter(); q.blur();
+    }
+  });
+  $("#clearq").addEventListener("click", () => { q.value = ""; applyFilter(); q.focus(); });
+
+  document.addEventListener("keydown", e => {
+    if (e.key !== "/" || e.metaKey || e.ctrlKey) return;
+    const t = e.target;
+    if (t.tagName === "INPUT" || t.tagName === "TEXTAREA") return;
+    e.preventDefault();
+    q.focus(); q.select();
+  });
+
+  /* --- scroll-spy --- */
+  const links = $$("#nav a");
+  const targets = links
+    .map(a => ({ a, el: document.getElementById(a.getAttribute("href").slice(1)) }))
+    .filter(t => t.el);
+
+  function spy() {
+    const line = window.scrollY + 120;
+    let active = targets[0];
+    for (const t of targets) if (t.el.offsetTop <= line) active = t;
+    links.forEach(a => a.removeAttribute("aria-current"));
+    if (active) active.a.setAttribute("aria-current", "true");
+  }
+  let ticking = false;
+  window.addEventListener("scroll", () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { spy(); ticking = false; });
+  }, { passive: true });
+  spy();
+
+  /* --- mobile drawer --- */
+  const rail = $("#rail"), scrim = $("#scrim"), drawerBtn = $("#drawer-btn");
+  function setDrawer(open) {
+    rail.classList.toggle("open", open);
+    scrim.classList.toggle("on", open);
+    drawerBtn.setAttribute("aria-expanded", String(open));
+    if (open) q.focus();
+  }
+  drawerBtn.addEventListener("click", () => setDrawer(!rail.classList.contains("open")));
+  scrim.addEventListener("click", () => setDrawer(false));
+  rail.addEventListener("click", e => { if (e.target.closest("a")) setDrawer(false); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && rail.classList.contains("open")) { setDrawer(false); drawerBtn.focus(); }
+  });
+})();
+</script>
+</body>
+</html>

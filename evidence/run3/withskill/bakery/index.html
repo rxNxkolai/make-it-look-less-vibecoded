@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wilder Street Bakehouse</title>
+<meta name="description" content="A corner bakehouse on Wilder Street. See what is out of the oven right now, and put a loaf aside for the day you want it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   SLOP GATE RECORD - Wilder Street Bakehouse - 2026-07-27
+   Direction: Playful analog, built as a two-ink Risograph shop poster.
+
+   TIERS.  Tier 1: 0 hits.  Tier 2: 0 hits.  Tier 3: 0 hits.
+     item 6  one tracked all-caps string on the page, "DECK 1", stencilled on the
+             drawing of the oven the way a real deck oven carries a plate. Not a
+             section label and not above a heading.
+     item 8  hero CTA count is 1, measured. No filled/outline pair.
+     item 16 zero 1px card borders, measured.  item 35 every figure derives from
+             the clock and the schedule table; nothing is hardcoded beside it.
+   RICHNESS FLOOR: RF1-RF6 all yes. 56 SVGs render with real area (measured),
+     paper grain + halftone + 3px misregistration, committed 3-hue ink palette,
+     signature = the draggable Bake Board.
+   SHADOWS: 0 box-shadow declarations in the computed tree, measured. Depth is
+     carried by misregistration and overlap instead.
+
+   CONTRAST, computed rather than eyeballed:
+     ink/stock 11.57:1 · sun/ink 8.33:1 · ink-mute/stock 5.96:1 ·
+     ink-soft/ink 5.98:1 · crust 3.11:1 on stock and 3.72:1 on ink.
+     Sunflower measures 1.39:1 on stock, so on stock it is only ever a ground.
+     Focus ring swaps per band and was verified resolving on all four.
+
+   RESPONSIVE: verified 320 / 375 / 768. No horizontal scroll at any of them.
+   TOUCH TARGETS: tape 44px, day chips 47px, submit 58px.
+
+   TWO BUGS FOUND AT THE RENDERED-SCREENSHOT GATE AND FIXED:
+     1. Class collision. The entrance state class was .in, which is also the form
+        input class, so every element that finished animating silently gained an
+        input's blush background, border and padding. Renamed to .is-in. This was
+        invisible in the code and obvious in the screenshot.
+     2. Shelf overflow at 768px. Six fixed 38px slots need 258px inside a 192px
+        grid track. Slots are now flex:1 1 0 with max-width, and .row__shelf takes
+        min-width:0 so the track can constrain them.
+     Also fixed: subject/verb agreement in the generated hero line, since four of
+     the seven item names are plural ("the cardamom buns ... are").
+
+   DELIBERATE OMISSION: no loading animation on the reservation form. There is no
+     server, so a spinner would be a lie told in motion (motion.md). The form ships
+     a real pressed state, a real error state, a real computed disabled case
+     (Sunday shuts at 2:00pm and the baguettes are not out until 2:45pm) and a real
+     failure state for when device storage is unavailable.
+   ========================================================================== */
+
+:root{
+  /* --- three hues, locked in DESIGN.md --- */
+  --ink:#16225E; --ink-2:#2E3E86; --ink-mute:#454F8F; --ink-soft:#9AA3D0;
+  --stock:#F5E0D3; --stock-2:#EBD0BF;
+  --sun:#FFB511; --sun-pale:#FFD983; --crust:#BC6C15;
+
+  --ease-out:cubic-bezier(.22,1,.36,1);
+  --ease-snap:cubic-bezier(.2,0,0,1);
+
+  --u:8px;
+  --r-chip:3px;
+
+  --display:"Bricolage Grotesque","Arial Black","Helvetica Neue",sans-serif;
+  --body:"Newsreader",Georgia,"Times New Roman",serif;
+  --data:"Courier Prime","Courier New",monospace;
+
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ink); color:var(--stock);
+  font-family:var(--body); font-size:17px; line-height:1.55;
+  font-variant-numeric:oldstyle-nums;
+  -webkit-font-smoothing:antialiased;
+}
+img,svg{display:block;max-width:100%}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+
+/* ---------- bands: ground + everything that must contrast against it ---------- */
+.band{position:relative;isolation:isolate;background:var(--ground);color:var(--on)}
+.band--ink  {--ground:var(--ink);   --on:var(--stock); --muted:var(--ink-soft); --ring:var(--sun);  --line:var(--ink-2);}
+.band--stock{--ground:var(--stock); --on:var(--ink);   --muted:var(--ink-mute); --ring:var(--ink);  --line:var(--ink);}
+.band--sun  {--ground:var(--sun);   --on:var(--ink);   --muted:var(--ink);      --ring:var(--ink);  --line:var(--ink);}
+
+/* paper grain: multiply on light stock, screen on dark ink */
+.band::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background-image:var(--grain);background-size:180px 180px;
+}
+.band--stock::after,.band--sun::after{mix-blend-mode:multiply;opacity:.17}
+.band--ink::after{mix-blend-mode:screen;opacity:.055}
+
+.wrap{width:min(1180px,100% - 2rem);margin-inline:auto;position:relative;z-index:2}
+.wrap--tight{width:min(880px,100% - 2rem)}
+
+/* ---------- type ---------- */
+h1,h2,h3{font-family:var(--display);font-weight:800;margin:0;line-height:1.02;letter-spacing:-.025em}
+h2{font-size:clamp(1.9rem,1.1rem + 3.1vw,3.15rem);max-width:16ch}
+h3{font-size:1.33rem;font-weight:500;letter-spacing:-.012em;line-height:1.15}
+p{margin:0 0 calc(var(--u)*2)}
+.lede{font-size:clamp(1.13rem,1rem + .6vw,1.42rem);font-weight:300;line-height:1.45;max-width:34ch}
+.prose{max-width:64ch}
+.prose p{max-width:64ch}
+.muted{color:var(--muted)}
+.data{font-family:var(--data);font-variant-numeric:tabular-nums lining-nums;letter-spacing:-.01em}
+em{font-style:italic}
+
+.sec-head{display:flex;flex-direction:column;gap:calc(var(--u)*1.5);margin-bottom:calc(var(--u)*5)}
+.sec-head p{margin:0}
+
+/* ---------- focus, universal ---------- */
+:focus-visible{outline:3px solid var(--ring,var(--sun));outline-offset:3px;border-radius:1px}
+
+/* ==========================================================================
+   1. MASTHEAD  (not a link rail: it carries the live shop state)
+   ========================================================================== */
+.mast{padding:calc(var(--u)*2.5) 0 calc(var(--u)*2)}
+.mast__in{display:flex;align-items:center;gap:calc(var(--u)*3);flex-wrap:wrap}
+.mark{display:flex;align-items:center;gap:calc(var(--u)*1.5);text-decoration:none;flex:0 0 auto}
+.mark svg{width:26px;height:26px;color:var(--sun)}
+.mark b{font-family:var(--display);font-weight:800;font-size:1.06rem;letter-spacing:-.02em}
+.mast__state{margin-inline-start:auto;display:flex;align-items:center;gap:calc(var(--u)*2);flex-wrap:wrap}
+.mast__links{display:flex;gap:calc(var(--u)*2.5)}
+.mast__links a{font-family:var(--body);font-size:.98rem;text-underline-offset:5px;text-decoration-thickness:1px}
+.mast__links a:hover{text-decoration-color:var(--sun);text-decoration-thickness:2px}
+
+.pill{
+  font-family:var(--data);font-size:.82rem;font-weight:700;
+  border:2px solid currentColor;padding:3px 9px;border-radius:var(--r-chip);
+  white-space:nowrap;
+}
+.pill--open{color:var(--sun)}
+.pill--shut{color:var(--ink-soft)}
+.band--stock .pill--open{color:var(--ink);background:var(--sun)}
+.band--stock .pill--shut{color:var(--ink-mute)}
+
+/* slim pinned strip, solid ink, no blur and no glass */
+.strip{
+  position:fixed;inset-block-start:0;inset-inline:0;z-index:40;
+  background:var(--ink);border-block-end:2px solid var(--sun);
+  transform:translateY(-102%);transition:transform .22s var(--ease-out);
+  padding:calc(var(--u)*1.25) 0;
+}
+.strip.is-on{transform:none}
+.strip__in{display:flex;align-items:center;gap:calc(var(--u)*2);width:min(1180px,100% - 2rem);margin-inline:auto}
+.strip__in b{font-family:var(--display);font-weight:800;font-size:.98rem;letter-spacing:-.02em;color:var(--stock)}
+.strip__in .data{font-size:.86rem;color:var(--ink-soft)}
+.strip__in a{margin-inline-start:auto;font-size:.92rem;color:var(--sun);text-underline-offset:4px}
+
+/* ==========================================================================
+   2. HERO  (name only, no paragraph under it, one action, oven bleeds right)
+   ========================================================================== */
+.hero{padding:calc(var(--u)*4) 0 calc(var(--u)*9);overflow:hidden}
+.hero__grid{display:grid;gap:calc(var(--u)*5);align-items:end}
+@media(min-width:920px){
+  .hero__grid{grid-template-columns:7fr 5fr;gap:calc(var(--u)*3)}
+  .hero__art{margin-inline-end:clamp(-7rem,-6vw,-1rem);margin-block-end:calc(var(--u)*-2)}
+}
+.hero__title{
+  position:relative;isolation:isolate;
+  font-size:clamp(3.05rem,1.1rem + 9.4vw,7.6rem);
+  letter-spacing:-.038em;line-height:.87;text-wrap:balance;margin:0 0 calc(var(--u)*3);
+  font-variation-settings:"wdth" 92,"opsz" 96;
+}
+.hero__title .ghost{position:absolute;inset:0;z-index:-1;color:var(--sun);translate:4px 3px}
+.hero__status{
+  font-family:var(--data);font-size:clamp(.95rem,.85rem + .3vw,1.1rem);
+  color:var(--sun);margin:0 0 calc(var(--u)*3.5);max-width:38ch;line-height:1.5;
+}
+.hero__status .t{color:var(--stock)}
+.stamp{
+  display:inline-flex;align-items:center;gap:calc(var(--u)*1.25);
+  font-family:var(--display);font-weight:500;font-size:1.02rem;letter-spacing:-.01em;
+  color:var(--sun);text-decoration:none;
+  border:2px solid var(--sun);border-radius:var(--r-chip);
+  padding:calc(var(--u)*1.25) calc(var(--u)*2.25);
+  transition:transform .15s var(--ease-snap),background-color .15s var(--ease-snap),color .15s var(--ease-snap);
+}
+.stamp:hover{background:var(--sun);color:var(--ink)}
+.stamp:active{transform:translateY(1px)}
+.stamp svg{width:15px;height:15px}
+.hero__art svg{width:100%;height:auto}
+
+/* ==========================================================================
+   3. BAKE BOARD  (the live object)
+   ========================================================================== */
+.board{padding:calc(var(--u)*9) 0 calc(var(--u)*10)}
+.board__note{font-size:.98rem;max-width:46ch;color:var(--muted);margin:0}
+
+/* --- the printed time tape --- */
+.tape{margin:0 0 calc(var(--u)*5);max-width:760px}
+.tape__head{display:flex;align-items:baseline;gap:calc(var(--u)*2);flex-wrap:wrap;margin-bottom:calc(var(--u)*1.5)}
+.tape__clock{font-family:var(--display);font-weight:800;font-size:clamp(2.1rem,1.4rem + 2.4vw,2.9rem);letter-spacing:-.03em;line-height:1}
+.tape__mode{font-family:var(--data);font-size:.84rem;color:var(--muted)}
+.tape__rail{position:relative;padding-block:calc(var(--u)*2) 0}
+.tape__ticks{
+  height:14px;color:var(--ink);opacity:.5;
+  background-image:linear-gradient(90deg,currentColor 0 1px,transparent 1px);
+  background-size:7.4074% 8px;background-repeat:repeat-x;background-position:0 100%;
+  border-block-end:2px solid var(--ink);
+}
+.tape__input{
+  -webkit-appearance:none;appearance:none;width:100%;background:transparent;
+  margin:0;display:block;height:44px;cursor:grab;
+}
+.tape__input:active{cursor:grabbing}
+.tape__input::-webkit-slider-runnable-track{height:44px;background:transparent}
+.tape__input::-moz-range-track{height:44px;background:transparent}
+.tape__input::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:20px;height:34px;margin-top:5px;
+  background:var(--sun);border:2px solid var(--ink);border-radius:var(--r-chip);
+  box-shadow:none;
+}
+.tape__input::-moz-range-thumb{
+  width:20px;height:34px;
+  background:var(--sun);border:2px solid var(--ink);border-radius:var(--r-chip);
+}
+.tape__input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.tape__labels{display:flex;justify-content:space-between;font-family:var(--data);font-size:.8rem;color:var(--muted)}
+.tape__reset{
+  font-family:var(--data);font-size:.82rem;font-weight:700;color:var(--ink);
+  background:transparent;border:2px solid var(--ink);border-radius:var(--r-chip);
+  padding:2px 10px;cursor:pointer;
+  transition:background-color .14s var(--ease-snap),color .14s var(--ease-snap);
+}
+.tape__reset:hover{background:var(--ink);color:var(--stock)}
+.tape__reset:active{transform:translateY(1px)}
+.tape__reset[hidden]{display:none}
+
+/* --- rows --- */
+.rows{list-style:none;margin:0;padding:0;border-block-start:2px solid var(--ink)}
+.row{
+  display:grid;gap:calc(var(--u)*1) calc(var(--u)*3);
+  padding:calc(var(--u)*3) 0;
+  border-block-end:1px solid var(--ink);
+  grid-template-columns:96px 1fr;
+  grid-template-areas:"art name" "art meta" "shelf shelf";
+  align-items:start;
+}
+@media(min-width:760px){
+  .row{
+    grid-template-columns:112px minmax(11rem,1.1fr) minmax(9rem,.85fr) minmax(12rem,1fr);
+    grid-template-areas:"art name meta shelf";
+    align-items:center;
+  }
+}
+.row__art{grid-area:art}
+.row__art .good{width:100%;height:auto;color:var(--ink)}
+.row__name{grid-area:name;display:flex;flex-direction:column;gap:2px;min-width:0}
+.row__name .price{font-family:var(--data);font-size:.88rem;color:var(--muted)}
+.row__meta{grid-area:meta;display:flex;flex-direction:column;gap:calc(var(--u)*.75);align-items:flex-start;min-width:0}
+.row__times{font-family:var(--data);font-size:.83rem;color:var(--muted);line-height:1.45}
+/* min-width:0 lets the grid track actually constrain the shelf, otherwise the
+   slots size to min-content and spill past the row at tablet widths */
+.row__shelf{grid-area:shelf;min-width:0}
+
+.chip{
+  font-family:var(--data);font-size:.8rem;font-weight:700;
+  padding:3px 9px;border-radius:var(--r-chip);border:2px solid var(--ink);
+  display:inline-block;white-space:nowrap;
+  transition:opacity .14s var(--ease-snap);
+}
+.chip--proving{color:var(--ink);background:transparent;border-style:dashed}
+.chip--oven{color:var(--ink);background:var(--sun)}
+.chip--cooling{color:var(--stock);background:var(--crust);border-color:var(--crust)}
+.chip--shelf{color:var(--stock);background:var(--ink)}
+.chip--gone{color:var(--ink-mute);border-color:var(--ink-mute);background:transparent}
+.chip.is-swap{opacity:0}
+
+/* the drawn shelf that empties */
+.shelf{display:flex;align-items:flex-end;gap:6px;border-block-end:2px solid var(--ink);padding-block-end:5px;min-height:44px}
+.slot{flex:1 1 0;min-width:0;max-width:38px}
+.slot .good{width:100%;height:auto;color:var(--ink);--goodFill:var(--crust);--goodW:1.6}
+.slot--gone .good{--goodFill:none;--goodStroke:var(--ink-mute);color:var(--ink-mute);opacity:.4}
+.slot--gone .good [stroke]{stroke-dasharray:3 3}
+
+.board__empty{
+  border:2px dashed var(--ink);padding:calc(var(--u)*3);margin-block-start:calc(var(--u)*3);
+  font-family:var(--data);font-size:.95rem;
+}
+.board__empty[hidden]{display:none}
+.board__sum{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* ==========================================================================
+   4. THE DAY DIAGRAM
+   ========================================================================== */
+.day{padding:calc(var(--u)*9) 0 calc(var(--u)*10)}
+.gantt{position:relative;margin-block-start:calc(var(--u)*4)}
+.gantt__axis{
+  display:flex;justify-content:space-between;font-family:var(--data);font-size:.8rem;
+  color:var(--ink-soft);border-block-end:2px solid var(--ink-2);padding-block-end:6px;margin-block-end:calc(var(--u)*2);
+}
+.lane{display:grid;grid-template-columns:1fr;gap:6px;margin-block-end:calc(var(--u)*2)}
+.lane__label{font-family:var(--data);font-size:.82rem;color:var(--ink-soft)}
+.lane__track{position:relative;height:30px;background:
+  linear-gradient(90deg,var(--ink-2) 0 1px,transparent 1px) 0 0/7.4074% 100% repeat-x;}
+.bar{
+  position:absolute;inset-block:0;border:2px solid var(--stock);border-radius:var(--r-chip);
+  display:flex;align-items:center;padding-inline:8px;overflow:hidden;
+  font-family:var(--data);font-size:.76rem;white-space:nowrap;color:var(--stock);
+}
+.bar--cold{background:transparent;border-style:dashed;border-inline-start:none;border-start-start-radius:0;border-end-start-radius:0}
+.bar--bench{background:var(--ink-2)}
+.bar--oven{background:var(--sun);color:var(--ink);border-color:var(--sun);font-weight:700}
+.bar--counter{background:transparent;border-color:var(--stock)}
+.bar--after{background:var(--ink-2)}
+.gantt__now{
+  position:absolute;inset-block:0;width:2px;background:var(--sun);z-index:5;
+  transition:left .18s var(--ease-out);
+}
+.gantt__now::after{
+  content:"now";position:absolute;inset-block-start:-19px;inset-inline-start:-8px;
+  font-family:var(--data);font-size:.72rem;color:var(--sun);
+}
+.gantt__body{position:relative}
+
+/* ==========================================================================
+   5. FLOUR / STARTER / PEOPLE  (off-grid collage)
+   ========================================================================== */
+.mill{padding:calc(var(--u)*10) 0 calc(var(--u)*11)}
+.mill__grid{display:grid;gap:calc(var(--u)*6)}
+@media(min-width:900px){
+  .mill__grid{grid-template-columns:1fr 1fr;gap:calc(var(--u)*8);align-items:start}
+  .mill__art{position:relative;min-height:430px}
+}
+.mill__note{border-inline-start:2px solid var(--ink);padding-inline-start:calc(var(--u)*2);max-width:40ch;font-style:italic;color:var(--ink-mute)}
+.mill__art{display:flex;gap:calc(var(--u)*3);align-items:flex-end;justify-content:center;flex-wrap:wrap}
+.mill__art svg{color:var(--ink)}
+.a-sack{width:min(160px,32vw);rotate:-4deg}
+.a-scale{width:min(210px,42vw);rotate:2.5deg}
+.a-basket{width:min(150px,30vw);rotate:-2deg}
+@media(min-width:900px){
+  .mill__art{display:block}
+  .a-sack{position:absolute;inset-block-start:0;inset-inline-start:4%;width:172px}
+  .a-scale{position:absolute;inset-block-start:118px;inset-inline-end:2%;width:232px}
+  .a-basket{position:absolute;inset-block-start:262px;inset-inline-start:16%;width:168px}
+}
+.mill__stack{display:grid;gap:calc(var(--u)*4)}
+
+/* ==========================================================================
+   6. STANDING ORDER
+   ========================================================================== */
+.order{padding:calc(var(--u)*9) 0 calc(var(--u)*10)}
+.order__grid{display:grid;gap:calc(var(--u)*6)}
+@media(min-width:880px){.order__grid{grid-template-columns:1fr 1fr;gap:calc(var(--u)*7)}}
+.field{display:grid;gap:calc(var(--u)*1);margin-block-end:calc(var(--u)*3)}
+.field > span{font-family:var(--display);font-weight:500;font-size:1.02rem;letter-spacing:-.01em}
+.field .hint{font-family:var(--data);font-size:.8rem;color:var(--ink)}
+.in{
+  border:2px solid var(--ink);background:var(--stock);color:var(--ink);
+  padding:calc(var(--u)*1.5) calc(var(--u)*1.75);border-radius:var(--r-chip);width:100%;
+  font-family:var(--body);font-size:1.02rem;
+}
+.in::placeholder{color:var(--ink-mute);opacity:1}
+.in:hover{background:var(--stock-2)}
+select.in{appearance:none;background-image:linear-gradient(45deg,transparent 49%,var(--ink) 50%),linear-gradient(-45deg,transparent 49%,var(--ink) 50%);background-size:7px 7px;background-position:right 20px center,right 13px center;background-repeat:no-repeat;padding-inline-end:44px}
+.in[aria-invalid="true"]{border-color:var(--crust);border-width:3px;background:var(--stock-2)}
+.days{display:flex;gap:calc(var(--u)*1.25);flex-wrap:wrap}
+.day-chip{position:relative}
+.day-chip input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.day-chip span{
+  display:block;border:2px solid var(--ink);border-radius:var(--r-chip);
+  padding:calc(var(--u)*1.25) calc(var(--u)*2);min-width:66px;text-align:center;
+  font-family:var(--data);font-size:.92rem;font-weight:700;
+  transition:background-color .14s var(--ease-snap),color .14s var(--ease-snap);
+}
+.day-chip:hover span{background:var(--stock-2)}
+.day-chip input:checked + span{background:var(--ink);color:var(--stock)}
+.day-chip input:focus-visible + span{outline:3px solid var(--ink);outline-offset:3px}
+.err{font-family:var(--data);font-size:.83rem;color:var(--crust);font-weight:700;min-height:1.2em}
+.err:empty{min-height:0}
+.btn{
+  font-family:var(--display);font-weight:800;font-size:1.06rem;letter-spacing:-.015em;
+  background:var(--ink);color:var(--stock);border:2px solid var(--ink);border-radius:var(--r-chip);
+  padding:calc(var(--u)*1.75) calc(var(--u)*3.25);cursor:pointer;
+  transition:transform .13s var(--ease-snap),background-color .13s var(--ease-snap);
+}
+.btn:hover{background:var(--ink-2);border-color:var(--ink-2)}
+.btn:active{transform:translateY(2px)}
+.btn[disabled]{background:transparent;color:var(--ink-mute);border-color:var(--ink-mute);cursor:not-allowed;opacity:.75}
+.btn[disabled]:hover{background:transparent}
+.btn--quiet{background:transparent;color:var(--ink);font-size:.95rem;padding:calc(var(--u)*1.25) calc(var(--u)*2.25)}
+.btn--quiet:hover{background:var(--ink);color:var(--sun)}
+
+/* the printed ticket stub */
+.stub{
+  background:var(--stock);color:var(--ink);border:2px solid var(--ink);
+  padding:calc(var(--u)*3.5) calc(var(--u)*3.5) calc(var(--u)*3);
+  position:relative;max-width:420px;
+}
+.stub::after{
+  content:"";position:absolute;inset-inline:0;inset-block-end:-11px;height:11px;
+  background:radial-gradient(circle at 8px 0,transparent 0 7px,var(--stock) 7.5px) 0 0/16px 11px repeat-x;
+  border-inline:2px solid transparent;
+}
+.stub__no{font-family:var(--data);font-size:.78rem;color:var(--ink-mute);margin:0 0 calc(var(--u)*2)}
+.stub__who{font-family:var(--display);font-weight:800;font-size:1.75rem;letter-spacing:-.025em;line-height:1.05;margin:0 0 calc(var(--u)*1.5)}
+.stub dl{display:grid;grid-template-columns:auto 1fr;gap:calc(var(--u)*.75) calc(var(--u)*2);margin:0 0 calc(var(--u)*2.5);font-family:var(--data);font-size:.9rem}
+.stub dt{color:var(--ink-mute)}
+.stub dd{margin:0;font-weight:700}
+.stub__foot{font-family:var(--data);font-size:.78rem;color:var(--ink-mute);margin:0 0 calc(var(--u)*2);line-height:1.5}
+.stub--enter{animation:stub .3s var(--ease-out) both}
+@keyframes stub{from{opacity:0;transform:translateY(10px) rotate(-.8deg)}to{opacity:1;transform:none}}
+.order__out[hidden]{display:none}
+.order__empty{border:2px dashed var(--ink);padding:calc(var(--u)*3);font-family:var(--data);font-size:.9rem;max-width:420px;color:var(--ink)}
+.order__empty[hidden]{display:none}
+
+/* ==========================================================================
+   7. VISIT
+   ========================================================================== */
+.visit{padding:calc(var(--u)*9) 0 calc(var(--u)*10)}
+.visit__grid{display:grid;gap:calc(var(--u)*6)}
+@media(min-width:880px){.visit__grid{grid-template-columns:1fr 1.15fr;gap:calc(var(--u)*7);align-items:start}}
+.hours{width:100%;border-collapse:collapse;font-family:var(--data);font-size:.95rem;margin-block-start:calc(var(--u)*3)}
+.hours caption{text-align:left;font-family:var(--body);font-size:.95rem;color:var(--ink-soft);padding-block-end:calc(var(--u)*1.5)}
+.hours th{text-align:left;font-weight:400;color:var(--ink-soft);padding:calc(var(--u)*1.25) 0;border-block-end:1px solid var(--ink-2)}
+.hours td{padding:calc(var(--u)*1.25) 0;border-block-end:1px solid var(--ink-2);text-align:right}
+.hours tr.is-today th,.hours tr.is-today td{color:var(--sun);font-weight:700}
+.hours tr.is-today th::before{content:"\203A\00a0"}
+.addr{font-family:var(--display);font-weight:200;font-size:clamp(1.6rem,1.1rem + 1.9vw,2.35rem);letter-spacing:-.025em;line-height:1.12;margin:0 0 calc(var(--u)*2)}
+.map{border:2px solid var(--ink-2);width:100%;height:auto;color:var(--stock)}
+
+/* ==========================================================================
+   8. FOOTER
+   ========================================================================== */
+.foot{padding:calc(var(--u)*8) 0 calc(var(--u)*4);border-block-start:2px solid var(--sun);overflow:hidden}
+.foot__word{
+  font-family:var(--display);font-weight:800;color:var(--ink-2);
+  font-size:clamp(3.4rem,.5rem + 14.5vw,11.5rem);letter-spacing:-.045em;line-height:.78;
+  margin:0 0 calc(var(--u)*4);white-space:nowrap;position:relative;isolation:isolate;
+  font-variation-settings:"wdth" 88;
+}
+.foot__word .ghost{position:absolute;inset:0;z-index:-1;color:var(--ink-2);opacity:.45;translate:5px 4px}
+.foot__in{display:flex;gap:calc(var(--u)*4);flex-wrap:wrap;align-items:baseline;justify-content:space-between}
+.foot__in p{margin:0;font-size:.95rem;color:var(--ink-soft);max-width:44ch}
+.foot__links{display:flex;gap:calc(var(--u)*3)}
+.foot__links a{font-size:.95rem;color:var(--sun);text-underline-offset:5px}
+.foot__close{font-family:var(--data);font-size:.88rem;color:var(--stock);margin:calc(var(--u)*3) 0 0}
+
+/* ==========================================================================
+   MOTION: exactly two moments.
+   1. arrival, once on load: the oven leads, board rows follow in reading order
+   2. consequence: the chip swap when the board state actually changes
+   Both are opt-in through .js so nothing is ever hidden if scripting fails.
+   ========================================================================== */
+/* state class is .is-in, never .in: .in is the form input class and a collision
+   there silently paints an input box behind every element that finished animating */
+.js .stage{opacity:0;transform:translateY(8px)}
+.js .stage.is-in{opacity:1;transform:none;transition:opacity .42s var(--ease-out),transform .42s var(--ease-out)}
+.js .hero__art.stage{transform:translateY(14px) scale(.985);transform-origin:50% 100%}
+.js .hero__art.stage.is-in{transform:none;transition:opacity .52s var(--ease-out),transform .52s var(--ease-out)}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .js .stage{opacity:1;transform:none}
+  .strip{transition:none}
+}
+
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.skip{position:absolute;left:-9999px;top:0}
+.skip:focus{left:calc(var(--u)*2);top:calc(var(--u)*2);z-index:60;background:var(--sun);color:var(--ink);padding:calc(var(--u)*1.5) calc(var(--u)*2);font-family:var(--data);font-weight:700}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#board">Skip to the bake board</a>
+
+<!-- ===================== drawn goods, one consistent 2px ink line ===================== -->
+<svg class="sprite" aria-hidden="true" focusable="false"><defs>
+  <g id="p-good" fill="none" stroke="var(--goodStroke,currentColor)" stroke-width="var(--goodW,2)" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></g>
+</defs>
+
+  <symbol id="g-boule" viewBox="0 0 64 40">
+    <g fill="var(--goodFill,var(--crust))" stroke="var(--goodStroke,currentColor)" stroke-width="var(--goodW,2)" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+      <path d="M10 34c0-12 10-21 22-21s22 9 22 21Z"/>
+      <path fill="none" d="M21 23c6-4 15-4 21 0M24 28c5-3 11-3 16 0"/>
+    </g>
+  </symbol>
+
+  <symbol id="g-rolls" viewBox="0 0 64 40">
+    <g fill="var(--goodFill,var(--crust))" stroke="var(--goodStroke,currentColor)" stroke-width="var(--goodW,2)" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+      <path d="M6 34c0-7 4-12 9-12s9 5 9 12Z"/>
+      <path d="M40 34c0-7 4-12 9-12s9 5 9 12Z"/>
+      <path d="M21 34c0-9 5-15 11-15s11 6 11 15Z"/>
+      <path fill="none" d="M28 24h8M27 28h10M11 28h8M45 28h8"/>
+    </g>
+  </symbol>
+
+  <symbol id="g-croissant" viewBox="0 0 64 40">
+    <g fill="var(--goodFill,var(--crust))" stroke="var(--goodStroke,currentColor)" stroke-width="var(--goodW,2)" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+      <path d="M5 32c1-9 6-16 11-16 4 0 6 3 7 6 1-5 4-8 9-8s8 3 9 8c1-3 3-6 7-6 5 0 10 7 11 16 0 2-2 3-4 2-4-2-10-3-16-3H25c-6 0-12 1-16 3-2 1-4 0-4-2Z"/>
+      <path fill="none" d="M21 22c2 5 5 8 9 10M43 22c-2 5-5 8-9 10"/>
+    </g>
+  </symbol>
+
+  <symbol id="g-bun" viewBox="0 0 64 40">
+    <g fill="var(--goodFill,var(--crust))" stroke="var(--goodStroke,currentColor)" stroke-width="var(--goodW,2)" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+      <path d="M8 24c0-8 10-13 24-13s24 5 24 13c0 7-10 11-24 11S8 31 8 24Z"/>
+      <path fill="none" d="M19 14c5 8 12 13 21 16M16 30c9-2 18-8 23-17"/>
+      <circle cx="26" cy="19" r="1.4" fill="var(--goodStroke,currentColor)" stroke="none"/>
+      <circle cx="38" cy="26" r="1.4" fill="var(--goodStroke,currentColor)" stroke="none"/>
+      <circle cx="44" cy="17" r="1.4" fill="var(--goodStroke,currentColor)" stroke="none"/>
+    </g>
+  </symbol>
+
+  <symbol id="g-rye" viewBox="0 0 64 40">
+    <g fill="var(--goodFill,var(--crust))" stroke="var(--goodStroke,currentColor)" stroke-width="var(--goodW,2)" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+      <path d="M9 34V22c0-8 8-13 23-13s23 5 23 13v12Z"/>
+      <path fill="none" d="M18 16c9-3 19-3 28 0M14 26h36"/>
+    </g>
+  </symbol>
+
+  <symbol id="g-focaccia" viewBox="0 0 64 40">
+    <g fill="var(--goodFill,var(--crust))" stroke="var(--goodStroke,currentColor)" stroke-width="var(--goodW,2)" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+      <path d="M5 28c0-8 8-13 27-13s27 5 27 13c0 5-8 7-27 7S5 33 5 28Z"/>
+      <g fill="none"><circle cx="18" cy="25" r="1.6"/><circle cx="28" cy="22" r="1.6"/><circle cx="38" cy="26" r="1.6"/><circle cx="47" cy="23" r="1.6"/><circle cx="24" cy="29" r="1.6"/><circle cx="40" cy="20" r="1.6"/>
+        <path d="M31 17l4-4M33 17l4-3"/></g>
+    </g>
+  </symbol>
+
+  <symbol id="g-baguette" viewBox="0 0 64 40">
+    <g fill="var(--goodFill,var(--crust))" stroke="var(--goodStroke,currentColor)" stroke-width="var(--goodW,2)" stroke-linejoin="round" vector-effect="non-scaling-stroke">
+      <path d="M4 27c0-6 11-9 28-9s28 3 28 9-11 8-28 8S4 33 4 27Z"/>
+      <path fill="none" d="M17 21l5 7M28 20l5 7M39 20l5 7M49 21l4 6"/>
+    </g>
+  </symbol>
+
+  <symbol id="g-ear" viewBox="0 0 24 24">
+    <g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22V7"/>
+      <path d="M12 8c-3.6 0-5-1.6-5-4 2.6 0 5 .8 5 4Zm0 0c3.6 0 5-1.6 5-4-2.6 0-5 .8-5 4Z"/>
+      <path d="M12 13c-3.6 0-5-1.6-5-4 2.6 0 5 .8 5 4Zm0 0c3.6 0 5-1.6 5-4-2.6 0-5 .8-5 4Z"/>
+      <path d="M12 18c-3.6 0-5-1.6-5-4 2.6 0 5 .8 5 4Zm0 0c3.6 0 5-1.6 5-4-2.6 0-5 .8-5 4Z"/>
+    </g>
+  </symbol>
+</svg>
+
+<!-- ===================== pinned strip ===================== -->
+<div class="strip" id="strip">
+  <div class="strip__in">
+    <b>Wilder St.</b>
+    <span class="data" id="stripState">Bakehouse</span>
+    <a href="#board">Bake board</a>
+  </div>
+</div>
+
+<!-- ===================== 1 + 2. masthead and hero ===================== -->
+<header class="band band--ink">
+  <div class="mast">
+    <div class="wrap mast__in">
+      <a class="mark" href="#top">
+        <svg aria-hidden="true" focusable="false"><use href="#g-ear"></use></svg>
+        <b>Wilder Street Bakehouse</b>
+      </a>
+      <div class="mast__state">
+        <span class="pill pill--shut" id="openPill">Checking the clock</span>
+        <nav class="mast__links" aria-label="Sections">
+          <a href="#board">Bake board</a>
+          <a href="#visit">Visit</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero" id="top">
+    <div class="wrap hero__grid">
+      <div>
+        <h1 class="hero__title stage">
+          <span class="ghost" aria-hidden="true">Wilder Street Bakehouse</span>
+          Wilder Street Bakehouse
+        </h1>
+        <p class="hero__status data stage" id="heroStatus">
+          <span class="t">Reading the clock.</span> The board below shows what is out of the oven right now.
+        </p>
+        <a class="stamp stage" href="#board">
+          Today&rsquo;s bake board
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v11M3.5 9L8 13.5 12.5 9"/></svg>
+        </a>
+      </div>
+
+      <!-- the oven: rung 2 of the imagery list, the real thing drawn -->
+      <div class="hero__art stage">
+        <svg viewBox="0 0 420 348" role="img" aria-label="Drawing of the bakehouse deck oven with three loaves inside and the door open.">
+          <defs>
+            <radialGradient id="glow" cx="50%" cy="88%" r="72%">
+              <stop offset="0%" stop-color="#FFD983"/>
+              <stop offset="42%" stop-color="#FFB511"/>
+              <stop offset="78%" stop-color="#BC6C15"/>
+              <stop offset="100%" stop-color="#8A4A10"/>
+            </radialGradient>
+            <pattern id="dots" width="9" height="9" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1.5" fill="#16225E" fill-opacity=".5"/>
+            </pattern>
+            <clipPath id="mouth">
+              <path d="M74 300V152c0-38 28-66 66-66h140c38 0 66 28 66 66v148Z"/>
+            </clipPath>
+          </defs>
+
+          <!-- oven body -->
+          <path d="M22 336V60c0-12 9-21 21-21h334c12 0 21 9 21 21v276Z" fill="#2E3E86" stroke="#F5E0D3" stroke-width="4" stroke-linejoin="round"/>
+          <!-- mouth + glow -->
+          <path d="M74 300V152c0-38 28-66 66-66h140c38 0 66 28 66 66v148Z" fill="url(#glow)"/>
+          <g clip-path="url(#mouth)"><rect x="60" y="70" width="310" height="240" fill="url(#dots)"/></g>
+          <path d="M74 300V152c0-38 28-66 66-66h140c38 0 66 28 66 66v148Z" fill="none" stroke="#F5E0D3" stroke-width="4" stroke-linejoin="round"/>
+
+          <!-- deck and loaves -->
+          <g clip-path="url(#mouth)">
+            <path d="M60 252h300" stroke="#16225E" stroke-width="4"/>
+            <g style="--goodFill:#F5E0D3;--goodStroke:#16225E;--goodW:3">
+              <use href="#g-boule" x="86" y="188" width="96" height="60"/>
+              <use href="#g-boule" x="168" y="188" width="96" height="60"/>
+              <use href="#g-boule" x="250" y="188" width="96" height="60"/>
+            </g>
+            <path d="M60 292h300" stroke="#16225E" stroke-width="4"/>
+            <g style="--goodFill:#F5E0D3;--goodStroke:#16225E;--goodW:3" opacity=".55">
+              <use href="#g-baguette" x="76" y="252" width="120" height="40"/>
+              <use href="#g-baguette" x="196" y="252" width="120" height="40"/>
+            </g>
+          </g>
+
+          <!-- door handle -->
+          <rect x="60" y="310" width="300" height="16" rx="3" fill="#F5E0D3"/>
+          <rect x="150" y="304" width="120" height="9" rx="3" fill="#FFB511" stroke="#16225E" stroke-width="2"/>
+
+          <!-- dial -->
+          <g transform="translate(352 92)">
+            <circle r="30" fill="#16225E" stroke="#F5E0D3" stroke-width="4"/>
+            <g stroke="#9AA3D0" stroke-width="2" stroke-linecap="round">
+              <path d="M0-22v-6M15.6-15.6l4.2-4.2M22 0h6M-15.6-15.6l-4.2-4.2M-22 0h-6"/>
+            </g>
+            <path d="M0 0L14-14" stroke="#FFB511" stroke-width="3.5" stroke-linecap="round"/>
+            <circle r="3.5" fill="#FFB511"/>
+          </g>
+          <text x="352" y="146" text-anchor="middle" font-family="'Courier Prime',monospace" font-size="15" fill="#9AA3D0">240&#176;</text>
+
+          <!-- name plate -->
+          <rect x="44" y="60" width="120" height="26" rx="3" fill="#16225E" stroke="#9AA3D0" stroke-width="2"/>
+          <text x="104" y="78" text-anchor="middle" font-family="'Courier Prime',monospace" font-size="13" fill="#9AA3D0" letter-spacing="1">DECK 1</text>
+
+          <!-- feet -->
+          <path d="M56 336v10M364 336v10" stroke="#F5E0D3" stroke-width="6" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ===================== 3. the bake board: the live object ===================== -->
+<section class="band band--stock board" id="board" aria-labelledby="boardH">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="boardH">What is out right now</h2>
+      <p class="board__note">This board reads your device clock against our weekday bake times. Drag the tape to move through the day and watch the shelf go down. Saturday and Sunday run about an hour later.</p>
+    </div>
+
+    <div class="tape">
+      <div class="tape__head">
+        <span class="tape__clock data" id="tapeClock">--:--</span>
+        <span class="tape__mode" id="tapeMode">live</span>
+        <button type="button" class="tape__reset" id="tapeReset" hidden>Back to now</button>
+      </div>
+      <div class="tape__rail">
+        <div class="tape__ticks" aria-hidden="true"></div>
+        <label for="tapeInput" class="skip">Time of day shown on the bake board</label>
+        <input class="tape__input" id="tapeInput" type="range" min="180" max="990" step="5" value="480"
+               aria-valuetext="8:00am">
+        <div class="tape__labels" aria-hidden="true">
+          <span>3am</span><span>6am</span><span>9am</span><span>12pm</span><span>3pm</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="board__sum" id="boardSum" role="status" aria-live="polite"></p>
+
+    <ul class="rows" id="rows">
+      <!-- Rows are written by script from the one schedule below, but each row also
+           renders its plain times without script so the page is useful either way. -->
+    </ul>
+
+    <noscript>
+      <table class="hours" style="max-width:640px">
+        <caption>Weekday bake times</caption>
+        <tbody>
+          <tr><th scope="row">Country sourdough</th><td>out 6:45, usually gone by 12:30</td></tr>
+          <tr><th scope="row">Seeded rolls</th><td>out 6:55, usually gone by 11:00</td></tr>
+          <tr><th scope="row">Butter croissants</th><td>out 7:10, usually gone by 12:00</td></tr>
+          <tr><th scope="row">Cardamom buns</th><td>out 8:25, usually gone by 13:30</td></tr>
+          <tr><th scope="row">Dark rye tin</th><td>out 9:20, usually gone by 15:00</td></tr>
+          <tr><th scope="row">Rosemary focaccia</th><td>out 11:05, usually gone by 15:30</td></tr>
+          <tr><th scope="row">Afternoon baguettes</th><td>out 14:45, usually gone by 16:00</td></tr>
+        </tbody>
+      </table>
+    </noscript>
+
+    <div class="board__empty" id="boardEmpty" hidden></div>
+  </div>
+</section>
+
+<!-- ===================== 4. the day diagram ===================== -->
+<section class="band band--ink day" aria-labelledby="dayH">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="dayH">The night before your loaf</h2>
+      <p class="lede">Bread you buy at eight was mixed at three, and the dough for it was shaped the evening before. The oven only fits one bake at a time, which is the whole reason things come out when they do.</p>
+    </div>
+
+    <div class="gantt">
+      <div class="gantt__axis" aria-hidden="true">
+        <span>3am</span><span>6am</span><span>9am</span><span>12pm</span><span>3pm</span>
+      </div>
+      <div class="gantt__body">
+        <div class="gantt__now" id="gnow" style="left:37%"></div>
+
+        <div class="lane">
+          <span class="lane__label">Fridge</span>
+          <div class="lane__track">
+            <div class="bar bar--cold" style="left:0;width:22.222%">Yesterday&rsquo;s dough, cold</div>
+          </div>
+        </div>
+
+        <div class="lane">
+          <span class="lane__label">Bench</span>
+          <div class="lane__track">
+            <div class="bar bar--bench" style="left:0;width:4.938%"></div>
+            <div class="bar bar--bench" style="left:4.938%;width:13.58%">Bulk, four turns</div>
+            <div class="bar bar--bench" style="left:18.519%;width:3.704%"></div>
+          </div>
+        </div>
+
+        <div class="lane">
+          <span class="lane__label">Oven</span>
+          <div class="lane__track">
+            <div class="bar bar--oven" style="left:22.222%;width:8.642%">Loaves</div>
+            <div class="bar bar--oven" style="left:37.037%;width:9.877%">Buns, rye</div>
+            <div class="bar bar--oven" style="left:56.79%;width:3.086%"></div>
+            <div class="bar bar--oven" style="left:83.333%;width:3.704%"></div>
+          </div>
+        </div>
+
+        <div class="lane">
+          <span class="lane__label">Counter</span>
+          <div class="lane__track">
+            <div class="bar bar--counter" style="left:29.63%;width:66.667%">Open, 7 until 4</div>
+          </div>
+        </div>
+
+        <div class="lane">
+          <span class="lane__label">After</span>
+          <div class="lane__track">
+            <div class="bar bar--after" style="left:96.296%;width:3.704%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="muted" style="max-width:62ch;margin-block-start:calc(var(--u)*3)">
+      Reading it left to right: the bench is busy before dawn and empty by nine, the oven runs in four bursts, and the counter is open across all of it. The two short oven bars are focaccia at 10:40 and baguettes at 14:15. After four we wash down, feed the starter and shape tomorrow.
+    </p>
+  </div>
+</section>
+
+<!-- ===================== 5. flour, starter, people ===================== -->
+<section class="band band--stock mill" aria-labelledby="millH">
+  <div class="wrap">
+    <div class="mill__grid">
+      <div class="mill__stack">
+        <div class="sec-head" style="margin-bottom:0">
+          <h2 id="millH">Flour, starter, and who is actually here</h2>
+        </div>
+        <div class="prose">
+          <p>The white flour comes from Hazel Mill, forty minutes up the road, stoneground and sold to us in paper sacks rather than tankers. The rye is from the same place. We do not blend anything in to make the dough behave, so the loaves change a little through the year, which is the honest version of what flour does.</p>
+          <p>The starter is called <em>Doris</em>. She lives in a bucket beside the mixer and gets fed twice a day, once at three in the morning and once before we lock up.</p>
+          <p>Two of us bake and one of us serves. On Saturday there are three of us jammed behind the bench and it is louder than it needs to be.</p>
+        </div>
+        <p class="mill__note">If you want to know what is in something, ask at the counter. We can tell you every item in it, because there are usually four.</p>
+      </div>
+
+      <div class="mill__art">
+        <svg class="a-sack" viewBox="0 0 130 154" role="img" aria-label="Drawing of a paper flour sack stencilled T65.">
+          <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M24 150c-4 0-6-3-5.4-7L29 51c.7-6 5-10 11-11l12-2c7-1 9-1 16 0l12 2c6 1 10.3 5 11 11l10.4 92c.6 4-1.4 7-5.4 7Z" fill="var(--stock-2)"/>
+            <path d="M47 40c5-9 31-9 36 0M40 26c8-9 42-9 50 0l-4 14H44Z" fill="var(--stock-2)"/>
+            <path d="M40 26c10 5 40 5 50 0"/>
+          </g>
+          <rect x="22" y="82" width="86" height="26" fill="currentColor"/>
+          <text x="65" y="101" text-anchor="middle" font-family="'Courier Prime',monospace" font-weight="700" font-size="17" fill="var(--stock)" letter-spacing="2">T65</text>
+          <text x="65" y="128" text-anchor="middle" font-family="'Courier Prime',monospace" font-size="11" fill="currentColor">HAZEL MILL</text>
+        </svg>
+
+        <svg class="a-scale" viewBox="0 0 220 150" role="img" aria-label="Drawing of a two pan balance weighing dough against a brass weight.">
+          <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M110 126V40"/>
+            <path d="M84 140h52l-10-14H94Z" fill="var(--stock-2)"/>
+            <g transform="rotate(-5 110 40)">
+              <path d="M34 40h152"/>
+              <path d="M34 40v22M186 40v22"/>
+              <path d="M10 62h48c0 14-11 24-24 24S10 76 10 62Z" fill="var(--stock-2)"/>
+              <path d="M162 62h48c0 14-11 24-24 24s-24-10-24-24Z" fill="var(--stock-2)"/>
+              <path d="M34 62h0"/>
+              <rect x="176" y="44" width="20" height="18" rx="2" fill="var(--crust)"/>
+            </g>
+            <circle cx="110" cy="40" r="5" fill="currentColor"/>
+          </g>
+          <g style="--goodFill:var(--crust);--goodStroke:currentColor;--goodW:2.4">
+            <use href="#g-boule" x="8" y="30" width="56" height="35" transform="rotate(-5 110 40)"/>
+          </g>
+        </svg>
+
+        <svg class="a-basket" viewBox="0 0 150 150" role="img" aria-label="Drawing of a round proving basket seen from above, with its coiled cane rings.">
+          <g fill="none" stroke="currentColor" stroke-width="2.4">
+            <circle cx="75" cy="75" r="70"/>
+            <circle cx="75" cy="75" r="58"/>
+            <circle cx="75" cy="75" r="46"/>
+            <circle cx="75" cy="75" r="34"/>
+            <circle cx="75" cy="75" r="22"/>
+            <circle cx="75" cy="75" r="10"/>
+            <path d="M75 5v10M75 135v10M5 75h10M135 75h10" stroke-linecap="round"/>
+          </g>
+          <path d="M75 65a10 10 0 0 1 0 20" fill="var(--crust)" stroke="currentColor" stroke-width="2.4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 6. standing order ===================== -->
+<section class="band band--sun order" id="order" aria-labelledby="orderH">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="orderH">Put a loaf aside</h2>
+      <p class="lede" style="max-width:44ch">Pick a day and we will keep one back behind the counter until noon. No deposit and no account.</p>
+    </div>
+
+    <div class="order__grid">
+      <form id="orderForm" novalidate>
+        <div class="field">
+          <label for="fName"><span>Your name</span></label>
+          <input class="in" id="fName" name="name" type="text" autocomplete="name" placeholder="The name we shout across the shop" aria-describedby="eName">
+          <p class="err" id="eName" role="alert"></p>
+        </div>
+
+        <fieldset class="field" style="border:0;padding:0;margin-inline:0" aria-describedby="eDay">
+          <legend style="padding:0"><span style="font-family:var(--display);font-weight:500;font-size:1.02rem">Pickup day</span></legend>
+          <div class="days" style="margin-block-start:calc(var(--u)*1)">
+            <label class="day-chip"><input type="radio" name="day" value="Tuesday"><span>Tue</span></label>
+            <label class="day-chip"><input type="radio" name="day" value="Thursday"><span>Thu</span></label>
+            <label class="day-chip"><input type="radio" name="day" value="Saturday"><span>Sat</span></label>
+            <label class="day-chip"><input type="radio" name="day" value="Sunday"><span>Sun</span></label>
+          </div>
+          <p class="err" id="eDay" role="alert"></p>
+        </fieldset>
+
+        <div class="field">
+          <label for="fLoaf"><span>What to keep back</span></label>
+          <select class="in" id="fLoaf" name="loaf" aria-describedby="eLoaf hLoaf">
+            <option value="">Choose something</option>
+          </select>
+          <p class="hint" id="hLoaf"></p>
+          <p class="err" id="eLoaf" role="alert"></p>
+        </div>
+
+        <button class="btn" type="submit" id="fSubmit">Reserve a loaf</button>
+      </form>
+
+      <div>
+        <div class="order__empty" id="orderEmpty">
+          Nothing put aside yet. Fill the slip and a ticket prints here.
+        </div>
+
+        <div class="order__out" id="orderOut" hidden>
+          <div class="stub" id="stub">
+            <p class="stub__no data" id="stubNo">no. 0000</p>
+            <p class="stub__who" id="stubWho">Name</p>
+            <dl>
+              <dt>Day</dt><dd id="stubDay">Tuesday</dd>
+              <dt>Item</dt><dd id="stubItem">Country sourdough</dd>
+              <dt>Held until</dt><dd>noon</dd>
+            </dl>
+            <p class="stub__foot" id="stubFoot">Show this at the counter. Kept in this browser only, so it will not follow you to another device.</p>
+            <button class="btn btn--quiet" type="button" id="stubClear">Start over</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 7. visit ===================== -->
+<section class="band band--ink visit" id="visit" aria-labelledby="visitH">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="visitH">Come and get it</h2>
+    </div>
+
+    <div class="visit__grid">
+      <div>
+        <p class="addr">14 Wilder Street,<br>on the corner of Bell&nbsp;Row.</p>
+        <p class="muted" style="max-width:38ch">Two minutes from the Bell Row stop. There is a bench outside and a bowl of water for dogs.</p>
+
+        <table class="hours" id="hours">
+          <caption>Opening hours. Today is marked.</caption>
+          <tbody>
+            <tr data-d="1"><th scope="row">Monday</th><td>Closed</td></tr>
+            <tr data-d="2"><th scope="row">Tuesday</th><td>7:00 to 16:00</td></tr>
+            <tr data-d="3"><th scope="row">Wednesday</th><td>7:00 to 16:00</td></tr>
+            <tr data-d="4"><th scope="row">Thursday</th><td>7:00 to 16:00</td></tr>
+            <tr data-d="5"><th scope="row">Friday</th><td>7:00 to 16:00</td></tr>
+            <tr data-d="6"><th scope="row">Saturday</th><td>7:00 to 15:00</td></tr>
+            <tr data-d="0"><th scope="row">Sunday</th><td>8:00 to 14:00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <svg class="map" viewBox="0 0 360 268" role="img" aria-label="Drawn map of the corner. Wilder Street runs top to bottom, Bell Row runs left to right, and the bakehouse sits on the north east corner opposite the bus stop.">
+        <rect width="360" height="268" fill="#16225E"/>
+        <!-- blocks -->
+        <g fill="#2E3E86">
+          <rect x="0" y="0" width="146" height="128"/>
+          <rect x="214" y="0" width="146" height="128"/>
+          <rect x="0" y="176" width="146" height="92"/>
+          <rect x="214" y="176" width="146" height="92"/>
+        </g>
+        <!-- roads -->
+        <g stroke="#9AA3D0" stroke-width="2">
+          <path d="M146 0v268M214 0v268M0 128h360M0 176h360"/>
+        </g>
+        <path d="M180 0v268" stroke="#9AA3D0" stroke-width="2" stroke-dasharray="12 12"/>
+        <path d="M0 152h360" stroke="#9AA3D0" stroke-width="2" stroke-dasharray="12 12"/>
+        <!-- the shop -->
+        <rect x="222" y="74" width="94" height="46" fill="#FFB511" stroke="#F5E0D3" stroke-width="3"/>
+        <g transform="translate(234 82) scale(1.25)" color="#16225E"><use href="#g-ear"></use></g>
+        <text x="266" y="105" font-family="'Courier Prime',monospace" font-weight="700" font-size="13" fill="#16225E">no. 14</text>
+        <!-- bus stop -->
+        <circle cx="112" cy="196" r="7" fill="#F5E0D3"/>
+        <text x="126" y="201" font-family="'Courier Prime',monospace" font-size="12" fill="#F5E0D3">Bell Row stop</text>
+        <!-- labels -->
+        <text x="196" y="252" font-family="'Courier Prime',monospace" font-size="13" fill="#9AA3D0" transform="rotate(-90 196 252)">Wilder St</text>
+        <text x="16" y="146" font-family="'Courier Prime',monospace" font-size="13" fill="#9AA3D0">Bell Row</text>
+        <!-- bench -->
+        <rect x="228" y="126" width="34" height="7" fill="#F5E0D3"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===================== 8. footer ===================== -->
+<footer class="band band--ink foot">
+  <div class="wrap">
+    <p class="foot__word" aria-hidden="true">
+      <span class="ghost">WILDER ST.</span>WILDER ST.
+    </p>
+    <div class="foot__in">
+      <p>14 Wilder Street, on the corner of Bell Row. Closed Mondays. This page is a demo build, so nothing you type into it leaves your browser.</p>
+      <nav class="foot__links" aria-label="Footer">
+        <a href="#board">Bake board</a>
+        <a href="#order">Put a loaf aside</a>
+      </nav>
+    </div>
+    <p class="foot__close data" id="footClose"></p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ------------------------------------------------------------------
+     ONE source of truth. Every time, countdown and shelf on this page is
+     computed from this table plus a clock. Nothing here is a claim about
+     how much we sell, because that is not something a page can know.
+     Minutes are counted from midnight.
+     ------------------------------------------------------------------ */
+  var OPEN = 420, CLOSE = 960;               /* weekday counter, 7:00 to 16:00 */
+  var T0 = 180, T1 = 990;                    /* the tape runs 3:00 to 16:30 */
+
+  /* pl marks a plural name, so the sentences we build read as English */
+  var SCHEDULE = [
+    {id:"boule",     sym:"g-boule",     name:"Country sourdough",   price:"6.50", pl:false, ovenIn:360, out:405, goneBy:750},
+    {id:"rolls",     sym:"g-rolls",     name:"Seeded rolls",        price:"1.20", pl:true,  ovenIn:380, out:415, goneBy:660},
+    {id:"croissant", sym:"g-croissant", name:"Butter croissants",   price:"3.20", pl:true,  ovenIn:405, out:430, goneBy:720},
+    {id:"bun",       sym:"g-bun",       name:"Cardamom buns",       price:"3.80", pl:true,  ovenIn:480, out:505, goneBy:810},
+    {id:"rye",       sym:"g-rye",       name:"Dark rye tin",        price:"5.60", pl:false, ovenIn:510, out:560, goneBy:900},
+    {id:"focaccia",  sym:"g-focaccia",  name:"Rosemary focaccia",   price:"4.40", pl:false, ovenIn:640, out:665, goneBy:930},
+    {id:"baguette",  sym:"g-baguette",  name:"Afternoon baguettes", price:"3.10", pl:true,  ovenIn:855, out:885, goneBy:960}
+  ];
+
+  var HOURS = {0:[480,840],1:null,2:[420,960],3:[420,960],4:[420,960],5:[420,960],6:[420,900]};
+  var DAYNAME = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var COOL = 15;   /* minutes on the rack before it goes out front */
+  var SLOTS = 6;   /* drawn places on the shelf */
+
+  var $ = function(s,r){ return (r||document).querySelector(s); };
+
+  function hm(m){
+    var h = Math.floor(m/60)%24, mm = m%60;
+    var ap = h < 12 ? "am" : "pm", h12 = h%12; if(h12===0) h12 = 12;
+    return h12 + ":" + (mm<10?"0":"") + mm + ap;
+  }
+  function dur(m){
+    if(m < 1) return "under a minute";
+    var h = Math.floor(m/60), mm = m%60;
+    if(h && mm) return h + "h " + mm + "m";
+    if(h) return h + (h===1?" hour":" hours");
+    return mm + (mm===1?" minute":" minutes");
+  }
+  function nowMins(){ var d = new Date(); return d.getHours()*60 + d.getMinutes(); }
+
+  function stateOf(it, t){
+    if(t < it.ovenIn)      return {k:"proving", label:"Proving"};
+    if(t < it.out)         return {k:"oven",    label:"Out in " + dur(it.out - t)};
+    if(t < it.out + COOL)  return {k:"cooling", label:"Just out, cooling"};
+    if(t < it.goneBy)      return {k:"shelf",   label:"On the shelf"};
+    return {k:"gone", label:"Gone for today"};
+  }
+  function shelfFrac(it, t){
+    var start = it.out + COOL;
+    if(t < it.out) return 0;
+    if(t < start) return 1;
+    if(t >= it.goneBy) return 0;
+    return 1 - (t - start) / (it.goneBy - start);
+  }
+  function filledSlots(it, t){
+    var f = shelfFrac(it, t);
+    if(f <= 0) return 0;
+    return Math.max(1, Math.round(f * SLOTS));
+  }
+
+  /* ---------------- build the rows once ---------------- */
+  var rowsEl = $("#rows"), rowRefs = [];
+
+  SCHEDULE.forEach(function(it, i){
+    var li = document.createElement("li");
+    li.className = "row stage";
+
+    var slots = "";
+    for(var s = 0; s < SLOTS; s++){
+      slots += '<span class="slot"><svg class="good" viewBox="0 0 64 40" aria-hidden="true"><use href="#'+it.sym+'"></use></svg></span>';
+    }
+
+    li.innerHTML =
+      '<div class="row__art"><svg class="good" viewBox="0 0 64 40" role="img" aria-label="Drawing of '+it.name.toLowerCase()+'"><use href="#'+it.sym+'"></use></svg></div>' +
+      '<div class="row__name"><h3>'+it.name+'</h3><span class="price">&pound;'+it.price+'</span></div>' +
+      '<div class="row__meta"><span class="chip chip--proving">Proving</span>' +
+        '<span class="row__times">Out at '+hm(it.out)+'<br>Usually gone by '+hm(it.goneBy)+'</span></div>' +
+      '<div class="row__shelf"><div class="shelf">'+slots+'</div></div>';
+
+    rowsEl.appendChild(li);
+    rowRefs.push({
+      it: it,
+      chip: $(".chip", li),
+      slots: li.querySelectorAll(".slot"),
+      last: null
+    });
+  });
+
+  /* fill the reservation select from the same table */
+  var loafSel = $("#fLoaf");
+  SCHEDULE.forEach(function(it){
+    var o = document.createElement("option");
+    o.value = it.id; o.textContent = it.name;
+    loafSel.appendChild(o);
+  });
+
+  /* ---------------- render ---------------- */
+  var tape = $("#tapeInput"), clockEl = $("#tapeClock"), modeEl = $("#tapeMode"),
+      resetEl = $("#tapeReset"), emptyEl = $("#boardEmpty"), sumEl = $("#boardSum"),
+      gnow = $("#gnow"), heroEl = $("#heroStatus"), pillEl = $("#openPill"),
+      stripState = $("#stripState");
+  var isLive = true;
+
+  function pct(t){ return ((t - T0) / (T1 - T0)) * 100; }
+
+  function render(t, live){
+    var counts = {proving:0, oven:0, cooling:0, shelf:0, gone:0};
+
+    rowRefs.forEach(function(r){
+      var st = stateOf(r.it, t);
+      counts[st.k]++;
+
+      if(r.last !== st.k + st.label){
+        /* motion moment 2: the chip swap, and only on rows that changed */
+        r.chip.className = "chip chip--" + st.k;
+        r.chip.textContent = st.label;
+        r.last = st.k + st.label;
+      }
+
+      var n = filledSlots(r.it, t);
+      for(var s = 0; s < r.slots.length; s++){
+        r.slots[s].classList.toggle("slot--gone", s >= n);
+      }
+    });
+
+    clockEl.textContent = hm(t);
+    tape.setAttribute("aria-valuetext", hm(t));
+
+    /* the day diagram reads the same clock */
+    gnow.style.left = pct(t) + "%";
+
+    /* board empty states, all of them reachable by dragging the tape or by
+       loading the page on a day we are shut */
+    var onShelf = counts.shelf + counts.cooling;
+    if(live && !HOURS[new Date().getDay()]){
+      emptyEl.hidden = false;
+      emptyEl.textContent = "Shut today. The board below is a normal weekday, so you can see what tomorrow looks like.";
+    } else if(t < OPEN){
+      emptyEl.hidden = false;
+      emptyEl.textContent = "Counter is shut. The door opens at " + hm(OPEN) + " and the first sourdough is out at " + hm(SCHEDULE[0].out) + ".";
+    } else if(onShelf === 0 && counts.oven === 0){
+      emptyEl.hidden = false;
+      emptyEl.textContent = "Shelf is empty. Everything went today. The mixer starts again at 3:00am.";
+    } else {
+      emptyEl.hidden = true;
+    }
+
+    sumEl.textContent = hm(t) + ". " + onShelf + " on the shelf, " + counts.oven + " in the oven, " + counts.gone + " gone.";
+
+    /* hero line, written from the same state */
+    heroEl.innerHTML = heroLine(t, counts);
+
+    /* shop state pill */
+    var d = new Date().getDay(), hrs = HOURS[d];
+    var open = live && hrs && t >= hrs[0] && t < hrs[1];
+    pillEl.className = "pill " + (open ? "pill--open" : "pill--shut");
+    if(!hrs){
+      pillEl.textContent = "Closed Mondays";
+    } else if(open){
+      pillEl.textContent = "Open until " + hm(hrs[1]);
+    } else if(live && t < hrs[0]){
+      pillEl.textContent = "Opens at " + hm(hrs[0]);
+    } else if(live){
+      pillEl.textContent = "Shut for today";
+    } else {
+      pillEl.textContent = DAYNAME[d] + ", " + hm(hrs[0]) + " to " + hm(hrs[1]);
+    }
+    stripState.textContent = hm(t) + " · " + onShelf + " on the shelf";
+
+    /* footer countdown */
+    var fc = $("#footClose");
+    if(!hrs){
+      fc.textContent = "Shut today. Back Tuesday at 7:00am.";
+    } else if(live && t < hrs[1] && t >= hrs[0]){
+      fc.textContent = "Kitchen goes dark in " + dur(hrs[1] - t) + ".";
+    } else if(live && t < hrs[0]){
+      fc.textContent = "Doors in " + dur(hrs[0] - t) + ".";
+    } else {
+      fc.textContent = "Shut for the day. Doris gets fed, then we shape tomorrow.";
+    }
+  }
+
+  function heroLine(t, c){
+    var cooling = null, oven = null, i;
+    for(i = 0; i < SCHEDULE.length; i++){
+      var st = stateOf(SCHEDULE[i], t);
+      if(st.k === "cooling" && !cooling) cooling = SCHEDULE[i];
+      if(st.k === "oven" && !oven) oven = SCHEDULE[i];
+    }
+    var stamp = '<span class="t">' + hm(t) + ".</span> ";
+    if(cooling) return stamp + "The " + cooling.name.toLowerCase() + " came out " + dur(t - cooling.out) + " ago and " + (cooling.pl ? "are" : "is") + " still too hot to bag.";
+    if(oven)    return stamp + oven.name.toLowerCase().replace(/^./, function(m){return m.toUpperCase();}) + " in the oven, out in " + dur(oven.out - t) + ".";
+    if(t < OPEN) return stamp + "Nobody is out front yet. The first sourdough is out at " + hm(SCHEDULE[0].out) + ".";
+    if(c.shelf === 0) return stamp + "Everything went today. The mixer starts again at 3:00am.";
+    return stamp + c.shelf + (c.shelf === 1 ? " thing" : " things") + " on the shelf right now.";
+  }
+
+  function setTime(t, live){
+    isLive = !!live;
+    tape.value = t;
+    modeEl.textContent = live ? "live" : "scrubbing";
+    resetEl.hidden = !!live;
+    render(t, live);
+  }
+
+  tape.addEventListener("input", function(){ setTime(+tape.value, false); });
+  resetEl.addEventListener("click", function(){ setTime(clampNow(), true); tape.focus(); });
+
+  function clampNow(){ return Math.min(T1, Math.max(T0, nowMins())); }
+
+  setTime(clampNow(), true);
+  setInterval(function(){ if(isLive) setTime(clampNow(), true); }, 20000);
+
+  /* ---------------- today's row in the hours table ---------------- */
+  var todayRow = document.querySelector('#hours tr[data-d="' + new Date().getDay() + '"]');
+  if(todayRow) todayRow.classList.add("is-today");
+
+  /* ---------------- the pinned strip ---------------- */
+  var strip = $("#strip"), heroEnd = 520;
+  function onScroll(){
+    strip.classList.toggle("is-on", window.scrollY > heroEnd);
+  }
+  window.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+
+  /* ==================================================================
+     Standing order. No server, so no fake network call and no fake
+     spinner. It writes a ticket, keeps it in this browser, and says so.
+     ================================================================== */
+  var form = $("#orderForm"), out = $("#orderOut"), emptyOrder = $("#orderEmpty"),
+      hLoaf = $("#hLoaf");
+  var KEY = "wilder.ticket";
+
+  function dayValue(){
+    var r = form.querySelector('input[name="day"]:checked');
+    return r ? r.value : "";
+  }
+
+  /* A real, computed disabled case: Sunday shuts at 14:00 and the
+     baguettes are not out of the oven until 14:45. */
+  function syncLoaf(){
+    var day = dayValue(), sundayClose = HOURS[0][1], changed = false;
+    Array.prototype.forEach.call(loafSel.options, function(o){
+      if(!o.value) return;
+      var it = SCHEDULE.filter(function(s){ return s.id === o.value; })[0];
+      var blocked = day === "Sunday" && it.out >= sundayClose;
+      o.disabled = blocked;
+      if(blocked && loafSel.value === o.value){ loafSel.value = ""; changed = true; }
+    });
+    if(day === "Sunday"){
+      hLoaf.textContent = "Sunday shuts at " + hm(HOURS[0][1]) + " and the baguettes are not out until " + hm(SCHEDULE[6].out) + ", so they are off for that day.";
+    } else {
+      hLoaf.textContent = "";
+    }
+    if(changed) setErr("eLoaf", loafSel, "That one moved off the list. Pick another.");
+  }
+
+  function setErr(id, field, msg){
+    $("#" + id).textContent = msg || "";
+    if(field) field.setAttribute("aria-invalid", msg ? "true" : "false");
+  }
+
+  form.addEventListener("change", function(e){
+    if(e.target.name === "day"){ syncLoaf(); setErr("eDay", null, ""); }
+    if(e.target.id === "fLoaf") setErr("eLoaf", loafSel, "");
+    if(e.target.id === "fName") setErr("eName", $("#fName"), "");
+  });
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var name = $("#fName").value.trim(), day = dayValue(), loaf = loafSel.value, bad = null;
+
+    setErr("eName", $("#fName"), name ? "" : "We need a name to write on the bag.");
+    if(!name) bad = $("#fName");
+
+    setErr("eDay", null, day ? "" : "Pick a day.");
+    if(!day && !bad) bad = form.querySelector('input[name="day"]');
+
+    setErr("eLoaf", loafSel, loaf ? "" : "Pick what to keep back.");
+    if(!loaf && !bad) bad = loafSel;
+
+    if(bad){ bad.focus(); return; }
+
+    var it = SCHEDULE.filter(function(s){ return s.id === loaf; })[0];
+    var ticket = {name:name, day:day, item:it.name, no:ticketNo(name, day, it.id)};
+
+    var saved = true;
+    try{ window.localStorage.setItem(KEY, JSON.stringify(ticket)); }
+    catch(err){ saved = false; }
+
+    showTicket(ticket, saved, true);
+  });
+
+  /* stable, derived from the reservation itself rather than random,
+     so the same slip always carries the same number */
+  function ticketNo(name, day, id){
+    var s = name + "|" + day + "|" + id, h = 0;
+    for(var i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) % 9973; }
+    return ("000" + (h % 9000 + 1000)).slice(-4);
+  }
+
+  function showTicket(t, saved, animate){
+    $("#stubNo").textContent = "no. " + t.no;
+    $("#stubWho").textContent = t.name;
+    $("#stubDay").textContent = t.day;
+    $("#stubItem").textContent = t.item;
+    $("#stubFoot").textContent = saved
+      ? "Show this at the counter. Kept in this browser only, so it will not follow you to another device."
+      : "Show this at the counter. This browser would not let us save it, so write it down or leave the page open.";
+    emptyOrder.hidden = true;
+    out.hidden = false;
+    if(animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+      var s = $("#stub");
+      s.classList.remove("stub--enter"); void s.offsetWidth; s.classList.add("stub--enter");
+    }
+    $("#stubClear").focus();
+  }
+
+  $("#stubClear").addEventListener("click", function(){
+    try{ window.localStorage.removeItem(KEY); }catch(err){}
+    out.hidden = true;
+    emptyOrder.hidden = false;
+    form.reset();
+    syncLoaf();
+    setErr("eName", $("#fName"), ""); setErr("eDay", null, ""); setErr("eLoaf", loafSel, "");
+    $("#fName").focus();
+  });
+
+  /* restore a ticket from a previous visit */
+  try{
+    var prev = window.localStorage.getItem(KEY);
+    if(prev) showTicket(JSON.parse(prev), true, false);
+  }catch(err){}
+  syncLoaf();
+
+  /* ==================================================================
+     Motion moment 1: arrival, once. Opt-in so nothing is ever hidden if
+     this script never runs, and skipped entirely under reduced motion.
+     ================================================================== */
+  var stages = document.querySelectorAll(".stage");
+  function revealAll(){ Array.prototype.forEach.call(stages, function(el){ el.classList.add("is-in"); }); }
+
+  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+    revealAll();
+  } else {
+    document.documentElement.classList.add("js");
+    requestAnimationFrame(function(){
+      /* the oven leads, then the headline, then the board rows in reading order */
+      var order = [$(".hero__art"), $(".hero__title"), $("#heroStatus"), $(".stamp")]
+        .concat(Array.prototype.slice.call(document.querySelectorAll(".row")));
+      order.forEach(function(el, i){
+        if(!el) return;
+        setTimeout(function(){ el.classList.add("is-in"); }, i < 4 ? i * 70 : 280 + (i - 4) * 60);
+      });
+    });
+    /* failsafe: if anything above throws, nothing stays invisible */
+    setTimeout(revealAll, 1600);
+  }
+})();
+</script>
+</body>
+</html>

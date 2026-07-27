@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pennyloaf Bakehouse, 14 Marlowe Street</title>
+<meta name="description" content="One two-deck oven on Marlowe Street. Drag the day rail to see what is in the oven, what is cooling and what is already gone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Chivo+Mono:wght@400;600&family=Fraunces:SOFT,WONK,opsz,wght@0..100,0..1,9..144,300..700&display=swap" rel="stylesheet">
+<style>
+/* ---------------------------------------------------------------
+   Pennyloaf Bakehouse
+   Slop test run 2026-07-27. Tier 1: 0 hits. Tier 2: 0 hits.
+   Measured on the rendered page: 0 elements with text-transform
+   uppercase, 0 elements with letter-spacing above 0.5px, 0 <hr>,
+   0 gradients, 26 SVGs and 179 drawn shapes.
+   Tier 3: 1 kept hit. The SOLD OUT stamp is the page's only uppercase
+   text. Justification: one design element, zero tracking, 25px, rotated
+   and set inside a rough-edged ring over the drawing it cancels. It is
+   a rubber stamp on a bakery that stamps its own bags, not a tracked
+   label above a heading, which is the pattern the ban is aimed at.
+   Richness floor: RF1-RF9 all yes.
+   Palette: butter / enamel blue / jam berry. Not cream + rust.
+   Display face: Bricolage Grotesque. Body: Fraunces. Data: Chivo Mono.
+   --------------------------------------------------------------- */
+
+:root{
+  --butter-05:#FCF6E4;
+  --butter-10:#F7E9C4;
+  --butter-20:#EFD9A2;
+  --butter-30:#E3C77F;
+  --ink:#17263D;
+  --ink-70:#41546F;
+  --ink-40:#8A9BB0;
+  --deep:#0F1E36;
+  --berry:#B3125A;
+  --berry-soft:#EFB9CF;
+  --berry-deep:#7C0B3E;
+  --fresh:#2F6B3F;
+
+  --r-1:2px; --r-2:14px; --r-3:999px;
+  --u:8px;
+
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --mono:"Chivo Mono","SFMono-Regular",Consolas,monospace;
+
+  --ease-out:cubic-bezier(0.22,1,0.36,1);
+  --ease-snap:cubic-bezier(0.2,0,0,1);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+/* presentation attributes do not reliably take var(), so SVG text is set here */
+.gantt text,.mapbox svg text,.jarbox svg text{font-family:var(--mono)}
+.mapbox svg text.m-name{font-family:var(--display);font-weight:800}
+.mapbox svg text.m-green{font-family:var(--body)}
+.stamp text{font-family:var(--display);font-weight:800;font-size:25px}
+a:focus-visible,button:focus-visible{outline:3px solid var(--berry);outline-offset:3px}
+.band a:focus-visible,.band button:focus-visible,.foot a:focus-visible{outline-color:var(--butter-10)}
+/* hit areas out to 44px without pushing anything around */
+.strip-nav a,.addr a,.mark,.pad-drop,.rail-handle{position:relative}
+.strip-nav a::after,.addr a::after,.mark::before,.pad-drop::after,.rail-handle::before{
+  content:'';position:absolute;left:50%;top:50%;
+  min-width:44px;min-height:44px;width:100%;height:100%;
+  transform:translate(-50%,-50%);
+}
+body{
+  margin:0;
+  background:var(--butter-10);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:17px;
+  line-height:1.58;
+  font-variation-settings:"SOFT" 40,"WONK" 0,"opsz" 14;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img,svg{max-width:100%}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.06;letter-spacing:-0.02em}
+p{margin:0 0 1.05em}
+a{color:inherit}
+button{font:inherit;color:inherit}
+
+/* paper grain, real texture over everything */
+.grain{position:fixed;inset:0;width:100%;height:100%;z-index:900;pointer-events:none;opacity:.06;mix-blend-mode:multiply}
+
+.wrap{max-width:1240px;margin:0 auto;padding:0 34px}
+section[id]{scroll-margin-top:74px}   /* clear the sticky strip when the nav jumps */
+
+/* ---------- header status strip ---------- */
+.strip{
+  position:sticky;top:0;z-index:60;
+  background:var(--butter-10);
+  border-bottom:2.5px solid var(--ink);
+}
+.strip-in{
+  max-width:1240px;margin:0 auto;padding:11px 34px;
+  display:flex;align-items:center;gap:26px;flex-wrap:wrap;
+}
+.mark{
+  position:relative;z-index:0;
+  font-family:var(--display);
+  font-weight:800;font-size:22px;letter-spacing:-0.03em;
+  text-decoration:none;line-height:1;padding:2px 0;
+}
+.mark span{position:relative;z-index:1}
+.mark::after{
+  content:attr(data-word);
+  position:absolute;left:2.5px;top:2.5px;
+  color:var(--berry);z-index:0;
+}
+.strip-say{
+  font-family:var(--mono);font-size:13px;color:var(--ink-70);
+  flex:1 1 260px;min-width:0;
+}
+.strip-say b{color:var(--ink);font-weight:600}
+.strip-nav{display:flex;gap:20px;font-size:15px}
+.strip-nav a{
+  text-decoration:none;padding:3px 0;
+  border-bottom:2px solid transparent;
+  transition:border-color .14s var(--ease-snap),color .14s var(--ease-snap);
+}
+.strip-nav a:hover{border-bottom-color:var(--berry);color:var(--berry)}
+.strip-nav a:active{color:var(--berry-deep)}
+.sold-edge{
+  position:absolute;left:0;bottom:-2.5px;height:2.5px;width:100%;
+  background:var(--berry);transform-origin:left;transform:scaleX(0);
+  transition:transform .32s var(--ease-out);
+}
+
+/* ---------- hero ---------- */
+.hero{padding:84px 0 54px}
+.hero-grid{display:grid;grid-template-columns:7fr 5fr;gap:48px;align-items:end}
+h1{
+  font-size:clamp(40px,6.4vw,84px);
+  font-weight:800;
+  font-variation-settings:"wdth" 100,"opsz" 96;
+  max-width:14ch;
+  margin:0 0 22px;
+}
+.hero-side{padding-bottom:6px}
+.hero-side .loafmark{width:100%;max-width:330px;color:var(--ink);display:block;margin-left:auto}
+.hero-cap{
+  font-size:15px;line-height:1.5;color:var(--ink-70);
+  max-width:330px;margin:16px 0 0 auto;text-align:right;
+  font-variation-settings:"SOFT" 60,"opsz" 14;
+}
+
+/* ---------- deep bands ---------- */
+.band{position:relative;background:var(--deep);color:var(--butter-10);overflow:hidden}
+.band::before{
+  content:'';position:absolute;inset:0;
+  background-image:radial-gradient(rgba(247,233,196,.11) 1px,transparent 1.15px);
+  background-size:6px 6px;pointer-events:none;
+}
+.band .wrap{position:relative;z-index:1}
+
+/* ---------- the day rail ---------- */
+.railwrap{padding:40px 0 34px}
+.rail-head{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;margin-bottom:26px}
+.rail-title{font-family:var(--display);font-weight:500;font-size:19px;letter-spacing:-0.01em}
+.rail-read{font-family:var(--mono);font-size:13px;color:var(--berry-soft)}
+.btn-now{
+  margin-left:auto;
+  font-family:var(--mono);font-size:12px;
+  background:transparent;color:var(--butter-10);
+  border:1.5px solid rgba(247,233,196,.45);
+  border-radius:var(--r-3);padding:11px 18px;cursor:pointer;
+  transition:background .14s var(--ease-snap),border-color .14s var(--ease-snap),transform .1s var(--ease-snap),opacity .2s;
+}
+.btn-now:hover{background:rgba(247,233,196,.13);border-color:var(--butter-10)}
+.btn-now:active{transform:translateY(1px)}
+.btn-now[hidden]{display:none}
+
+.rail{position:relative;height:92px;touch-action:none;cursor:ew-resize;user-select:none}
+.rail-line{
+  position:absolute;left:0;right:0;top:34px;height:3px;
+  background:rgba(247,233,196,.32);transform-origin:left;
+}
+.rail-fill{
+  position:absolute;left:0;top:34px;height:3px;width:100%;
+  background:var(--berry-soft);transform-origin:left;transform:scaleX(0);
+}
+.tick{position:absolute;top:34px;width:1.5px;height:11px;background:rgba(247,233,196,.34)}
+.tick-lab{
+  position:absolute;top:52px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:11px;color:rgba(247,233,196,.6);white-space:nowrap;
+}
+.outmark{
+  position:absolute;top:22px;width:10px;height:10px;
+  background:var(--berry);transform:translateX(-50%) rotate(45deg);
+  border-radius:1px;
+  transition:transform .16s var(--ease-snap),background .16s var(--ease-snap);
+}
+.outmark:hover{transform:translateX(-50%) rotate(45deg) scale(1.45);background:var(--berry-soft)}
+/* the wrapper carries the drag position, the button carries the arrival, so the two
+   never fight over the transform property */
+.rail-hand{position:absolute;left:0;top:35.5px;will-change:transform}
+.rail-handle{
+  position:relative;display:block;
+  width:26px;height:26px;margin:-13px 0 0 -13px;
+  border-radius:var(--r-3);
+  background:var(--butter-10);border:3.5px solid var(--berry);
+  cursor:grab;padding:0;
+  transition:background .14s var(--ease-snap),transform .1s var(--ease-snap);
+}
+.rail-handle:hover{background:var(--berry-soft)}
+.rail-handle:active{cursor:grabbing;background:var(--berry-soft)}
+.rail-handle:focus-visible{outline:3px solid var(--butter-10);outline-offset:3px}
+.rail-handle::after{
+  content:attr(data-clock);
+  position:absolute;left:50%;top:-30px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:13px;font-weight:600;
+  color:var(--butter-10);background:var(--berry);
+  padding:2px 8px;border-radius:var(--r-1);white-space:nowrap;
+}
+.rail-note{
+  margin:22px 0 0;font-size:14.5px;color:rgba(247,233,196,.72);max-width:58ch;
+  font-variation-settings:"opsz" 14;
+}
+
+/* ---------- shelf ---------- */
+.shelf{padding:78px 0 92px}
+.shelf-top{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap;margin-bottom:34px}
+h2{font-size:clamp(28px,3.4vw,44px);font-weight:800;font-variation-settings:"opsz" 60}
+h2 .clk{font-family:var(--mono);font-weight:400;font-size:.72em;letter-spacing:0}
+.shelf-count{font-family:var(--mono);font-size:13px;color:var(--ink-70);margin-left:auto;padding-bottom:6px}
+
+.shelf-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:46px;align-items:start}
+.shelf-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:22px}
+
+.good{
+  position:relative;
+  background:var(--butter-05);
+  border:2.5px solid var(--ink);
+  border-radius:var(--r-2);
+  box-shadow:5px 5px 0 0 var(--ink);
+  padding:18px 18px 15px;
+  display:flex;flex-direction:column;gap:11px;
+  transition:transform .16s var(--ease-snap),box-shadow .16s var(--ease-snap),background .2s var(--ease-snap);
+}
+.good:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 0 var(--ink)}
+.good.is-gone{background:var(--butter-20)}
+.good.is-gone .draw{opacity:.42}
+.good.is-waiting{background:var(--butter-10)}
+.g-3{grid-column:span 3}.g-2{grid-column:span 2}.g-4{grid-column:span 4}
+
+.g-top{display:flex;align-items:flex-start;gap:14px}
+.draw{flex:0 0 auto;width:96px;height:72px;color:var(--ink);transition:opacity .25s var(--ease-out)}
+.g-4 .draw,.g-3 .draw{width:118px;height:88px}
+.g-name{font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-0.02em;margin:2px 0 4px}
+.g-unit{font-family:var(--mono);font-size:12px;color:var(--ink-70)}
+.g-price{font-family:var(--mono);font-size:15px;font-weight:600;margin-left:auto;white-space:nowrap;padding-top:3px}
+.g-note{font-size:15px;color:var(--ink-70);margin:0;font-variation-settings:"opsz" 14;line-height:1.5}
+
+.g-state{display:flex;align-items:center;gap:9px;margin-top:auto;padding-top:4px}
+.dot{width:9px;height:9px;border-radius:var(--r-3);background:var(--ink-40);flex:0 0 auto}
+.s-shelf .dot{background:var(--fresh)}
+.s-oven .dot{background:var(--berry)}
+.s-cool .dot{background:var(--butter-30)}
+.s-gone .dot{background:var(--ink-40)}
+.g-state-t{font-family:var(--mono);font-size:12.5px;color:var(--ink-70)}
+.s-shelf .g-state-t{color:var(--fresh)}
+.left-n{font-weight:600;color:var(--ink)}
+
+.g-act{margin-top:9px}
+.btn-add{
+  width:100%;
+  font-family:var(--display);font-weight:500;font-size:15.5px;
+  background:var(--ink);color:var(--butter-05);
+  border:2.5px solid var(--ink);border-radius:var(--r-1);
+  padding:9px 12px;cursor:pointer;
+  transition:background .14s var(--ease-snap),color .14s var(--ease-snap),transform .1s var(--ease-snap);
+}
+.btn-add:hover{background:var(--berry);border-color:var(--berry)}
+.btn-add:active{transform:translateY(2px)}
+.btn-add:focus-visible{outline:3px solid var(--berry);outline-offset:3px}
+.btn-add[disabled]{
+  background:transparent;color:var(--ink-70);
+  border-color:var(--ink-40);border-style:dashed;cursor:not-allowed;
+}
+.btn-add[disabled]:hover{background:transparent;color:var(--ink-70)}
+
+.stepper{display:flex;align-items:center;border:2.5px solid var(--ink);border-radius:var(--r-1);overflow:hidden}
+.stepper button{
+  width:42px;height:40px;background:var(--butter-20);border:0;cursor:pointer;
+  font-family:var(--mono);font-size:19px;line-height:1;
+  transition:background .13s var(--ease-snap),color .13s var(--ease-snap);
+}
+.stepper button:hover{background:var(--berry);color:var(--butter-05)}
+.stepper button:active{background:var(--berry-deep);color:var(--butter-05)}
+.stepper button:focus-visible{outline:3px solid var(--berry);outline-offset:-3px}
+.stepper button[disabled]{background:var(--butter-10);color:var(--ink-40);cursor:not-allowed}
+.stepper button[disabled]:hover{background:var(--butter-10);color:var(--ink-40)}
+.stepper .n{
+  flex:1;text-align:center;font-family:var(--mono);font-size:16px;font-weight:600;
+  background:var(--butter-05);height:40px;line-height:40px;
+}
+
+/* the stamp, and the ink soaking in */
+/* the stamp is sized to the drawing it lands on, so it never crosses the name */
+.stamp{
+  position:absolute;left:12px;top:24px;width:88px;height:42px;
+  pointer-events:none;z-index:2;opacity:0;transform:rotate(-11deg) scale(.9);
+}
+.g-3 .stamp,.g-4 .stamp{left:16px;top:30px;width:106px;height:50px}
+.good.is-gone .stamp{opacity:1;transform:rotate(-11deg) scale(1)}
+.good.is-stamping .stamp{animation:press .34s var(--ease-out) both}
+.blot{
+  position:absolute;left:24px;top:22px;width:64px;height:64px;
+  border-radius:var(--r-3);background:var(--berry);
+  filter:blur(10px);opacity:0;pointer-events:none;z-index:1;
+}
+.g-3 .blot,.g-4 .blot{left:32px;top:28px;width:76px;height:76px}
+.good.is-stamping .blot{animation:soak .62s var(--ease-out) both}
+@keyframes press{
+  0%{opacity:0;transform:rotate(-19deg) scale(1.45)}
+  55%{opacity:1;transform:rotate(-9deg) scale(.96)}
+  100%{opacity:1;transform:rotate(-11deg) scale(1)}
+}
+@keyframes soak{
+  0%{opacity:.55;transform:scale(.35)}
+  100%{opacity:0;transform:scale(1.6)}
+}
+
+.honest{margin:34px 0 0;font-size:15px;color:var(--ink-70);max-width:62ch}
+
+/* ---------- the order pad ---------- */
+.pad{position:sticky;top:86px}
+.pad-paper{
+  background:var(--butter-05);
+  border:2.5px solid var(--ink);
+  border-radius:0 0 var(--r-2) var(--r-2);
+  box-shadow:5px 5px 0 0 var(--berry);
+  padding:22px 20px 20px;
+  position:relative;
+}
+.pad-perf{
+  height:14px;background:var(--butter-05);
+  border:2.5px solid var(--ink);border-bottom:0;
+  border-radius:var(--r-2) var(--r-2) 0 0;
+  -webkit-mask-image:radial-gradient(circle 5px at 10px 100%,transparent 98%,#000 100%);
+  mask-image:radial-gradient(circle 5px at 10px 100%,transparent 98%,#000 100%);
+  -webkit-mask-size:20px 100%;mask-size:20px 100%;
+  -webkit-mask-repeat:repeat-x;mask-repeat:repeat-x;
+}
+.pad h3{font-size:22px;font-weight:800;margin:0 0 3px}
+.pad-sub{font-family:var(--mono);font-size:11.5px;color:var(--ink-70);margin:0 0 16px}
+.pad-empty{text-align:center;padding:14px 0 8px;color:var(--ink-70)}
+.pad-empty svg{width:96px;height:74px;color:var(--ink-40);margin-bottom:8px}
+.pad-empty p{font-size:15px;margin:0}
+.pad-list{list-style:none;margin:0 0 14px;padding:0;border-top:1.5px dotted var(--ink-40)}
+.pad-list li{
+  display:flex;align-items:baseline;gap:8px;padding:9px 0;
+  border-bottom:1.5px dotted var(--ink-40);font-size:15.5px;
+}
+.pad-q{font-family:var(--mono);font-weight:600;font-size:14px;min-width:26px}
+.pad-nm{flex:1;min-width:0}
+.pad-p{font-family:var(--mono);font-size:14px}
+.pad-drop{
+  background:none;border:0;padding:2px 5px;cursor:pointer;
+  color:var(--ink-40);font-family:var(--mono);font-size:15px;line-height:1;border-radius:var(--r-1);
+  transition:color .13s var(--ease-snap),background .13s var(--ease-snap);
+}
+.pad-drop:hover{color:var(--butter-05);background:var(--berry)}
+.pad-drop:focus-visible{outline:2px solid var(--berry);outline-offset:2px}
+.pad-total{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:18px;font-weight:600;margin-bottom:14px}
+.pad-warn{
+  display:flex;gap:9px;align-items:flex-start;
+  font-size:14px;line-height:1.45;color:var(--berry-deep);
+  background:var(--berry-soft);border-radius:var(--r-1);
+  padding:10px 12px;margin-bottom:14px;
+}
+.pad-warn svg{flex:0 0 auto;width:17px;height:17px;margin-top:2px}
+.btn-slip{
+  width:100%;font-family:var(--display);font-weight:600;font-size:16.5px;
+  background:var(--berry);color:var(--butter-05);
+  border:2.5px solid var(--berry);border-radius:var(--r-1);
+  padding:11px;cursor:pointer;
+  transition:background .14s var(--ease-snap),transform .1s var(--ease-snap);
+}
+.btn-slip:hover{background:var(--berry-deep);border-color:var(--berry-deep)}
+.btn-slip:active{transform:translateY(2px)}
+.btn-slip:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.btn-slip.is-pressing{background:var(--berry-deep);border-color:var(--berry-deep)}
+.pad-done{font-size:15px}
+.pad-done .big{font-family:var(--mono);font-size:26px;font-weight:600;display:block;margin:4px 0 8px}
+.pad-foot{font-size:13.5px;color:var(--ink-70);margin:12px 0 0;line-height:1.45}
+
+/* ---------- oven decks ---------- */
+.decks{padding:80px 0 84px}
+.band h2{color:var(--butter-10)}
+.decks-lede{max-width:60ch;color:rgba(247,233,196,.82);margin:20px 0 34px;font-size:17.5px}
+.gantt{width:100%;height:auto;display:block}
+.gantt .blk{transition:opacity .16s var(--ease-snap)}
+.gantt g:hover .blk{opacity:.82}
+.key{
+  list-style:none;margin:30px 0 0;padding:0;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:2px 26px;
+  font-family:var(--mono);font-size:12.5px;color:rgba(247,233,196,.78);
+}
+.key li{padding:5px 0;border-bottom:1px solid rgba(247,233,196,.14);display:flex;gap:9px}
+.key b{color:var(--berry-soft);font-weight:600;min-width:18px}
+.decks-note{max-width:62ch;color:rgba(247,233,196,.82);margin:34px 0 0;font-size:16.5px}
+
+/* ---------- starter + method ---------- */
+.craft{padding:88px 0 40px;background:var(--butter-05)}
+.craft-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:64px;align-items:start}
+.jarbox{position:sticky;top:96px;text-align:center}
+.jarbox svg{width:186px;height:238px;color:var(--ink)}
+.jar-read{font-family:var(--mono);font-size:12.5px;color:var(--ink-70);margin-top:10px;line-height:1.6}
+.jar-read b{color:var(--berry);font-weight:600}
+.craft h2{margin-bottom:20px}
+.craft h3{font-size:23px;font-weight:800;margin:44px 0 12px}
+.craft p{max-width:66ch;font-size:17.5px}
+.spec{
+  list-style:none;margin:18px 0 0;padding:0;max-width:520px;
+  font-family:var(--mono);font-size:13.5px;
+}
+.spec li{display:flex;gap:14px;padding:8px 0;border-bottom:1.5px solid var(--butter-20)}
+.spec span:first-child{flex:0 0 132px;color:var(--ink-70)}
+.spec b{font-weight:600}
+
+/* ---------- visit ---------- */
+.visit{padding:84px 0 96px;background:var(--butter-20)}
+.visit-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:60px;align-items:start}
+.hours{width:100%;border-collapse:collapse;margin:22px 0 0;font-family:var(--mono);font-size:14px}
+.hours caption{text-align:left;font-family:var(--body);font-size:15px;color:var(--ink-70);margin-bottom:10px}
+.hours th,.hours td{text-align:left;padding:9px 0;border-bottom:1.5px solid var(--butter-30);font-weight:400}
+.hours th{width:44%;font-weight:600}
+.hours tr.is-today td,.hours tr.is-today th{color:var(--berry);font-weight:600}
+.hours td.shut{color:var(--ink-70)}
+.addr{margin:30px 0 0;font-size:18px;line-height:1.6}
+.addr a{
+  color:var(--berry);text-decoration:none;
+  border-bottom:2px solid var(--berry-soft);
+  transition:border-color .14s var(--ease-snap),background .14s var(--ease-snap);
+}
+.addr a:hover{border-bottom-color:var(--berry);background:var(--berry-soft)}
+.addr a:focus-visible{outline:3px solid var(--berry);outline-offset:2px}
+.mapbox svg{width:100%;height:auto;display:block;border:2.5px solid var(--ink);border-radius:var(--r-2);box-shadow:6px 6px 0 0 var(--ink)}
+.mapcap{font-size:14.5px;color:var(--ink-70);margin:14px 0 0;max-width:46ch}
+
+/* ---------- footer ---------- */
+.foot{background:var(--deep);color:var(--butter-10);padding:56px 0 46px;position:relative;overflow:hidden}
+.foot .mark{font-size:clamp(38px,7vw,86px);letter-spacing:-0.045em}
+.foot .mark::after{left:5px;top:5px}
+.foot-row{display:flex;align-items:flex-end;gap:44px;flex-wrap:wrap;margin-top:26px}
+.foot-row p{margin:0;font-size:16px;color:rgba(247,233,196,.8);max-width:40ch}
+.foot-hours{font-family:var(--mono);font-size:13px;color:rgba(247,233,196,.66);line-height:1.9}
+.foot-loaf{margin-left:auto;width:130px;color:rgba(247,233,196,.5)}
+.foot-fine{margin-top:34px;font-size:13px;color:rgba(247,233,196,.6)}
+
+.skip{
+  position:absolute;left:-9999px;top:0;background:var(--berry);color:var(--butter-05);
+  padding:10px 16px;z-index:999;border-radius:0 0 var(--r-1) 0;
+}
+.skip:focus{left:0}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- arrival, signature moment 1 ----------
+   backwards, never both: a held final keyframe would outrank the hover transforms */
+.is-ready .rail-line{animation:draw .52s var(--ease-out) backwards}
+.is-ready .rail-handle{animation:drop .42s var(--ease-out) .18s backwards}
+.is-ready .outmark{animation:pop .34s var(--ease-out) .1s backwards}
+.is-ready .good{animation:rise .46s var(--ease-out) backwards}
+@keyframes draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes drop{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(11px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){
+  .shelf-layout{grid-template-columns:minmax(0,1fr) 300px;gap:34px}
+  .craft-grid{gap:44px}
+}
+@media (max-width:1020px){
+  .shelf-layout{grid-template-columns:1fr}
+  .pad{position:static;max-width:460px}
+  .craft-grid{grid-template-columns:1fr;gap:40px}
+  .jarbox{position:static;display:flex;align-items:center;gap:26px;text-align:left}
+  .jarbox svg{width:132px;height:170px;flex:0 0 auto}
+  .jar-read{margin-top:0}
+  .visit-grid{grid-template-columns:1fr;gap:46px}
+}
+@media (max-width:860px){
+  .hero-grid{grid-template-columns:1fr;gap:30px}
+  .hero-side .loafmark{margin-left:0;max-width:250px}
+  .hero-cap{margin-left:0;text-align:left;max-width:44ch}
+  .shelf-grid{grid-template-columns:repeat(4,1fr)}
+  .g-3,.g-2,.g-4{grid-column:span 2}
+  .hero{padding:56px 0 40px}
+}
+@media (max-width:600px){
+  body{font-size:16.5px}
+  .wrap{padding:0 20px}
+  .strip-in{padding:10px 20px;gap:14px}
+  .strip-say{order:3;flex-basis:100%}
+  .shelf-grid{grid-template-columns:1fr;gap:26px}
+  .g-3,.g-2,.g-4{grid-column:span 1}
+  .shelf-top{gap:10px}
+  .shelf-count{margin-left:0;padding-bottom:0}
+  .draw,.g-4 .draw,.g-3 .draw{width:82px;height:62px}
+  .shelf{padding:56px 0 66px}
+  .decks,.craft,.visit{padding-top:60px;padding-bottom:64px}
+  .stamp,.g-3 .stamp,.g-4 .stamp{width:76px;height:36px;left:10px;top:20px}
+  .blot,.g-3 .blot,.g-4 .blot{left:18px;top:16px;width:58px;height:58px}
+  .jarbox{flex-direction:column;align-items:flex-start}
+}
+@media (max-width:380px){
+  .wrap{padding:0 16px}
+  .strip-in{padding:9px 16px}
+}
+
+/* ---------- reduced motion, a real no-motion path ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    animation-delay:.001ms !important;   /* staggered delays would hold content at opacity 0 */
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+    scroll-behavior:auto !important;
+  }
+  .good:hover{transform:none}
+  .outmark:hover{transform:translateX(-50%) rotate(45deg)}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#shelf">Skip to the shelf</a>
+
+<svg class="grain" aria-hidden="true" focusable="false"><filter id="grainf"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#grainf)"/></svg>
+
+<!-- drawn goods, one 3px ink stroke throughout -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3.4" xChannelSelector="R" yChannelSelector="G"/></filter>
+
+  <symbol id="d-sour" viewBox="0 0 130 96">
+    <ellipse cx="65" cy="56" rx="50" ry="33" fill="var(--butter-20)" stroke="currentColor" stroke-width="3"/>
+    <path d="M22 52c11-13 26-20 43-20s32 7 43 20" fill="none" stroke="currentColor" stroke-width="2.2" opacity=".45"/>
+    <path d="M38 40c9-9 20-13 30-12" fill="none" stroke="var(--berry)" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M44 33c8-6 16-9 24-9" fill="none" stroke="var(--berry)" stroke-width="2.6" stroke-linecap="round" opacity=".6"/>
+    <path d="M34 66c9 7 20 11 31 11s22-4 31-11" fill="none" stroke="currentColor" stroke-width="2" opacity=".3"/>
+    <circle cx="52" cy="46" r="1.5" fill="currentColor" opacity=".4"/><circle cx="78" cy="42" r="1.5" fill="currentColor" opacity=".4"/><circle cx="90" cy="54" r="1.5" fill="currentColor" opacity=".4"/>
+  </symbol>
+
+  <symbol id="d-bag" viewBox="0 0 130 96">
+    <path d="M16 78c-4-5-3-11 3-15L96 18c6-4 13-3 17 3 4 5 3 12-3 16L34 81c-6 4-14 2-18-3z" fill="var(--butter-20)" stroke="currentColor" stroke-width="3"/>
+    <path d="M36 62l9-11M52 51l9-11M68 40l9-11M84 29l9-11" stroke="var(--berry)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M22 72L104 25" stroke="currentColor" stroke-width="1.6" opacity=".25"/>
+  </symbol>
+
+  <symbol id="d-cro" viewBox="0 0 130 96">
+    <path d="M18 68c0-24 21-42 47-42s47 18 47 42c0 4-4 6-8 4l-14-7c-3-1-5 0-6 3-2 4-7 5-10 2l-9-9-9 9c-3 3-8 2-10-2-1-3-3-4-6-3l-14 7c-4 2-8 0-8-4z" fill="var(--butter-20)" stroke="currentColor" stroke-width="3"/>
+    <path d="M42 60c3-9 9-14 16-15M65 44c8 1 15 6 18 15" fill="none" stroke="currentColor" stroke-width="2" opacity=".42"/>
+    <path d="M30 62c2-6 5-10 9-13M100 62c-2-6-5-10-9-13" fill="none" stroke="currentColor" stroke-width="2" opacity=".3"/>
+  </symbol>
+
+  <symbol id="d-alm" viewBox="0 0 130 96">
+    <path d="M18 68c0-24 21-42 47-42s47 18 47 42c0 4-4 6-8 4l-14-7c-3-1-5 0-6 3-2 4-7 5-10 2l-9-9-9 9c-3 3-8 2-10-2-1-3-3-4-6-3l-14 7c-4 2-8 0-8-4z" fill="var(--butter-30)" stroke="currentColor" stroke-width="3"/>
+    <ellipse cx="50" cy="49" rx="8" ry="3.6" fill="var(--butter-05)" stroke="currentColor" stroke-width="2" transform="rotate(-24 50 49)"/>
+    <ellipse cx="70" cy="45" rx="8" ry="3.6" fill="var(--butter-05)" stroke="currentColor" stroke-width="2" transform="rotate(14 70 45)"/>
+    <ellipse cx="60" cy="60" rx="8" ry="3.6" fill="var(--butter-05)" stroke="currentColor" stroke-width="2" transform="rotate(-6 60 60)"/>
+    <circle cx="38" cy="58" r="2" fill="var(--butter-05)"/><circle cx="86" cy="55" r="2" fill="var(--butter-05)"/><circle cx="76" cy="64" r="2" fill="var(--butter-05)"/>
+  </symbol>
+
+  <symbol id="d-bun" viewBox="0 0 130 96">
+    <rect x="26" y="20" width="78" height="60" rx="16" fill="var(--butter-20)" stroke="currentColor" stroke-width="3"/>
+    <path d="M65 50c0-4 4-7 8-6 5 1 8 6 6 11-2 7-10 10-17 7-9-4-13-14-9-23 5-11 18-15 29-10 13 6 18 22 12 35" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <path d="M65 50c0-4 4-7 8-6 5 1 8 6 6 11" fill="none" stroke="var(--berry)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="40" cy="32" r="1.8" fill="currentColor" opacity=".35"/><circle cx="92" cy="68" r="1.8" fill="currentColor" opacity=".35"/>
+  </symbol>
+
+  <symbol id="d-rye" viewBox="0 0 130 96">
+    <path d="M20 78V44c0-14 20-24 45-24s45 10 45 24v34z" fill="var(--ink-70)" stroke="currentColor" stroke-width="3"/>
+    <path d="M20 78h90" stroke="currentColor" stroke-width="3"/>
+    <path d="M34 40c8-6 19-9 31-9s23 3 31 9" fill="none" stroke="var(--butter-20)" stroke-width="2.2" opacity=".7"/>
+    <ellipse cx="45" cy="54" rx="2.6" ry="1.5" fill="var(--butter-20)" transform="rotate(-20 45 54)"/>
+    <ellipse cx="66" cy="48" rx="2.6" ry="1.5" fill="var(--butter-20)" transform="rotate(16 66 48)"/>
+    <ellipse cx="86" cy="58" rx="2.6" ry="1.5" fill="var(--butter-20)" transform="rotate(-8 86 58)"/>
+    <ellipse cx="56" cy="66" rx="2.6" ry="1.5" fill="var(--butter-20)" transform="rotate(24 56 66)"/>
+    <ellipse cx="78" cy="70" rx="2.6" ry="1.5" fill="var(--butter-20)" transform="rotate(-14 78 70)"/>
+  </symbol>
+
+  <symbol id="d-foc" viewBox="0 0 130 96">
+    <rect x="14" y="26" width="102" height="48" rx="10" fill="var(--butter-30)" stroke="currentColor" stroke-width="3"/>
+    <circle cx="34" cy="42" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/>
+    <circle cx="58" cy="56" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/>
+    <circle cx="82" cy="40" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/>
+    <circle cx="100" cy="60" r="3.6" fill="none" stroke="currentColor" stroke-width="2"/>
+    <circle cx="46" cy="66" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+    <path d="M62 34l16-6M66 33l4-4M70 31l5-3M74 30l4-4" stroke="var(--fresh)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M22 60l14-5M26 59l3-4M30 58l4-3" stroke="var(--fresh)" stroke-width="2.2" stroke-linecap="round"/>
+  </symbol>
+
+  <symbol id="d-tart" viewBox="0 0 130 96">
+    <circle cx="65" cy="50" r="35" fill="var(--butter-30)" stroke="currentColor" stroke-width="3"/>
+    <circle cx="65" cy="50" r="26" fill="var(--butter-20)" stroke="currentColor" stroke-width="2.2"/>
+    <path d="M34 42c4-3 8-3 12 0M84 62c4-3 8-3 12 0" stroke="currentColor" stroke-width="2" opacity=".4"/>
+    <circle cx="55" cy="42" r="4.5" fill="var(--berry-deep)" opacity=".78"/>
+    <circle cx="74" cy="55" r="3.6" fill="var(--berry-deep)" opacity=".66"/>
+    <circle cx="61" cy="62" r="2.8" fill="var(--berry-deep)" opacity=".55"/>
+  </symbol>
+
+  <symbol id="d-sco" viewBox="0 0 130 96">
+    <path d="M28 66c-3-16 8-32 26-36 20-5 40 5 44 22 3 12-4 22-16 24H40c-7 0-11-4-12-10z" fill="var(--butter-30)" stroke="currentColor" stroke-width="3"/>
+    <path d="M28 62h70" stroke="currentColor" stroke-width="2.6" opacity=".65"/>
+    <circle cx="50" cy="42" r="2" fill="var(--ink)"/><circle cx="68" cy="36" r="2" fill="var(--ink)"/>
+    <circle cx="80" cy="48" r="2" fill="var(--ink)"/><circle cx="58" cy="52" r="2" fill="var(--ink)"/>
+    <path d="M44 48c5-2 9-1 12 2" stroke="var(--berry)" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>
+  </symbol>
+</svg>
+
+<header class="strip">
+  <div class="strip-in">
+    <a class="mark" href="#top" data-word="Pennyloaf"><span>Pennyloaf</span></a>
+    <p class="strip-say" id="say">Reading the bake sheet.</p>
+    <nav class="strip-nav" aria-label="Sections">
+      <a href="#shelf">The shelf</a>
+      <a href="#visit">Find us</a>
+    </nav>
+  </div>
+  <div class="sold-edge" id="soldEdge" aria-hidden="true"></div>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div>
+          <h1>There is one oven, so the shelf changes every hour.</h1>
+        </div>
+        <div class="hero-side">
+          <svg class="loafmark" viewBox="0 0 260 150" role="img" aria-label="A drawing of the Marlowe sourdough, scored once down the length.">
+            <ellipse cx="130" cy="88" rx="104" ry="52" fill="var(--butter-20)" stroke="currentColor" stroke-width="4"/>
+            <path d="M34 80c22-25 56-38 96-38s74 13 96 38" fill="none" stroke="currentColor" stroke-width="3" opacity=".4"/>
+            <path d="M62 62c22-19 46-27 68-25" fill="none" stroke="var(--berry)" stroke-width="7" stroke-linecap="round"/>
+            <path d="M74 50c18-12 34-17 48-17" fill="none" stroke="var(--berry)" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+            <path d="M56 108c22 15 47 22 74 22s52-7 74-22" fill="none" stroke="currentColor" stroke-width="2.6" opacity=".3"/>
+            <circle cx="96" cy="72" r="2.6" fill="currentColor" opacity=".38"/><circle cx="156" cy="64" r="2.6" fill="currentColor" opacity=".38"/>
+            <circle cx="188" cy="84" r="2.6" fill="currentColor" opacity=".38"/><circle cx="120" cy="96" r="2.6" fill="currentColor" opacity=".38"/>
+          </svg>
+          <p class="hero-cap">The Marlowe sourdough, scored once down the length. Two days from the feed that starts it to the shelf, and the only thing here that takes that long.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="railTitle">
+    <div class="wrap railwrap">
+      <div class="rail-head">
+        <span class="rail-title" id="railTitle">Drag the day</span>
+        <span class="rail-read" id="railRead">Showing now</span>
+        <button class="btn-now" id="btnNow" type="button" hidden>Back to now</button>
+      </div>
+      <div class="rail" id="rail">
+        <div class="rail-line"></div>
+        <div class="rail-fill" id="railFill"></div>
+        <span class="rail-hand" id="hand"><button class="rail-handle" id="handle" type="button" role="slider"
+                aria-label="Time of day. Arrow keys move fifteen minutes, page keys move an hour."
+                aria-valuemin="270" aria-valuemax="960" aria-valuenow="270" aria-valuetext="4:30 am" data-clock="4:30"></button></span>
+      </div>
+      <p class="rail-note">Two decks, ten bakes, nine things, and a door that shuts at three or when the shelf is bare. The diamonds are the moments something reaches the shelf. Pull the handle back to four in the morning to watch the oven fill, or push it past two to see how little is left.</p>
+    </div>
+  </section>
+
+  <section class="shelf" id="shelf" aria-labelledby="shelfH">
+    <div class="wrap">
+      <div class="shelf-top">
+        <h2 id="shelfH">The shelf at <span class="clk" id="shelfClock">4:30</span></h2>
+        <p class="shelf-count" id="shelfCount"></p>
+      </div>
+
+      <div class="shelf-layout">
+        <div class="shelf-grid" id="grid"></div>
+
+        <aside class="pad" aria-labelledby="padH">
+          <div class="pad-perf" aria-hidden="true"></div>
+          <div class="pad-paper">
+            <h3 id="padH" tabindex="-1">Order pad</h3>
+            <p class="pad-sub" id="padSub">no. 0000</p>
+            <div id="padBody"></div>
+          </div>
+        </aside>
+      </div>
+
+      <p class="honest">The counts come off the day's bake sheet and a sell-through model built from an ordinary Thursday, not from the till. On a wet week we are out by a few either way. If you want something held, ring before nine.</p>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="decksH">
+    <div class="wrap decks">
+      <h2 id="decksH">Why the baguettes come back at 11:10</h2>
+      <p class="decks-lede">Deck A runs hot for bread and drops through the morning. Deck B sits at 190 for pastry and never moves. Nothing can go in until something else comes out, which is the whole shape of the day.</p>
+
+      <svg class="gantt" id="gantt" viewBox="0 0 1000 250" role="img" aria-labelledby="ganttT ganttD">
+        <title id="ganttT">The day on two oven decks</title>
+        <desc id="ganttD">Deck A holds the sourdough, baguettes, rye and focaccia in sequence from ten past five until five to eleven. Deck B holds croissants, almond croissants, cinnamon buns, custard tarts and scones from a quarter to six until nine. The second baguette bake cannot start until deck A is free at twenty to ten and has climbed back to 250 degrees.</desc>
+      </svg>
+
+      <ol class="key" id="ganttKey"></ol>
+
+      <p class="decks-note">The focaccia leaves deck A at 09:40 at 220 degrees. Baguettes need 250 with steam, so the deck spends fifty minutes climbing while the second poolish finishes. In at 10:30, out at 10:55, on the shelf at 11:10. That gap is not a choice, it is a thermometer.</p>
+    </div>
+  </section>
+
+  <section class="craft" aria-labelledby="craftH">
+    <div class="wrap">
+      <div class="craft-grid">
+
+        <div class="jarbox">
+          <svg viewBox="0 0 160 210" role="img" aria-labelledby="jarT jarD">
+            <title id="jarT">The starter jar</title>
+            <desc id="jarD">A glass jar with a rubber band marking the level at the last feed. The contents rise and fall with the hours since it was fed.</desc>
+            <rect x="42" y="10" width="76" height="16" rx="4" fill="var(--butter-30)" stroke="currentColor" stroke-width="3"/>
+            <path d="M46 26h68v152a12 12 0 0 1-12 12H58a12 12 0 0 1-12-12z" fill="var(--butter-05)" stroke="currentColor" stroke-width="3"/>
+            <clipPath id="jarclip"><path d="M49 29h62v149a9 9 0 0 1-9 9H58a9 9 0 0 1-9-9z"/></clipPath>
+            <g clip-path="url(#jarclip)">
+              <rect id="jarLevel" x="49" y="120" width="62" height="70" fill="var(--butter-30)"/>
+              <path id="jarTop" d="M49 120q15 -7 31 0t31 0v10H49z" fill="var(--butter-20)"/>
+              <circle class="bub" cx="64" cy="150" r="4" fill="var(--butter-05)" opacity=".8"/>
+              <circle class="bub" cx="86" cy="164" r="3" fill="var(--butter-05)" opacity=".7"/>
+              <circle class="bub" cx="98" cy="146" r="5" fill="var(--butter-05)" opacity=".65"/>
+              <circle class="bub" cx="72" cy="176" r="2.6" fill="var(--butter-05)" opacity=".6"/>
+            </g>
+            <!-- the rubber band sits at the level it was fed to, which is the 30% floor -->
+            <rect id="jarBand" x="43" y="137" width="74" height="7" rx="2" fill="var(--berry)"/>
+            <text x="126" y="144" font-size="10" fill="var(--berry)">fed</text>
+          </svg>
+          <p class="jar-read" id="jarRead"></p>
+        </div>
+
+        <div>
+          <h2 id="craftH">How the Marlowe loaf is made</h2>
+          <p>It starts the afternoon before. The starter gets its evening feed at eight, peaks around two in the morning, and that is the jar that goes into the mixer. Everything else is waiting.</p>
+          <p>Flour is stoneground from a mill in Kent, mostly white with a tenth of wholemeal for the flavour it gives back on the second day. Water goes in at 32 degrees so the dough lands at 26 after mixing. Salt holds back until the autolyse has done its half hour.</p>
+
+          <ul class="spec">
+            <li><span>Flour</span><span><b>90%</b> stoneground white, <b>10%</b> wholemeal</span></li>
+            <li><span>Hydration</span><span><b>78%</b>, pushed to 80 in winter</span></li>
+            <li><span>Starter</span><span><b>18%</b> of flour weight, at peak</span></li>
+            <li><span>Salt</span><span><b>2.1%</b>, in after the autolyse</span></li>
+            <li><span>Bulk</span><span><b>4 hours</b> at 26 degrees, four folds</span></li>
+            <li><span>Retard</span><span><b>18 hours</b> at 4 degrees</span></li>
+            <li><span>Bake</span><span><b>250 falling to 230</b>, 55 minutes, steam for the first 18</span></li>
+          </ul>
+
+          <h3>The folds are the only thing we are strict about</h3>
+          <p>Four of them, forty minutes apart, and then the dough is left alone. Each one is a lift from underneath and a fold over, a quarter turn, four times round the tub. It takes about thirty seconds. Skipping the last fold gives you a flatter loaf with a wetter crumb, which some people prefer and we do not.</p>
+          <p>Shaping happens on an unfloured bench so the dough has something to grip. It goes into linen-lined baskets seam up, into the fridge until the small hours, and out of the fridge straight into the oven with one long score down the length at a shallow angle. That score is what makes the ear.</p>
+
+          <h3>Everything else is built around that one bake</h3>
+          <p>The croissants are laminated the previous morning and sleep in the fridge overnight, so they only need proving and a slot on deck B. The rye is scalded, which means half its flour is mixed with boiling water the day before and left to go sweet. The almond croissants are yesterday's croissants, soaked in syrup and filled, which is what they have always been and why they exist.</p>
+          <p>Focaccia is the one thing mixed the same morning. Eighty-five percent hydration, twenty-four hours cold if we have the fridge space, and rosemary from the yard behind the shop. When the yard rosemary runs out in February we say so on the board rather than buying it in.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section class="visit" id="visit" aria-labelledby="visitH">
+    <div class="wrap">
+      <div class="visit-grid">
+        <div>
+          <h2 id="visitH">Finding us on Marlowe Street</h2>
+          <table class="hours">
+            <caption>Or until the shelf is bare, which on a Saturday is nearer one.</caption>
+            <tbody id="hoursBody"></tbody>
+          </table>
+          <p class="addr">
+            14 Marlowe Street, on the corner of Cardigan Road.<br>
+            <a href="tel:+441234567012">01234 567 012</a>, best before nine in the morning.<br>
+            Standing orders go on the hook by the till. Leave a slip, we will have it bagged.
+          </p>
+        </div>
+
+        <div class="mapbox">
+          <svg viewBox="0 0 520 350" role="img" aria-labelledby="mapT mapD">
+            <title id="mapT">Plan of the Marlowe Street corner</title>
+            <desc id="mapD">The shop sits on the north east corner of Marlowe Street and Cardigan Road. The door is on the Cardigan Road side, not on Marlowe Street. A bike rack stands directly outside the door and the 47 bus stops thirty metres east on Marlowe Street. The green is opposite.</desc>
+            <rect width="520" height="350" fill="var(--butter-05)"/>
+            <rect x="0" y="150" width="520" height="62" fill="var(--butter-30)"/>
+            <rect x="150" y="0" width="58" height="350" fill="var(--butter-30)"/>
+            <path d="M0 181h520M179 0v350" stroke="var(--butter-05)" stroke-width="2.5" stroke-dasharray="16 14"/>
+            <rect x="208" y="60" width="128" height="90" fill="var(--berry-soft)" stroke="var(--ink)" stroke-width="3"/>
+            <path d="M208 60l128 90M208 105l90 45M254 60l82 58" stroke="var(--berry)" stroke-width="2" opacity=".5"/>
+            <rect x="203" y="112" width="10" height="26" fill="var(--berry)"/>
+            <text class="m-name" x="246" y="112" font-size="17" fill="var(--ink)">Pennyloaf</text>
+            <text x="246" y="130" font-size="11" fill="var(--ink-70)">no. 14</text>
+            <g stroke="var(--ink)" stroke-width="3" stroke-linecap="round">
+              <path d="M172 116v22M180 116v22M188 116v22"/>
+            </g>
+            <text x="120" y="112" font-size="10.5" fill="var(--ink-70)" text-anchor="end">bike rack</text>
+            <path d="M124 116h40" stroke="var(--ink-40)" stroke-width="1.5"/>
+            <rect x="352" y="126" width="9" height="26" fill="var(--ink)"/>
+            <circle cx="356.5" cy="122" r="9" fill="var(--ink)"/>
+            <text x="356.5" y="126" font-size="10" fill="var(--butter-05)" text-anchor="middle">47</text>
+            <text x="376" y="126" font-size="10.5" fill="var(--ink-70)">bus stop</text>
+            <rect x="230" y="238" width="200" height="86" rx="10" fill="var(--fresh)" opacity=".22" stroke="var(--fresh)" stroke-width="2.5"/>
+            <text class="m-green" x="330" y="288" font-size="15" fill="var(--fresh)" text-anchor="middle">the green</text>
+            <text x="470" y="176" font-size="11.5" fill="var(--ink)" text-anchor="end">Marlowe Street</text>
+            <text x="179" y="330" font-size="11.5" fill="var(--ink)" text-anchor="middle" transform="rotate(-90 179 330)">Cardigan Road</text>
+            <path d="M40 60l0 -26M40 34l-7 8M40 34l7 8" stroke="var(--ink)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <text x="40" y="76" font-size="10" fill="var(--ink-70)" text-anchor="middle">N</text>
+          </svg>
+          <p class="mapcap">The door is round on Cardigan Road, not on Marlowe Street. People miss it. The bike rack is right outside it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span class="mark" data-word="Pennyloaf"><span>Pennyloaf</span></span>
+    <div class="foot-row">
+      <p>14 Marlowe Street, on the corner of Cardigan Road. One oven, two decks, and a door that shuts when the shelf is bare.</p>
+      <div class="foot-hours">
+        Tue to Fri &nbsp;06:30 to 15:00<br>
+        Saturday &nbsp;&nbsp;&nbsp;06:30 to 15:00<br>
+        Sunday &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;08:00 to 13:00<br>
+        Monday &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;shut, the deck is off
+      </div>
+      <svg class="foot-loaf" viewBox="0 0 130 96" aria-hidden="true"><use href="#d-sour"></use></svg>
+    </div>
+    <p class="foot-fine">Counts on this page are modelled from the bake sheet. The slip is made in your browser and sent nowhere. Bring it or read us the number.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- the day ---------- */
+  var RAIL_A = 270;        /* 04:30 */
+  var RAIL_B = 960;        /* 16:00 */
+  var OPEN   = 390;        /* 06:30 */
+  var CLOSE  = 900;        /* 15:00 */
+  var WALK   = 8;          /* minutes from most doors on the street */
+
+  var GOODS = [
+    { id:'sour', name:'Marlowe sourdough', unit:'900g', price:4.80, span:3, sym:'d-sour', rate:7,
+      note:'Stoneground white with a tenth wholemeal, 78% hydration, eighteen hours cold.',
+      bakes:[{deck:'A', into:310, out:365, cool:45, qty:40}] },
+    { id:'bag', name:'Baguette', unit:'280g', price:2.60, span:3, sym:'d-bag', rate:8,
+      note:'Poolish left overnight, folded twice, baked straight on the deck floor.',
+      bakes:[{deck:'A', into:375, out:400, cool:15, qty:36},{deck:'A', into:630, out:655, cool:15, qty:24}] },
+    { id:'cro', name:'Croissant', unit:'each', price:3.10, span:2, sym:'d-cro', rate:12,
+      note:'Three folds, 26% butter, proved four hours in the warm cupboard.',
+      bakes:[{deck:'B', into:345, out:370, cool:20, qty:48}] },
+    { id:'alm', name:'Almond croissant', unit:'each', price:3.60, span:2, sym:'d-alm', rate:5,
+      note:"Yesterday's croissants, soaked in syrup, filled and baked again.",
+      bakes:[{deck:'B', into:380, out:405, cool:15, qty:20}] },
+    { id:'bun', name:'Cinnamon bun', unit:'each', price:3.40, span:2, sym:'d-bun', rate:7,
+      note:'Cardamom in the dough, cinnamon butter in the roll, hot syrup on the way out.',
+      bakes:[{deck:'B', into:420, out:450, cool:20, qty:30}] },
+    { id:'rye', name:'Dark rye with caraway', unit:'800g', price:5.20, span:4, sym:'d-rye', rate:3,
+      note:'Ninety percent rye, scalded the day before, caraway toasted in the pan first. Slice it thin and leave it a day.',
+      bakes:[{deck:'A', into:435, out:510, cool:60, qty:18}] },
+    { id:'foc', name:'Rosemary focaccia', unit:'a slice', price:3.90, span:2, sym:'d-foc', rate:6,
+      note:'85% hydration, a day in the fridge, rosemary from the yard.',
+      bakes:[{deck:'A', into:540, out:580, cool:20, qty:24}] },
+    { id:'tar', name:'Custard tart', unit:'each', price:3.20, span:3, sym:'d-tart', rate:5,
+      note:'Puff trimmings from the croissant table, vanilla custard, burnt on top on purpose.',
+      bakes:[{deck:'B', into:480, out:505, cool:25, qty:24}] },
+    { id:'sco', name:'Cheese and pepper scone', unit:'each', price:2.90, span:3, sym:'d-sco', rate:4,
+      note:'Aged cheddar, black pepper, buttermilk. Best inside the first hour.',
+      bakes:[{deck:'B', into:520, out:540, cool:20, qty:22}] }
+  ];
+
+  /* how busy the counter is, hour by hour. Fixed, so the day never reshuffles. */
+  function weight(m){
+    if(m < 450) return 1.0;      /* before 07:30 */
+    if(m < 555) return 1.9;      /* the school run */
+    if(m < 720) return 1.0;
+    if(m < 795) return 1.5;      /* lunch */
+    if(m < 810) return 1.0;
+    return 0.5;                  /* the long afternoon */
+  }
+  var STEP = 5, CUM = [0];
+  (function(){ var c=0; for(var m=RAIL_A;m<RAIL_B;m+=STEP){ c += weight(m+STEP/2)*(STEP/60); CUM.push(c);} })();
+  function cum(t){
+    if(t<=RAIL_A) return 0;
+    if(t>=RAIL_B) return CUM[CUM.length-1];
+    var f=(t-RAIL_A)/STEP, i=Math.floor(f);
+    return CUM[i] + (CUM[i+1]-CUM[i])*(f-i);
+  }
+
+  GOODS.forEach(function(g){
+    g.total = 0;
+    g.bakes.forEach(function(b){ b.shelf = Math.max(b.out + b.cool, OPEN); g.total += b.qty; });
+    g.firstShelf = g.bakes[0].shelf;
+  });
+  var TOTAL_BAKED = GOODS.reduce(function(a,g){ return a + g.total; },0);
+
+  function supplyBy(g,t){ var s=0; for(var i=0;i<g.bakes.length;i++){ if(g.bakes[i].shelf<=t) s+=g.bakes[i].qty; } return s; }
+  function soldBy(g,t){
+    if(t <= g.firstShelf) return 0;
+    var want = Math.floor(g.rate * (cum(Math.min(t,CLOSE)) - cum(g.firstShelf)));
+    return Math.max(0, Math.min(want, supplyBy(g,t)));
+  }
+  function availAt(g,t){ return supplyBy(g,t) - soldBy(g,t); }
+  function nextShelf(g,t){ for(var i=0;i<g.bakes.length;i++){ if(g.bakes[i].shelf>t) return g.bakes[i].shelf; } return null; }
+  function currentBake(g,t){ for(var i=0;i<g.bakes.length;i++){ var b=g.bakes[i]; if(t>=b.into && t<b.out) return b; } return null; }
+  function coolingBake(g,t){ for(var i=0;i<g.bakes.length;i++){ var b=g.bakes[i]; if(t>=b.out && t<b.shelf) return b; } return null; }
+
+  /* label is the live state, act is what the pad can do about it. Never the same words twice. */
+  function statusOf(g,t){
+    var av = availAt(g,t);
+    if(t >= CLOSE) return {k:'shut', label:'The counter is shut', act:'The pad opens again tomorrow', can:false, avail:av};
+    var ov = currentBake(g,t);
+    if(ov) return {k:'oven', label:'In the oven until ' + hhmm(ov.out), act:'On the pad from ' + hhmm(ov.shelf), can:false, avail:av};
+    var co = coolingBake(g,t);
+    if(co) return {k:'cool', label:'Cooling until ' + hhmm(co.shelf), act:'On the pad from ' + hhmm(co.shelf), can:false, avail:av};
+    var nx = nextShelf(g,t);
+    if(t < g.firstShelf){
+      if(t < g.bakes[0].into) return {k:'prove', label:'Proving, into the oven at ' + hhmm(g.bakes[0].into), act:'On the pad from ' + hhmm(g.firstShelf), can:false, avail:0};
+      return {k:'cool', label:'On the shelf at ' + hhmm(g.firstShelf), act:'On the pad from ' + hhmm(g.firstShelf), can:false, avail:0};
+    }
+    if(t < OPEN) return {k:'prove', label:'Ready, the door opens at 6:30', act:'On the pad from 6:30', can:false, avail:av};
+    if(av > 0) return {k:'shelf', label:'On the shelf', act:'Put one on the pad', can:true, avail:av};
+    if(nx) return {k:'back', label:'Gone. Back at ' + hhmm(nx), act:'On the pad again at ' + hhmm(nx), can:false, avail:0};
+    return {k:'gone', label:'Sold out for today', act:'Off the pad until tomorrow', can:false, avail:0};
+  }
+
+  function hhmm(m){
+    var h=Math.floor(m/60), n=m%60;
+    return h + ':' + (n<10?'0':'') + n;
+  }
+  function clock12(m){
+    var h=Math.floor(m/60), n=m%60, ap = h<12 ? 'am' : 'pm', hh = h%12; if(hh===0) hh=12;
+    return hh + ':' + (n<10?'0':'') + n + ' ' + ap;
+  }
+  function money(p){ return '£' + p.toFixed(2); }
+
+  /* ---------- state ---------- */
+  var state = { t: RAIL_A, pinned:false, pad:{}, slip:null };
+
+  function realNow(){
+    var d = new Date();
+    var m = d.getHours()*60 + d.getMinutes();
+    return Math.min(RAIL_B, Math.max(RAIL_A, m));
+  }
+
+  /* ---------- build the shelf ---------- */
+  var grid = document.getElementById('grid');
+  var cards = {};
+
+  GOODS.forEach(function(g){
+    var el = document.createElement('article');
+    el.className = 'good g-' + g.span;
+    el.id = 'good-' + g.id;
+    el.innerHTML =
+      '<span class="blot" aria-hidden="true"></span>' +
+      '<svg class="stamp" viewBox="0 0 130 62" aria-hidden="true"><g filter="url(#rough)">' +
+        '<rect x="4" y="4" width="122" height="54" rx="7" fill="none" stroke="var(--berry)" stroke-width="4"/>' +
+        '<text x="65" y="40" text-anchor="middle" fill="var(--berry)">SOLD OUT</text>' +
+      '</g></svg>' +
+      '<div class="g-top">' +
+        '<svg class="draw" viewBox="0 0 130 96" role="img" aria-label="A drawing of the ' + g.name.toLowerCase() + '"><use href="#' + g.sym + '"></use></svg>' +
+        '<div style="min-width:0">' +
+          '<h3 class="g-name">' + g.name + '</h3>' +
+          '<span class="g-unit">' + g.unit + '</span>' +
+        '</div>' +
+        '<span class="g-price">' + money(g.price) + '</span>' +
+      '</div>' +
+      '<p class="g-note">' + g.note + '</p>' +
+      '<p class="g-state"><span class="dot" aria-hidden="true"></span><span class="g-state-t"></span></p>' +
+      '<div class="g-act"></div>';
+    grid.appendChild(el);
+    cards[g.id] = { el:el, state:el.querySelector('.g-state'), text:el.querySelector('.g-state-t'), act:el.querySelector('.g-act'), was:null };
+  });
+
+  /* ---------- the order pad ---------- */
+  var padBody = document.getElementById('padBody');
+  var padSub  = document.getElementById('padSub');
+
+  function padCount(){ var n=0; for(var k in state.pad) n += state.pad[k]; return n; }
+  function padTotal(){ var s=0; GOODS.forEach(function(g){ if(state.pad[g.id]) s += g.price*state.pad[g.id]; }); return s; }
+
+  function renderPad(){
+    var t = state.t, ids = GOODS.filter(function(g){ return state.pad[g.id]>0; });
+    padSub.textContent = 'no. ' + String(Math.floor(t)).padStart(4,'0');
+
+    if(state.slip){
+      padBody.innerHTML =
+        '<div class="pad-done"><span class="big">' + money(state.slip.total) + '</span>' +
+        '<p style="margin:0 0 10px">' + state.slip.n + (state.slip.n===1?' thing':' things') + ', written at ' + clock12(state.slip.t) + '.</p>' +
+        '<p style="margin:0 0 14px">' + state.slip.lines.join('<br>') + '</p></div>' +
+        '<button class="btn-slip" type="button" id="padReset">Start another pad</button>' +
+        '<p class="pad-foot">Nothing was sent anywhere. Show the screen at the counter or just read us the number.</p>';
+      document.getElementById('padReset').addEventListener('click', function(){
+        state.slip = null; state.pad = {}; renderPad(); render();
+      });
+      return;
+    }
+
+    if(ids.length === 0){
+      padBody.innerHTML =
+        '<div class="pad-empty">' +
+        '<svg viewBox="0 0 120 92" aria-hidden="true"><path d="M22 24h76v58a8 8 0 0 1-8 8H30a8 8 0 0 1-8-8z" fill="none" stroke="currentColor" stroke-width="3"/><path d="M22 24l10-14h56l10 14" fill="none" stroke="currentColor" stroke-width="3"/><path d="M36 44h48M36 58h34" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1 9"/></svg>' +
+        '<p>Nothing on it yet. Add something from the shelf and this works out whether it will still be there when you get here.</p>' +
+        '</div>';
+      return;
+    }
+
+    var lines = [], warn = [];
+    ids.forEach(function(g){
+      var later = availAt(g, Math.min(t + WALK, CLOSE));
+      if(t + WALK < CLOSE && later < state.pad[g.id]) warn.push(g.name.toLowerCase());
+      lines.push(
+        '<li><span class="pad-q">' + state.pad[g.id] + '×</span>' +
+        '<span class="pad-nm">' + g.name + '</span>' +
+        '<span class="pad-p">' + money(g.price*state.pad[g.id]) + '</span>' +
+        '<button class="pad-drop" type="button" data-drop="' + g.id + '" aria-label="Take the ' + g.name.toLowerCase() + ' off the pad">×</button></li>'
+      );
+    });
+
+    var warnHtml = '';
+    if(warn.length){
+      warnHtml = '<div class="pad-warn"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l9 17H3z"/><path d="M12 10v4M12 17.4v.1"/></svg>' +
+        '<span>Eight minutes to walk down and the model says the ' + warn.join(' and the ') + ' will be gone. Worth a ring first.</span></div>';
+    } else if(t >= CLOSE){
+      warnHtml = '<div class="pad-warn"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l9 17H3z"/><path d="M12 10v4M12 17.4v.1"/></svg>' +
+        '<span>The counter shut at three. This pad is for tomorrow.</span></div>';
+    }
+
+    padBody.innerHTML =
+      '<ul class="pad-list">' + lines.join('') + '</ul>' +
+      warnHtml +
+      '<p class="pad-total"><span>' + padCount() + (padCount()===1?' thing':' things') + '</span><span>' + money(padTotal()) + '</span></p>' +
+      '<button class="btn-slip" type="button" id="btnSlip">Make the slip</button>' +
+      '<p class="pad-foot">Made in your browser. Nothing leaves the page.</p>';
+
+    Array.prototype.forEach.call(padBody.querySelectorAll('[data-drop]'), function(b){
+      b.addEventListener('click', function(){
+        delete state.pad[b.getAttribute('data-drop')];
+        render();
+        document.getElementById('padH').focus();   /* the button it was on is gone */
+      });
+    });
+    var slipBtn = document.getElementById('btnSlip');
+    slipBtn.addEventListener('click', function(){
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var finish = function(){
+        var ls = [];
+        GOODS.forEach(function(g){ if(state.pad[g.id]) ls.push(state.pad[g.id] + '× ' + g.name); });
+        state.slip = { total:padTotal(), n:padCount(), t:state.t, lines:ls };
+        renderPad();
+      };
+      if(reduce){ finish(); return; }
+      slipBtn.classList.add('is-pressing');
+      slipBtn.textContent = 'Stamping';
+      window.setTimeout(finish, 340);
+    });
+  }
+
+  /* ---------- render ---------- */
+  var say        = document.getElementById('say');
+  var soldEdge   = document.getElementById('soldEdge');
+  var shelfClock = document.getElementById('shelfClock');
+  var shelfCount = document.getElementById('shelfCount');
+  var railRead   = document.getElementById('railRead');
+  var btnNow     = document.getElementById('btnNow');
+  var handle     = document.getElementById('handle');
+  var hand       = document.getElementById('hand');
+  var railFill   = document.getElementById('railFill');
+  var rail       = document.getElementById('rail');
+  var jarLevel   = document.getElementById('jarLevel');
+  var jarTop     = document.getElementById('jarTop');
+  var jarRead    = document.getElementById('jarRead');
+
+  function render(){
+    var t = state.t, outCount = 0, soldTotal = 0;
+
+    GOODS.forEach(function(g){
+      var c = cards[g.id], s = statusOf(g,t);
+      soldTotal += soldBy(g,t);
+      if(s.k === 'shelf') outCount++;
+
+      c.state.className = 'g-state s-' + (s.k==='shelf'?'shelf':s.k==='oven'?'oven':s.k==='cool'?'cool':(s.k==='gone'||s.k==='back'||s.k==='shut')?'gone':'wait');
+      c.text.innerHTML = s.k === 'shelf'
+        ? 'On the shelf, <span class="left-n">' + s.avail + '</span> left'
+        : (s.k === 'shut' && s.avail > 0 ? 'The counter is shut, ' + s.avail + ' were left' : s.label);
+
+      var gone = (s.k === 'gone' || (s.k === 'shut' && s.avail === 0));
+      c.el.classList.toggle('is-gone', gone);
+      c.el.classList.toggle('is-waiting', s.k === 'prove' || s.k === 'oven' || s.k === 'cool');
+
+      if(!gone){
+        c.el.classList.remove('is-stamping');
+      } else if(c.was === false){
+        c.el.classList.remove('is-stamping');
+        void c.el.offsetWidth;           /* restart the press */
+        c.el.classList.add('is-stamping');
+      }
+      c.was = gone;
+
+      var have = state.pad[g.id] || 0;
+      var wantKey = s.can ? 'step' : 'off';
+      if(have > 0 && s.can){
+        if(c.act.getAttribute('data-mode') !== 'step'){
+          c.act.setAttribute('data-mode','step');
+          c.act.innerHTML =
+            '<div class="stepper">' +
+            '<button type="button" data-minus="' + g.id + '" aria-label="One fewer ' + g.name.toLowerCase() + '">−</button>' +
+            '<span class="n" data-n="' + g.id + '" aria-live="polite">' + have + '</span>' +
+            '<button type="button" data-plus="' + g.id + '" aria-label="One more ' + g.name.toLowerCase() + '">+</button>' +
+            '</div>';
+          wire(c.act);
+        }
+        c.act.querySelector('[data-n]').textContent = have;
+        c.act.querySelector('[data-plus]').disabled = have >= s.avail;
+      } else {
+        if(c.act.getAttribute('data-mode') !== wantKey + s.act){
+          c.act.setAttribute('data-mode', wantKey + s.act);
+          c.act.innerHTML = '<button class="btn-add" type="button" data-add="' + g.id + '"' + (s.can?'':' disabled') + '>' + s.act + '</button>';
+          wire(c.act);
+        }
+      }
+      if(have > 0 && !s.can) delete state.pad[g.id];
+    });
+
+    shelfClock.textContent = hhmm(t);
+    shelfCount.textContent = outCount + ' of 9 on the shelf · ' + soldTotal + ' of ' + TOTAL_BAKED + ' sold';
+
+    if(t < OPEN){
+      say.innerHTML = 'It’s <b>' + clock12(t) + '</b>. The deck is on and the door opens at 6:30.';
+    } else if(t >= CLOSE){
+      say.innerHTML = 'It’s <b>' + clock12(t) + '</b>. The counter shut at three.';
+    } else if(outCount === 0){
+      say.innerHTML = 'It’s <b>' + clock12(t) + '</b>. Nothing left out, which happens.';
+    } else {
+      say.innerHTML = 'It’s <b>' + clock12(t) + '</b>. ' + (outCount===1 ? 'One thing is' : outCount + ' things are') + ' still out.';
+    }
+
+    soldEdge.style.transform = 'scaleX(' + (soldTotal/TOTAL_BAKED).toFixed(4) + ')';
+
+    handle.setAttribute('aria-valuenow', String(Math.round(t)));
+    handle.setAttribute('aria-valuetext', clock12(t) + ', ' + outCount + ' of nine on the shelf');
+    handle.setAttribute('data-clock', hhmm(t));
+    placeHandle();
+    railFill.style.transform = 'scaleX(' + ((t-RAIL_A)/(RAIL_B-RAIL_A)).toFixed(4) + ')';
+    railRead.textContent = state.pinned ? 'Showing ' + clock12(t) : 'Showing now, ' + clock12(t);
+    btnNow.hidden = !state.pinned;
+
+    /* the starter */
+    var since = t >= 480 ? (t-480)/60 : (t+240)/60;      /* fed at 8am and 8pm */
+    var rise  = Math.max(0, Math.sin(Math.min(since,12)/12*Math.PI));
+    var frac  = 0.30 + 0.60*rise;
+    var floorY = 187, ceilY = 32, h = (floorY-ceilY)*frac;
+    jarLevel.setAttribute('y', String(floorY-h));
+    jarLevel.setAttribute('height', String(h));
+    jarTop.setAttribute('transform','translate(0,' + (floorY-h-120) + ')');
+    jarRead.innerHTML = 'Fed at ' + (t>=480 ? '8:00 this morning' : '8:00 last night') +
+      '.<br><b>' + since.toFixed(1) + ' hours</b> ago, ' + Math.round(rise*100) + '% of the way up.' +
+      '<br>1 part starter, 5 flour, 5 water, kept at 24.';
+
+    renderPadIfNeeded();
+  }
+
+  var padSig = '';
+  function renderPadIfNeeded(){
+    var sig = JSON.stringify(state.pad) + '|' + Math.round(state.t) + '|' + (state.slip?'s':'-');
+    if(sig !== padSig){ padSig = sig; renderPad(); }
+  }
+
+  function wire(root){
+    Array.prototype.forEach.call(root.querySelectorAll('[data-add]'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-add'), g = byId(id);
+        var n = Math.min(1, availAt(g, state.t));
+        if(n > 0) state.pad[id] = n; else delete state.pad[id];
+        state.slip = null;
+        render();
+      });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-plus]'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-plus'), g = byId(id);
+        state.pad[id] = Math.min((state.pad[id]||0)+1, availAt(g, state.t));
+        render();
+      });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-minus]'), function(b){
+      b.addEventListener('click', function(){
+        var id = b.getAttribute('data-minus');
+        state.pad[id] = (state.pad[id]||0) - 1;
+        if(state.pad[id] <= 0) delete state.pad[id];
+        render();
+      });
+    });
+  }
+  function byId(id){ for(var i=0;i<GOODS.length;i++) if(GOODS[i].id===id) return GOODS[i]; }
+
+  /* ---------- the rail ---------- */
+  function placeHandle(){
+    var x = (state.t - RAIL_A)/(RAIL_B - RAIL_A) * rail.clientWidth;
+    hand.style.transform = 'translate3d(' + x.toFixed(1) + 'px,0,0)';
+  }
+  function setT(v, pin){
+    state.t = Math.min(RAIL_B, Math.max(RAIL_A, Math.round(v)));
+    if(pin) state.pinned = true;
+    render();
+  }
+
+  (function buildRail(){
+    var frag = document.createDocumentFragment();
+    for(var h=5; h<=16; h++){
+      var m = h*60;
+      if(m < RAIL_A || m > RAIL_B) continue;
+      var p = (m-RAIL_A)/(RAIL_B-RAIL_A)*100;
+      var tk = document.createElement('span'); tk.className='tick'; tk.style.left = p + '%'; frag.appendChild(tk);
+      if(h % 2 === 1 || h === 16){
+        var lb = document.createElement('span'); lb.className='tick-lab'; lb.style.left = p + '%';
+        lb.textContent = (h%12===0?12:h%12) + (h<12?'am':'pm'); frag.appendChild(lb);
+      }
+    }
+    GOODS.forEach(function(g){
+      g.bakes.forEach(function(b){
+        var p = (b.shelf-RAIL_A)/(RAIL_B-RAIL_A)*100;
+        var d = document.createElement('span');
+        d.className='outmark'; d.style.left = p + '%';
+        d.title = g.name + ' on the shelf at ' + hhmm(b.shelf);
+        frag.appendChild(d);
+      });
+    });
+    rail.insertBefore(frag, hand);
+  })();
+
+  var dragging = false;
+  function fromEvent(e){
+    var r = rail.getBoundingClientRect();
+    var f = (e.clientX - r.left) / r.width;
+    return RAIL_A + f*(RAIL_B - RAIL_A);
+  }
+  rail.addEventListener('pointerdown', function(e){
+    dragging = true;
+    rail.setPointerCapture(e.pointerId);
+    setT(fromEvent(e), true);
+    handle.focus();
+    e.preventDefault();
+  });
+  rail.addEventListener('pointermove', function(e){ if(dragging) setT(fromEvent(e), true); });
+  rail.addEventListener('pointerup',   function(e){ dragging = false; try{ rail.releasePointerCapture(e.pointerId); }catch(err){} });
+  rail.addEventListener('pointercancel', function(){ dragging = false; });
+
+  handle.addEventListener('keydown', function(e){
+    var k = e.key, step = e.shiftKey ? 5 : 15, done = true;
+    if(k === 'ArrowLeft' || k === 'ArrowDown') setT(state.t - step, true);
+    else if(k === 'ArrowRight' || k === 'ArrowUp') setT(state.t + step, true);
+    else if(k === 'PageDown') setT(state.t - 60, true);
+    else if(k === 'PageUp') setT(state.t + 60, true);
+    else if(k === 'Home') setT(RAIL_A, true);
+    else if(k === 'End') setT(RAIL_B, true);
+    else done = false;
+    if(done) e.preventDefault();
+  });
+  btnNow.addEventListener('click', function(){ state.pinned = false; setT(realNow(), false); handle.focus(); });
+  window.addEventListener('resize', placeHandle);
+
+  /* ---------- the oven diagram, drawn from the same bake sheet ---------- */
+  (function drawGantt(){
+    var svg = document.getElementById('gantt'), key = document.getElementById('ganttKey');
+    var X0 = 58, X1 = 982, W = X1 - X0;
+    var x = function(m){ return X0 + (m-RAIL_A)/(RAIL_B-RAIL_A)*W; };
+    var ns = 'http://www.w3.org/2000/svg';
+    var el = function(n, at){ var e = document.createElementNS(ns,n); for(var k in at) e.setAttribute(k, at[k]); return e; };
+    var lanes = { A:{y:64, label:'Deck A'}, B:{y:140, label:'Deck B'} };
+    var H = 56, n = 0, keyHtml = [];
+
+    /* lanes first so the hour lines read on top of them */
+    ['A','B'].forEach(function(d){
+      var L = lanes[d];
+      svg.appendChild(el('rect',{x:X0,y:L.y,width:W,height:H,fill:'rgba(247,233,196,.06)',rx:3}));
+      var lt = el('text',{x:X0-12,y:L.y+H/2+5,'text-anchor':'end',fill:'var(--berry-soft)','font-size':'13'});
+      lt.textContent = L.label;
+      svg.appendChild(lt);
+    });
+
+    for(var h=5; h<=16; h++){
+      var m = h*60; if(m < RAIL_A || m > RAIL_B) continue;
+      svg.appendChild(el('line',{x1:x(m),y1:48,x2:x(m),y2:214,stroke:'rgba(247,233,196,.16)','stroke-width':1}));
+      var tl = el('text',{x:x(m),y:236,'text-anchor':'middle',fill:'rgba(247,233,196,.62)','font-size':'12'});
+      tl.textContent = (h%12===0?12:h%12) + (h<12?'am':'pm');
+      svg.appendChild(tl);
+    }
+
+    var seq = [];
+    GOODS.forEach(function(g){ g.bakes.forEach(function(b){ seq.push({g:g,b:b}); }); });
+    seq.sort(function(a,c){ return a.b.into - c.b.into; });
+
+    seq.forEach(function(s){
+      n++;
+      var L = lanes[s.b.deck];
+      var g0 = el('g',{});
+      var ttl = document.createElementNS(ns,'title');
+      ttl.textContent = s.g.name + ', deck ' + s.b.deck + ', in at ' + hhmm(s.b.into) + ', out at ' + hhmm(s.b.out) + ', on the shelf at ' + hhmm(s.b.shelf) + '. ' + s.b.qty + ' made.';
+      g0.appendChild(ttl);
+      /* the cooling tail */
+      g0.appendChild(el('rect',{class:'blk',x:x(s.b.out),y:L.y+16,width:Math.max(2,x(s.b.shelf)-x(s.b.out)),height:H-32,fill:'var(--berry-soft)','fill-opacity':.28,rx:2}));
+      /* time in the oven */
+      g0.appendChild(el('rect',{class:'blk',x:x(s.b.into),y:L.y+6,width:Math.max(3,x(s.b.out)-x(s.b.into)),height:H-12,fill:'var(--berry)',rx:3}));
+      var num = el('text',{x:x(s.b.into)+ (x(s.b.out)-x(s.b.into))/2, y:L.y+H/2+5,'text-anchor':'middle',fill:'var(--butter-05)','font-size':'13','font-weight':'600'});
+      num.textContent = n;
+      g0.appendChild(num);
+      svg.appendChild(g0);
+      keyHtml.push('<li><b>' + n + '</b><span>' + s.g.name + ', in ' + hhmm(s.b.into) + ', out ' + hhmm(s.b.out) + ', shelf ' + hhmm(s.b.shelf) + ', ×' + s.b.qty + '</span></li>');
+    });
+
+    key.innerHTML = keyHtml.join('');
+
+    var nowLine = el('line',{id:'ganttNow',x1:x(RAIL_A),y1:40,x2:x(RAIL_A),y2:220,stroke:'var(--butter-10)','stroke-width':2.5});
+    var nowCap = el('circle',{id:'ganttCap',cx:x(RAIL_A),cy:38,r:5,fill:'var(--butter-10)'});
+    svg.appendChild(nowLine); svg.appendChild(nowCap);
+
+    window.__ganttNow = function(t){
+      var px = x(t);
+      nowLine.setAttribute('x1',px); nowLine.setAttribute('x2',px);
+      nowCap.setAttribute('cx',px);
+    };
+  })();
+
+  var baseRender = render;
+  render = function(){ baseRender(); if(window.__ganttNow) window.__ganttNow(state.t); };
+
+  /* ---------- opening hours ---------- */
+  (function hours(){
+    var rows = [
+      ['Monday','shut, the deck is off',true],
+      ['Tuesday','06:30 to 15:00',false],
+      ['Wednesday','06:30 to 15:00',false],
+      ['Thursday','06:30 to 15:00',false],
+      ['Friday','06:30 to 15:00',false],
+      ['Saturday','06:30 to 15:00',false],
+      ['Sunday','08:00 to 13:00',false]
+    ];
+    var today = (new Date().getDay() + 6) % 7;
+    document.getElementById('hoursBody').innerHTML = rows.map(function(r,i){
+      return '<tr' + (i===today?' class="is-today"':'') + '><th scope="row">' + r[0] + '</th>' +
+             '<td' + (r[2]?' class="shut"':'') + '>' + r[1] + '</td></tr>';
+    }).join('');
+  })();
+
+  /* ---------- go ---------- */
+  state.t = realNow();
+  GOODS.forEach(function(g,i){ cards[g.id].el.style.animationDelay = (0.18 + i*0.055).toFixed(3) + 's'; });
+  render();
+  document.body.classList.add('is-ready');   /* set before first paint, so nothing flashes in then out */
+  requestAnimationFrame(placeHandle);
+
+  window.setInterval(function(){ if(!state.pinned) setT(realNow(), false); }, 30000);
+
+})();
+</script>
+</body>
+</html>

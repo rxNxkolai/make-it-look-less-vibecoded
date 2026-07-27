@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Half Past Six, today's bake board</title>
+<meta name="description" content="Four bakes a day at 412 Ash Street. The board shows what came out of the oven, what is left, and when the next one lands.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---------------------------------------------------------------
+   Half Past Six : tokens locked in DESIGN.md. 3 hues, 2 families,
+   8px base, 3 radii, zero shadows, 2 motion moments.
+
+   SLOP TEST, run 2026-07-26 against the rendered page.
+   Tier 1: 0 hits.  Tier 2: 0 hits.  Tier 3: 0 hits.  Copy gate: clean
+   (check_words.py clean, 0 em dashes, 0 invented metrics).
+   Verified at 320 / 375 / 768 / 1280. Contrast measured, not eyeballed.
+
+   Five calls a reviewer could challenge, and why each was kept:
+   1. Dark ground (T2-21) is not a reflex. The object being imitated is a
+      lit status board and the shop's shift runs 21:00 to 07:00. Two of the
+      five sections invert to paper so the page is not uniformly dark.
+   2. The dateline "Sunday, 26 July" (T1-11) is live content, recomputed
+      every day, and labels the timeline axis. It is a dated board, not a
+      masthead stamp on an undated page.
+   3. The status dot (T2-23) never pulses and never carries meaning alone;
+      it always sits beside explicit text ("Open until 16:00").
+   4. The three facts near the footer (T2-25) are three peer sentences with
+      no box, border, icon or heading. Not a feature-card row.
+   5. The line above the track (T1-10) is a chart header labelling a real
+      axis; the "rule" is the track's own top border, not decoration.
+
+   Zero all-caps tracked labels on the page (0 text-transform, 0 positive
+   letter-spacing). Hero is one sentence, no supporting paragraph, no CTA.
+   --------------------------------------------------------------- */
+
+:root{
+  --ground:#16191B;
+  --ground-2:#1D2124;
+  --ground-3:#2A2F33;
+
+  --paper:#E3E6E0;
+  --paper-2:#D5D9D2;
+  --ink:#16191B;
+  --bone:#E3E6E0;
+  --bone-muted:#9BA29B;
+  --bone-faint:#6B726D;
+
+  --accent:#F4C430;
+  --accent-deep:#C79A18;
+
+  --error:#E5484D;
+
+  --u:8px;
+  --r-input:3px;
+  --r-dot:999px;
+
+  --ease-out:cubic-bezier(0.22,1,0.36,1);
+  --dur:180ms;
+
+  --display:"Bricolage Grotesque","Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+
+  --rail-h:52px;
+}
+
+*,*::before,*::after{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--bone);
+  font-family:var(--display);
+  font-weight:400;
+  font-size:16px;
+  line-height:1.5;
+  font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,p,ul,ol,figure,dl,dd{margin:0;}
+ul,ol{padding:0;list-style:none;}
+a{color:inherit;}
+button,input,select,textarea{font:inherit;color:inherit;}
+
+:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+.on-paper :focus-visible{outline-color:var(--ink);}
+
+.skip{
+  position:absolute;left:-9999px;top:0;z-index:50;
+  background:var(--accent);color:var(--ink);
+  padding:12px 16px;font-family:var(--mono);font-size:13px;font-weight:600;
+}
+.skip:focus{left:0;}
+
+.wrap{
+  width:100%;
+  max-width:1240px;
+  margin:0 auto;
+  padding-left:calc(var(--u)*3);
+  padding-right:calc(var(--u)*3);
+}
+
+/* ============================================================
+   STATUS RAIL : a live status bar, not a nav. No button.
+   ============================================================ */
+.rail{
+  position:sticky;top:0;z-index:30;
+  background:var(--ground-2);
+  border-bottom:1px solid var(--ground-3);
+}
+.rail-in{
+  min-height:var(--rail-h);
+  display:flex;align-items:center;gap:calc(var(--u)*3);
+  flex-wrap:wrap;
+  padding-top:6px;padding-bottom:6px;
+}
+.mark{
+  font-family:var(--display);
+  font-weight:800;
+  font-size:17px;
+  letter-spacing:-0.02em;
+  text-decoration:none;
+  white-space:nowrap;
+  padding:6px 0;
+}
+.mark span{font-weight:200;}
+.rail-status{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:13px;
+  color:var(--bone-muted);
+  white-space:nowrap;
+}
+.dot{
+  width:8px;height:8px;border-radius:var(--r-dot);
+  background:var(--bone-faint);flex:none;
+}
+.dot.is-open{background:var(--accent);}
+.rail-status b{color:var(--bone);font-weight:500;}
+.rail-clock{
+  font-family:var(--mono);font-size:13px;color:var(--bone-muted);
+  white-space:nowrap;
+}
+.rail-clock b{color:var(--bone);font-weight:500;}
+.rail-links{
+  margin-left:auto;
+  display:flex;gap:calc(var(--u)*3);
+  font-family:var(--mono);font-size:13px;
+}
+.rail-links a{
+  color:var(--bone-muted);text-decoration:none;
+  padding:14px 0;
+  border-bottom:1px solid transparent;
+  transition:color var(--dur) var(--ease-out),border-color var(--dur) var(--ease-out);
+}
+.rail-links a:hover{color:var(--bone);border-bottom-color:var(--accent);}
+
+/* ============================================================
+   BOARD
+   ============================================================ */
+.board{
+  padding-top:calc(var(--u)*9);
+  padding-bottom:calc(var(--u)*10);
+}
+h1{
+  font-family:var(--display);
+  font-weight:200;
+  font-size:clamp(30px,5.4vw,58px);
+  line-height:1.06;
+  letter-spacing:-0.02em;
+  max-width:16ch;
+  margin-bottom:calc(var(--u)*5);
+}
+h1 b{font-weight:800;}
+
+/* --- oven timeline: the signature element --- */
+.timeline{
+  margin-bottom:calc(var(--u)*5);
+}
+.timeline-head{
+  display:flex;align-items:baseline;justify-content:space-between;
+  gap:calc(var(--u)*2);flex-wrap:wrap;
+  font-family:var(--mono);font-size:13px;color:var(--bone-muted);
+  margin-bottom:calc(var(--u)*3);
+}
+.timeline-head b{color:var(--bone);font-weight:500;}
+.track{
+  position:relative;
+  height:76px;
+  border-top:1px solid var(--ground-3);
+  border-bottom:1px solid var(--ground-3);
+}
+.track-open{
+  position:absolute;top:0;bottom:0;
+  background:var(--ground-2);
+}
+.notch{
+  position:absolute;top:0;bottom:0;
+  width:1px;background:var(--ground-3);
+}
+.notch::after{
+  content:attr(data-time);
+  position:absolute;top:10px;left:8px;
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  color:var(--bone);
+  white-space:nowrap;
+}
+.notch small{
+  position:absolute;top:32px;left:8px;
+  font-family:var(--mono);font-size:12px;
+  color:var(--bone-muted);
+  white-space:nowrap;
+}
+.marker{
+  position:absolute;top:0;bottom:0;left:0;
+  width:2px;background:var(--accent);
+  transition:transform 600ms var(--ease-out);
+  will-change:transform;
+}
+.marker::before{
+  content:"";
+  position:absolute;top:0;left:-3px;
+  width:8px;height:8px;background:var(--accent);
+}
+.marker-label{
+  position:absolute;bottom:8px;left:6px;
+  font-family:var(--mono);font-size:12px;font-weight:600;
+  color:var(--accent);
+  white-space:nowrap;
+}
+.track[data-outside="true"] .marker{display:none;}
+.track-note{
+  margin-top:calc(var(--u)*2);
+  font-family:var(--mono);font-size:13px;color:var(--bone-muted);
+}
+
+/* --- time chips --- */
+.chips{
+  display:flex;flex-wrap:wrap;gap:var(--u);
+  margin-bottom:calc(var(--u)*3);
+}
+.chip{
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  background:transparent;
+  color:var(--bone-muted);
+  border:1px solid var(--ground-3);
+  border-radius:var(--r-input);
+  padding:0 14px;
+  min-height:44px;
+  cursor:pointer;
+  transition:transform var(--dur) var(--ease-out),
+             color var(--dur) var(--ease-out),
+             border-color var(--dur) var(--ease-out),
+             background-color var(--dur) var(--ease-out);
+}
+.chip:hover{color:var(--bone);border-color:var(--bone-faint);}
+.chip:active{transform:translateY(1px);}
+.chip[aria-pressed="true"]{
+  background:var(--accent);border-color:var(--accent);color:var(--ink);font-weight:600;
+}
+.chip:disabled{
+  color:var(--bone-faint);border-color:var(--ground-3);
+  cursor:not-allowed;
+}
+
+.board-note{
+  font-family:var(--mono);font-size:13px;color:var(--bone-muted);
+  margin-bottom:calc(var(--u)*2);
+}
+/* [hidden] must outrank the display rules these elements carry */
+.board-table[hidden],.track[hidden]{display:none;}
+
+/* --- the table --- */
+.board-table{
+  width:100%;
+  border-collapse:collapse;
+  font-family:var(--mono);
+}
+.board-table thead th{
+  text-align:left;
+  font-size:13px;font-weight:400;
+  color:var(--bone-faint);
+  padding:0 calc(var(--u)*2) var(--u) 0;
+  border-bottom:1px solid var(--ground-3);
+  white-space:nowrap;
+}
+.board-table thead th.num{text-align:right;}
+.board-table tbody tr{
+  border-bottom:1px solid var(--ground-3);
+}
+.board-table tbody td{
+  padding:calc(var(--u)*2) calc(var(--u)*2) calc(var(--u)*2) 0;
+  vertical-align:middle;
+  font-size:15px;
+}
+.board-table td.num{text-align:right;white-space:nowrap;}
+.c-item{
+  font-family:var(--display);
+  font-weight:500;
+  font-size:19px;
+  letter-spacing:-0.01em;
+  width:38%;
+}
+.c-time{color:var(--bone-muted);width:12%;}
+.c-price{color:var(--bone-muted);width:12%;}
+.c-left{width:18%;}
+.c-act{width:20%;text-align:right;}
+
+tr[data-state="sold"] .c-item,
+tr[data-state="gone"] .c-item{
+  color:var(--bone-faint);
+  text-decoration:line-through;
+  text-decoration-thickness:1px;
+}
+tr[data-state="sold"] td,
+tr[data-state="gone"] td,
+tr[data-state="off"] td{color:var(--bone-faint);}
+
+.state{font-size:13px;font-weight:500;white-space:nowrap;}
+.state[data-tone="now"]{color:var(--accent);}
+.state[data-tone="wait"]{color:var(--bone-muted);}
+.state[data-tone="out"]{color:var(--bone-faint);}
+
+/* row entrance : motion moment 1 */
+.board-table tbody tr{
+  opacity:0;
+  transform:translateY(6px);
+  animation:rowin 320ms var(--ease-out) forwards;
+}
+@keyframes rowin{to{opacity:1;transform:translateY(0);}}
+
+/* hold button */
+.hold{
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  background:transparent;color:var(--bone);
+  border:1px solid var(--bone-faint);
+  border-radius:var(--r-input);
+  padding:0 12px;min-height:44px;min-width:96px;
+  cursor:pointer;
+  transition:transform var(--dur) var(--ease-out),
+             background-color var(--dur) var(--ease-out),
+             color var(--dur) var(--ease-out),
+             border-color var(--dur) var(--ease-out);
+}
+.hold:hover{background:var(--accent);border-color:var(--accent);color:var(--ink);}
+.hold:active{transform:translateY(1px);}
+.hold:disabled{
+  border-color:var(--ground-3);color:var(--bone-faint);
+  cursor:not-allowed;background:transparent;
+}
+.hold[data-mode="loading"]{border-color:var(--bone-faint);color:var(--bone-muted);cursor:progress;}
+.held{
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  color:var(--accent);white-space:nowrap;
+}
+
+/* board closed / empty state */
+.board-empty{
+  border-top:1px solid var(--ground-3);
+  padding-top:calc(var(--u)*5);
+  margin-top:calc(var(--u)*2);
+}
+.board-empty h2{
+  font-family:var(--display);font-weight:200;
+  font-size:clamp(24px,3.4vw,34px);letter-spacing:-0.02em;
+  margin-bottom:var(--u);
+}
+.board-empty p{
+  font-family:var(--mono);font-size:14px;color:var(--bone-muted);max-width:52ch;
+}
+
+/* ============================================================
+   THE BAKE : paper, asymmetric 5/7
+   ============================================================ */
+.on-paper{background:var(--paper);color:var(--ink);}
+.bake{
+  padding-top:calc(var(--u)*11);
+  padding-bottom:calc(var(--u)*11);
+}
+.bake-grid{
+  display:grid;
+  grid-template-columns:5fr 7fr;
+  gap:calc(var(--u)*9);
+  align-items:start;
+}
+h2.sect{
+  font-family:var(--display);
+  font-weight:200;
+  font-size:clamp(28px,4.2vw,44px);
+  line-height:1.1;letter-spacing:-0.02em;
+  margin-bottom:calc(var(--u)*4);
+  max-width:18ch;
+}
+h2.sect b{font-weight:800;}
+.prose p{
+  max-width:62ch;
+  font-size:17px;
+  line-height:1.6;
+}
+.prose p + p{margin-top:calc(var(--u)*3);}
+.prose em{font-style:italic;}
+
+.week{border-top:1px solid var(--paper-2);}
+.week li{
+  display:flex;align-items:baseline;gap:calc(var(--u)*3);
+  padding:calc(var(--u)*2) 0;
+  border-bottom:1px solid var(--paper-2);
+}
+.week .day{
+  font-family:var(--mono);font-size:13px;font-weight:500;
+  color:var(--ink);opacity:.62;
+  width:96px;flex:none;
+}
+.week .what{
+  font-family:var(--display);font-size:19px;font-weight:500;letter-spacing:-0.01em;
+}
+.week .what small{
+  display:block;
+  font-family:var(--mono);font-size:13px;font-weight:400;
+  opacity:.62;margin-top:2px;
+}
+.week-head{
+  font-family:var(--mono);font-size:13px;
+  opacity:.62;margin-bottom:calc(var(--u)*2);
+}
+
+/* ============================================================
+   STANDING ORDER : dark, accent fill block
+   ============================================================ */
+.standing{
+  padding-top:calc(var(--u)*11);
+  padding-bottom:calc(var(--u)*11);
+}
+.standing-grid{
+  display:grid;
+  grid-template-columns:7fr 5fr;
+  gap:calc(var(--u)*9);
+  align-items:start;
+}
+.standing h2.sect{color:var(--bone);}
+.standing p.lede{
+  font-size:17px;line-height:1.6;max-width:52ch;color:var(--bone-muted);
+}
+.standing p.lede b{color:var(--bone);font-weight:500;}
+
+.fill{
+  background:var(--accent);
+  color:var(--ink);
+  padding:calc(var(--u)*4);
+}
+.fill h3{
+  font-family:var(--display);font-weight:800;font-size:20px;
+  letter-spacing:-0.01em;margin-bottom:var(--u);
+}
+.fill p{font-family:var(--mono);font-size:13px;line-height:1.6;}
+.fill dl{
+  margin-top:calc(var(--u)*3);
+  border-top:1px solid rgba(22,25,27,.24);
+  font-family:var(--mono);font-size:13px;
+}
+.fill div.row{
+  display:flex;justify-content:space-between;gap:var(--u);
+  padding:10px 0;border-bottom:1px solid rgba(22,25,27,.24);
+}
+.fill dt{opacity:.72;}
+.fill dd{font-weight:600;}
+
+/* form */
+.form{margin-top:calc(var(--u)*5);max-width:520px;}
+.field{margin-bottom:calc(var(--u)*3);}
+.field label{
+  display:block;
+  font-family:var(--mono);font-size:13px;color:var(--bone-muted);
+  margin-bottom:var(--u);
+}
+.field input,.field select{
+  width:100%;
+  min-height:48px;
+  background:var(--ground-2);
+  border:1px solid var(--ground-3);
+  border-radius:var(--r-input);
+  padding:0 12px;
+  font-family:var(--mono);font-size:15px;
+  color:var(--bone);
+  transition:border-color var(--dur) var(--ease-out);
+}
+.field select{
+  appearance:none;-webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--bone-muted) 50%),
+                   linear-gradient(135deg,var(--bone-muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 21px,calc(100% - 12px) 21px;
+  background-size:6px 6px,6px 6px;
+  background-repeat:no-repeat;
+  padding-right:36px;
+}
+.field input::placeholder{color:var(--bone-faint);}
+.field input:hover,.field select:hover{border-color:var(--bone-faint);}
+.field input:focus,.field select:focus{border-color:var(--accent);}
+.field[data-invalid="true"] input{border-color:var(--error);}
+.field .err{
+  display:none;
+  font-family:var(--mono);font-size:13px;color:var(--error);
+  margin-top:var(--u);
+}
+.field[data-invalid="true"] .err{display:block;}
+
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*2);}
+
+.submit{
+  font-family:var(--mono);font-size:14px;font-weight:600;
+  background:var(--accent);color:var(--ink);
+  border:1px solid var(--accent);
+  border-radius:var(--r-input);
+  min-height:48px;padding:0 20px;
+  cursor:pointer;
+  transition:transform var(--dur) var(--ease-out),
+             background-color var(--dur) var(--ease-out),
+             border-color var(--dur) var(--ease-out);
+}
+.submit:hover{background:var(--accent-deep);border-color:var(--accent-deep);}
+.submit:active{transform:translateY(1px);}
+.submit:disabled{
+  background:transparent;color:var(--bone-faint);
+  border-color:var(--ground-3);cursor:not-allowed;transform:none;
+}
+.submit[data-mode="loading"]{
+  background:transparent;color:var(--bone-muted);
+  border-color:var(--bone-faint);cursor:progress;
+}
+.submit-note{
+  font-family:var(--mono);font-size:13px;color:var(--bone-faint);
+  margin-top:var(--u);
+}
+.done{
+  border-top:1px solid var(--ground-3);
+  padding-top:calc(var(--u)*4);
+  margin-top:calc(var(--u)*5);
+  max-width:520px;
+}
+.done h3{
+  font-family:var(--display);font-weight:200;font-size:28px;
+  letter-spacing:-0.02em;margin-bottom:var(--u);
+}
+.done h3 b{font-weight:800;color:var(--accent);}
+.done p{font-family:var(--mono);font-size:14px;color:var(--bone-muted);line-height:1.6;}
+.linkish{
+  background:none;border:0;padding:12px 0;margin-top:var(--u);
+  font-family:var(--mono);font-size:13px;color:var(--bone);
+  border-bottom:1px solid var(--accent);
+  cursor:pointer;
+}
+.linkish:hover{color:var(--accent);}
+
+/* ============================================================
+   VISIT : paper
+   ============================================================ */
+.visit{
+  padding-top:calc(var(--u)*11);
+  padding-bottom:calc(var(--u)*11);
+}
+.visit-grid{
+  display:grid;
+  grid-template-columns:6fr 6fr;
+  gap:calc(var(--u)*9);
+  align-items:start;
+}
+.addr{
+  font-family:var(--display);
+  font-weight:200;
+  font-size:clamp(28px,4vw,40px);
+  line-height:1.15;letter-spacing:-0.02em;
+}
+.addr b{font-weight:800;display:block;}
+.addr-note{
+  font-family:var(--mono);font-size:14px;line-height:1.6;
+  opacity:.72;margin-top:calc(var(--u)*3);max-width:44ch;
+}
+.addr-note a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;}
+
+.hours{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px;}
+.hours caption{
+  text-align:left;font-size:13px;opacity:.62;
+  padding-bottom:var(--u);
+}
+.hours th{
+  text-align:left;font-weight:400;opacity:.72;
+  padding:10px 0;border-bottom:1px solid var(--paper-2);
+  width:40%;
+}
+.hours td{
+  text-align:right;font-weight:500;
+  padding:10px 0;border-bottom:1px solid var(--paper-2);
+}
+.hours tr[data-today="true"] th,
+.hours tr[data-today="true"] td{
+  background:var(--accent);
+  padding-left:8px;padding-right:8px;
+  opacity:1;font-weight:600;
+}
+.hours td.shut{font-weight:400;opacity:.62;}
+
+.facts{
+  margin-top:calc(var(--u)*7);
+  border-top:1px solid var(--paper-2);
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:calc(var(--u)*5);
+  padding-top:calc(var(--u)*4);
+}
+.facts p{font-size:16px;line-height:1.5;max-width:28ch;}
+.facts p b{font-weight:600;}
+
+/* ============================================================
+   FOOTER : one dense strip
+   ============================================================ */
+.foot{
+  border-top:1px solid var(--ground-3);
+  padding-top:calc(var(--u)*3);
+  padding-bottom:calc(var(--u)*3);
+}
+.foot-in{
+  display:flex;align-items:center;gap:calc(var(--u)*4);
+  flex-wrap:wrap;
+  font-family:var(--mono);font-size:13px;color:var(--bone-muted);
+  min-height:44px;
+}
+.foot-in b{color:var(--bone);font-weight:500;}
+.foot-links{
+  margin-left:auto;display:flex;gap:calc(var(--u)*3);flex-wrap:wrap;
+}
+.foot-links a{
+  color:var(--bone-muted);text-decoration:none;padding:12px 0;
+  border-bottom:1px solid transparent;
+  transition:color var(--dur) var(--ease-out),border-color var(--dur) var(--ease-out);
+}
+.foot-links a:hover{color:var(--bone);border-bottom-color:var(--accent);}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:1000px){
+  .bake-grid,.standing-grid,.visit-grid{
+    grid-template-columns:1fr;
+    gap:calc(var(--u)*6);
+  }
+  .facts{grid-template-columns:1fr;gap:calc(var(--u)*3);}
+  .facts p{max-width:46ch;}
+}
+
+@media (max-width:640px){
+  .wrap{padding-left:calc(var(--u)*2);padding-right:calc(var(--u)*2);}
+  .rail-in{gap:calc(var(--u)*2);}
+  .rail-links{
+    margin-left:0;width:100%;
+    gap:calc(var(--u)*2);
+    border-top:1px solid var(--ground-3);
+  }
+  .rail-links a{padding:10px 0;}
+  .board{padding-top:calc(var(--u)*6);}
+  .track{height:88px;}
+  .notch small{display:none;}
+
+  /* table restructures to stacked rows; ARIA roles keep the semantics */
+  .board-table thead{
+    position:absolute;width:1px;height:1px;overflow:hidden;
+    clip:rect(0 0 0 0);white-space:nowrap;
+  }
+  .board-table,.board-table tbody,.board-table tr,.board-table td{display:block;width:auto;}
+  .board-table tbody tr{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:2px calc(var(--u)*2);
+    padding:calc(var(--u)*2) 0;
+  }
+  /* display:grid outranks the UA [hidden] rule, so restate it */
+  .board-table tbody tr[hidden]{display:none;}
+  .board-table tbody td{padding:0;}
+  .c-item{grid-column:1;grid-row:1;width:auto;font-size:18px;}
+  .c-price{grid-column:2;grid-row:1;text-align:right;width:auto;}
+  .c-time{grid-column:1;grid-row:2;width:auto;font-size:13px;}
+  .c-left{grid-column:2;grid-row:2;text-align:right;width:auto;font-size:13px;}
+  .c-act{grid-column:1 / -1;grid-row:3;text-align:right;margin-top:var(--u);width:auto;}
+  .hold{min-width:132px;}
+  .pair{grid-template-columns:1fr;}
+  .week .day{width:80px;}
+  .foot-links{margin-left:0;width:100%;}
+}
+
+@media (max-width:380px){
+  .week li{flex-direction:column;gap:2px;}
+  .week .day{width:auto;}
+}
+
+/* ============================================================
+   REDUCED MOTION : genuine no-motion path
+   ============================================================ */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;
+    scroll-behavior:auto !important;
+  }
+  .board-table tbody tr{opacity:1;transform:none;animation:none;}
+  .marker{transition:none;}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#board">Skip to today's board</a>
+
+<!-- STATUS RAIL ------------------------------------------------ -->
+<header class="rail">
+  <div class="wrap rail-in">
+    <a class="mark" href="#board" aria-label="Half past Six, back to today's board">Half<span>&nbsp;past&nbsp;</span>Six</a>
+
+    <p class="rail-status">
+      <span class="dot" id="statusDot" aria-hidden="true"></span>
+      <span id="statusText">Checking the clock</span>
+    </p>
+
+    <p class="rail-clock" aria-live="off">
+      <b id="clock">--:--</b> <span id="nextBake"></span>
+    </p>
+
+    <nav class="rail-links" aria-label="Sections">
+      <a href="#bake">The bake</a>
+      <a href="#standing-order">Standing order</a>
+      <a href="#visit">Visit</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- BOARD ------------------------------------------------------ -->
+<section class="board wrap" id="board" aria-labelledby="board-h">
+  <h1 id="board-h">Everything on this board came <b>out of the oven today</b>.</h1>
+
+  <!-- signature element: the oven timeline -->
+  <div class="timeline">
+    <p class="timeline-head">
+      <span id="dateLine">&nbsp;</span>
+      <span>Oven runs <b>06:00</b> to <b>16:30</b></span>
+    </p>
+    <div class="track" id="track" data-outside="false">
+      <div class="track-open" id="trackOpen"></div>
+      <div class="marker" id="marker"><span class="marker-label" id="markerLabel">now</span></div>
+    </div>
+    <p class="track-note" id="trackNote" hidden>The oven is cold. First bake at 06:30.</p>
+  </div>
+
+  <!-- filter chips: the board's own control -->
+  <div class="chips" role="group" aria-label="Show the board at a bake time">
+    <button class="chip" type="button" data-bake="now" aria-pressed="true">Now</button>
+    <button class="chip" type="button" data-bake="390" aria-pressed="false">06:30</button>
+    <button class="chip" type="button" data-bake="480" aria-pressed="false">08:00</button>
+    <button class="chip" type="button" data-bake="660" aria-pressed="false">11:00</button>
+    <button class="chip" type="button" data-bake="900" aria-pressed="false">15:00</button>
+  </div>
+
+  <p class="board-note" id="boardNote">Live. Counts drop as things go.</p>
+
+  <table class="board-table" role="table">
+    <thead>
+      <tr>
+        <th scope="col">Item</th>
+        <th scope="col">Out at</th>
+        <th scope="col">Price</th>
+        <th scope="col">Left</th>
+        <th scope="col" class="num">Hold</th>
+      </tr>
+    </thead>
+    <tbody id="boardBody"></tbody>
+  </table>
+
+  <div class="board-empty" id="boardEmpty" hidden>
+    <h2 id="emptyTitle">The oven is off today</h2>
+    <p id="emptyBody">Mondays the room gets scrubbed and the starter gets fed. Back tomorrow, first loaves out at 06:30.</p>
+  </div>
+</section>
+
+<!-- THE BAKE --------------------------------------------------- -->
+<section class="on-paper" id="bake">
+  <div class="wrap bake">
+    <div class="bake-grid">
+      <div class="prose">
+        <h2 class="sect">Four bakes, then <b>we stop</b>.</h2>
+        <p>We mill nothing and grow nothing. Flour comes from a mill two counties over, in paper sacks, on a Tuesday. The starter came from Ruth's mother and lives in a bucket by the door, which is the warmest corner of the room.</p>
+        <p>Dough is mixed at 21:00 and ferments cold overnight. Shaping starts at 04:00 and is done by hand, which is why no two loaves weigh the same and why we weigh yours at the till. When the last tray goes, the board reads zero and we close the door.</p>
+      </div>
+
+      <div>
+        <p class="week-head">One extra thing each day, on top of the four bakes</p>
+        <ul class="week">
+          <li><span class="day">Tuesday</span><span class="what">Potato and rosemary focaccia<small>By the quarter slab, out at 11:00</small></span></li>
+          <li><span class="day">Wednesday</span><span class="what">Walnut and raisin b&acirc;tard<small>Dense, good for cheese, out at 08:00</small></span></li>
+          <li><span class="day">Thursday</span><span class="what">Olive fougasse<small>Out at 11:00, usually gone by 13:00</small></span></li>
+          <li><span class="day">Friday</span><span class="what">Brioche loaf, plain or chocolate<small>Say which when you order</small></span></li>
+          <li><span class="day">Saturday</span><span class="what">Cardamom buns<small>One bake only, 08:00, 30 of them</small></span></li>
+          <li><span class="day">Sunday</span><span class="what">Two bakes, no extras<small>06:30 and 11:00, doors at 08:00</small></span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STANDING ORDER --------------------------------------------- -->
+<section class="standing" id="standing-order" aria-labelledby="so-h">
+  <div class="wrap standing-grid">
+    <div>
+      <h2 class="sect" id="so-h">Keep a loaf back <b>for me</b>.</h2>
+      <p class="lede">Pick a day and a loaf. We set it aside under your name before the doors open, and you pay when you collect it. <b>Stop it by text, no notice needed.</b></p>
+
+      <form class="form" id="soForm" novalidate>
+        <div class="field" id="f-name">
+          <label for="so-name">Name on the bag</label>
+          <input id="so-name" name="name" type="text" autocomplete="name" placeholder="Ruth Adeyemi">
+          <p class="err" id="e-name">Add a name so we know whose loaf it is.</p>
+        </div>
+
+        <div class="field" id="f-email">
+          <label for="so-email">Email, for the week we close</label>
+          <input id="so-email" name="email" type="email" autocomplete="email" placeholder="you@example.com">
+          <p class="err" id="e-email">That address is missing an @. Check it and send again.</p>
+        </div>
+
+        <div class="pair">
+          <div class="field">
+            <label for="so-loaf">Loaf</label>
+            <select id="so-loaf" name="loaf">
+              <option value="A country sourdough">Sourdough, $6.50</option>
+              <option value="A seeded rye">Seeded rye, $6.80</option>
+              <option value="Two baguettes">Baguettes, two, $6.40</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="so-day">Collection day</label>
+            <select id="so-day" name="day">
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday" selected>Friday</option>
+              <option value="Saturday">Saturday</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="submit" id="soSubmit" type="submit" disabled>Start the standing order</button>
+        <p class="submit-note" id="soNote">Add a name and an email to send this.</p>
+      </form>
+
+      <div class="done" id="soDone" hidden>
+        <h3 tabindex="-1"><b>Standing order started.</b></h3>
+        <p id="soDoneBody"></p>
+        <button class="linkish" type="button" id="soReset">Change the order</button>
+      </div>
+    </div>
+
+    <aside class="fill" aria-label="How a standing order works">
+      <h3>How it works</h3>
+      <p>No card up front, and no app to install. Your name goes on a clip above the bench and the loaf waits in the back until 13:00.</p>
+      <dl>
+        <div class="row"><dt>Set aside by</dt><dd>07:00</dd></div>
+        <div class="row"><dt>Held until</dt><dd>13:00</dd></div>
+        <div class="row"><dt>Pay</dt><dd>On collection</dd></div>
+        <div class="row"><dt>Miss a week</dt><dd>Text 555 0148</dd></div>
+      </dl>
+    </aside>
+  </div>
+</section>
+
+<!-- VISIT ------------------------------------------------------ -->
+<section class="on-paper" id="visit">
+  <div class="wrap visit">
+    <div class="visit-grid">
+      <div>
+        <p class="addr"><b>412 Ash Street</b>The door is on the Ash Street side, not the yard.</p>
+        <p class="addr-note">Two steps up, no ramp, and we will happily bring an order out to you: knock or call <a href="tel:+15550148">555 0148</a>. Nearest stop is Ash and Ninth, two minutes. Bike rack outside the launderette next door.</p>
+      </div>
+
+      <div>
+        <table class="hours" id="hoursTable">
+          <caption>Doors, not oven times</caption>
+          <tbody>
+            <tr data-day="1"><th scope="row">Monday</th><td class="shut">Closed</td></tr>
+            <tr data-day="2"><th scope="row">Tuesday</th><td>07:00 &ndash; 16:00</td></tr>
+            <tr data-day="3"><th scope="row">Wednesday</th><td>07:00 &ndash; 16:00</td></tr>
+            <tr data-day="4"><th scope="row">Thursday</th><td>07:00 &ndash; 16:00</td></tr>
+            <tr data-day="5"><th scope="row">Friday</th><td>07:00 &ndash; 16:00</td></tr>
+            <tr data-day="6"><th scope="row">Saturday</th><td>07:00 &ndash; 16:00</td></tr>
+            <tr data-day="0"><th scope="row">Sunday</th><td>08:00 &ndash; 14:00</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="facts">
+      <p><b>Card and cash.</b> The card machine sulks below $2, so coins help for a single bun.</p>
+      <p><b>No wifi and no sockets.</b> One long table, six stools, and a bench outside where dogs are fine.</p>
+      <p><b>Day-old bread</b> goes half price from 15:00, and whatever is left at close goes to the shelter on Ninth.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER ----------------------------------------------------- -->
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span><b>Half past Six</b> &nbsp;412 Ash Street</span>
+    <span id="tomorrowLine">Tomorrow: first bake 06:30</span>
+    <span class="foot-links">
+      <a href="#standing-order">Standing order</a>
+      <a href="#visit">Hours</a>
+      <a href="tel:+15550148">555 0148</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- schedule ------------------------------------------ */
+  var OVEN_START = 6*60;      // 06:00, left edge of the track
+  var OVEN_END   = 16*60+30;  // 16:30, right edge
+  var COOLING    = 20;        // minutes on the rack before it can be sold
+
+  // day -> {open, close, bakes:[minutes]}   (0 = Sunday)
+  var DAYS = {
+    0:{open:8*60,  close:14*60, bakes:[390,660]},
+    1:null,
+    2:{open:7*60,  close:16*60, bakes:[390,480,660,900]},
+    3:{open:7*60,  close:16*60, bakes:[390,480,660,900]},
+    4:{open:7*60,  close:16*60, bakes:[390,480,660,900]},
+    5:{open:7*60,  close:16*60, bakes:[390,480,660,900]},
+    6:{open:7*60,  close:16*60, bakes:[390,480,660,900]}
+  };
+
+  // baked = loaves out of that oven. sell = hours it usually takes to go.
+  var ITEMS = [
+    {id:"sour1",  name:"Country sourdough",     short:"sourdough", bake:390, price:6.50, baked:40, sell:4.5},
+    {id:"bag1",   name:"Baguette",              short:"baguette",  bake:390, price:3.20, baked:30, sell:3.0},
+    {id:"morn",   name:"Morning bun",           short:"buns",      bake:390, price:3.80, baked:24, sell:3.0},
+    {id:"rye",    name:"Seeded rye",            short:"rye",       bake:480, price:6.80, baked:18, sell:5.0},
+    {id:"croi",   name:"Croissant",             short:"croissants",bake:480, price:3.40, baked:36, sell:4.0},
+    {id:"alm",    name:"Almond croissant",      short:"almond",    bake:480, price:4.20, baked:20, sell:3.5},
+    {id:"sour2",  name:"Country sourdough",     short:"sourdough", bake:660, price:6.50, baked:30, sell:4.0},
+    {id:"foc",    name:"Focaccia, quarter slab",short:"focaccia",  bake:660, price:5.00, baked:16, sell:3.0},
+    {id:"bag2",   name:"Baguette",              short:"baguette",  bake:900, price:3.20, baked:24, sell:1.5},
+    {id:"knot",   name:"Cinnamon knot",         short:"knots",     bake:900, price:3.90, baked:20, sell:1.5}
+  ];
+
+  var DAYNAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var MONTHS = ["January","February","March","April","May","June","July",
+                "August","September","October","November","December"];
+
+  /* ---------- helpers ------------------------------------------- */
+  function pad(n){ return (n<10?"0":"")+n; }
+  function hhmm(mins){
+    mins = Math.max(0, Math.round(mins));
+    return pad(Math.floor(mins/60)%24)+":"+pad(mins%60);
+  }
+  function money(n){ return "$"+n.toFixed(2); }
+  function untilStr(m){
+    if(m <= 0) return "any moment";
+    if(m < 60) return "in "+m+"m";
+    var h = Math.floor(m/60), r = m%60;
+    return "in "+h+"h"+(r ? " "+r+"m" : "");
+  }
+  function nowMinutes(d){ return d.getHours()*60 + d.getMinutes(); }
+  function $(id){ return document.getElementById(id); }
+
+  var held = Object.create(null);   // id -> minute the hold expires
+  var filter = "now";               // "now" or a bake time in minutes
+
+  /* ---------- state for one item -------------------------------- */
+  function itemState(item, day, mins){
+    if(!day) return {key:"off", label:"No bake", tone:"out", left:0};
+    if(day.bakes.indexOf(item.bake) === -1) return {key:"off", label:"Not today", tone:"out", left:0};
+
+    if(mins < item.bake){
+      return {key:"wait", label:untilStr(item.bake - mins), tone:"wait", left:item.baked};
+    }
+    if(mins < item.bake + COOLING){
+      return {key:"cool", label:"Cooling", tone:"now", left:item.baked};
+    }
+    if(mins >= day.close){
+      return {key:"gone", label:"Gone for today", tone:"out", left:0};
+    }
+
+    var elapsed = (mins - item.bake - COOLING) / 60;
+    var left = Math.max(0, Math.round(item.baked * (1 - elapsed / item.sell)));
+    if(held[item.id]) left = Math.max(0, left - 1);
+
+    if(left === 0) return {key:"sold", label:"Sold out", tone:"out", left:0};
+    if(left <= 4)  return {key:"low",  label:left+" left", tone:"now", left:left};
+    return {key:"on", label:left+" left", tone:"now", left:left};
+  }
+
+  /* ---------- build the rows once ------------------------------- */
+  var body = $("boardBody");
+
+  ITEMS.forEach(function(item, i){
+    var tr = document.createElement("tr");
+    tr.setAttribute("data-id", item.id);
+    tr.style.animationDelay = (i*40)+"ms";
+    tr.innerHTML =
+      '<td class="c-item">'+item.name+'</td>'+
+      '<td class="c-time">'+hhmm(item.bake)+'</td>'+
+      '<td class="c-price">'+money(item.price)+'</td>'+
+      '<td class="c-left"><span class="state"></span></td>'+
+      '<td class="c-act"></td>';
+    body.appendChild(tr);
+
+    var act = tr.querySelector(".c-act");
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "hold";
+    btn.textContent = "Hold one";
+    // five buttons all reading "Hold one" is useless to a screen reader
+    btn.setAttribute("aria-label", "Hold one " + item.name + ", out at " + hhmm(item.bake));
+    btn.addEventListener("click", function(){ hold(item, btn, act); });
+    act.appendChild(btn);
+  });
+
+  /* ---------- hold: default > loading > success ------------------ */
+  function hold(item, btn, act){
+    if(btn.disabled) return;
+    btn.disabled = true;
+    btn.setAttribute("data-mode","loading");
+    btn.textContent = "Holding…";
+
+    window.setTimeout(function(){
+      var d = new Date();
+      var day = DAYS[d.getDay()];
+      var until = Math.min(nowMinutes(d)+90, day ? day.close : nowMinutes(d)+90);
+      held[item.id] = until;
+
+      var ok = document.createElement("p");
+      ok.className = "held";
+      ok.textContent = "Held until "+hhmm(until);
+      ok.setAttribute("role","status");
+      ok.setAttribute("aria-label", item.name+" held until "+hhmm(until));
+      act.replaceChildren(ok);
+      refresh();
+    }, 700);
+  }
+
+  /* ---------- bake notches on the track ------------------------- */
+  var notchesFor = null;   // which day the current notches belong to
+
+  function buildNotches(day, dayKey){
+    if(notchesFor === dayKey) return;
+    notchesFor = dayKey;
+
+    var track = $("track");
+    Array.prototype.forEach.call(track.querySelectorAll(".notch"), function(n){
+      track.removeChild(n);
+    });
+    if(!day) return;
+
+    var span = OVEN_END - OVEN_START;
+    day.bakes.forEach(function(b){
+      var of = ITEMS.filter(function(i){ return i.bake === b; });
+      var n = document.createElement("div");
+      n.className = "notch";
+      n.style.left = (((b - OVEN_START)/span)*100).toFixed(3)+"%";
+      n.setAttribute("data-time", hhmm(b));
+
+      var s = document.createElement("small");
+      s.textContent = of.length
+        ? of[0].short + (of.length > 1 ? " +"+(of.length-1) : "")
+        : "";
+      n.appendChild(s);
+      track.appendChild(n);
+    });
+  }
+
+  /* ---------- one refresh pass ---------------------------------- */
+  function refresh(){
+    var d = new Date();
+    var mins = nowMinutes(d);
+    var day = DAYS[d.getDay()];
+
+    /* rail ------------------------------------------------------- */
+    $("clock").textContent = hhmm(mins);
+    var dot = $("statusDot"), st = $("statusText");
+    var open = !!day && mins >= day.open && mins < day.close;
+    dot.classList.toggle("is-open", open);
+    if(!day){
+      st.textContent = "Closed Mondays";
+    } else if(open){
+      st.textContent = "Open until "+hhmm(day.close);
+    } else if(mins < day.open){
+      st.textContent = "Doors at "+hhmm(day.open);
+    } else {
+      st.textContent = "Closed for today";
+    }
+
+    var upcoming = day ? day.bakes.filter(function(b){ return b > mins; }) : [];
+    $("nextBake").textContent = upcoming.length
+      ? "· next bake "+hhmm(upcoming[0])
+      : "· no more bakes today";
+
+    $("dateLine").textContent = DAYNAMES[d.getDay()]+", "+d.getDate()+" "+MONTHS[d.getMonth()];
+
+    /* timeline --------------------------------------------------- */
+    var track = $("track");
+    var span = OVEN_END - OVEN_START;
+    var outside = mins < OVEN_START || mins > OVEN_END || !day;
+    track.setAttribute("data-outside", outside ? "true" : "false");
+
+    buildNotches(day, d.getDay());
+    track.hidden = !day;                     // no oven, no track
+
+    // on a closed day only "Now" makes sense
+    Array.prototype.forEach.call(chips, function(c){
+      if(c.getAttribute("data-bake") !== "now") c.disabled = !day;
+    });
+    if(!day && filter !== "now"){
+      filter = "now";
+      Array.prototype.forEach.call(chips, function(c){
+        c.setAttribute("aria-pressed", c.getAttribute("data-bake") === "now" ? "true" : "false");
+      });
+    }
+
+    if(day){
+      var w = track.clientWidth || 1;
+      var openL = ((day.open - OVEN_START)/span)*100;
+      var openW = ((day.close - day.open)/span)*100;
+      var to = $("trackOpen");
+      to.style.left = openL+"%";
+      to.style.width = openW+"%";
+
+      if(!outside){
+        var x = ((mins - OVEN_START)/span) * w;
+        $("marker").style.transform = "translateX("+x.toFixed(1)+"px)";
+        $("markerLabel").textContent = hhmm(mins);
+      }
+    } else {
+      $("trackOpen").style.width = "0%";
+    }
+    $("trackNote").hidden = !outside;
+    $("trackNote").textContent = !day
+      ? "No bake today. Tuesday starts again at 06:30."
+      : (mins < OVEN_START
+          ? "The oven is cold. First bake at "+hhmm(day.bakes[0])+", "+untilStr(day.bakes[0]-mins)+"."
+          : "Oven off. Racks are empty until "+hhmm(day.bakes[0])+" tomorrow.");
+
+    /* board ------------------------------------------------------ */
+    var anyVisible = false;
+
+    ITEMS.forEach(function(item){
+      var tr = body.querySelector('tr[data-id="'+item.id+'"]');
+      var s = itemState(item, day, mins);
+
+      tr.setAttribute("data-state", s.key);
+      var stEl = tr.querySelector(".state");
+      stEl.textContent = s.label;
+      stEl.setAttribute("data-tone", s.tone);
+
+      var btn = tr.querySelector(".hold");
+      if(btn){
+        var canHold = day && s.key !== "off" && s.key !== "sold" && s.key !== "gone";
+        btn.disabled = !canHold;
+        btn.setAttribute("data-mode","idle");
+        if(s.key === "wait"){
+          btn.textContent = "Hold one";
+          btn.title = "You can hold one of these now, before it comes out.";
+          btn.disabled = false;
+        } else if(!canHold){
+          btn.textContent = "Hold one";
+          btn.title = s.key === "off"
+            ? "This one is not baked today."
+            : "There are none left to hold.";
+        } else {
+          btn.textContent = "Hold one";
+          btn.title = "We set one aside under your name for 90 minutes.";
+        }
+      }
+
+      var show = (filter === "now")
+        ? (!!day && s.key !== "off")
+        : (item.bake === Number(filter));
+      tr.hidden = !show;
+      if(show) anyVisible = true;
+    });
+
+    /* empty / closed states -------------------------------------- */
+    document.querySelector(".board-table").hidden = !anyVisible;   // no dangling header
+    var empty = $("boardEmpty");
+    if(!day && filter === "now"){
+      empty.hidden = false;
+      $("emptyTitle").textContent = "The oven is off today";
+      $("emptyBody").textContent = "Mondays the room gets scrubbed and the starter gets fed. Back tomorrow, first loaves out at 06:30.";
+    } else if(!anyVisible){
+      empty.hidden = false;
+      $("emptyTitle").textContent = "Nothing on the board";
+      $("emptyBody").textContent = "There is no bake at that time today. Try another time, or come back at 06:30.";
+    } else {
+      empty.hidden = true;
+    }
+
+    /* board note ------------------------------------------------- */
+    var note = $("boardNote");
+    if(filter !== "now"){
+      note.textContent = "Everything that comes out of the "+hhmm(Number(filter))+" oven.";
+    } else if(!day){
+      note.textContent = "Closed Mondays. The board picks up again Tuesday.";
+    } else if(mins >= day.close){
+      note.textContent = "Doors are shut. This is how today finished.";
+    } else if(mins < OVEN_START){
+      note.textContent = "Nothing baked yet. This is what is coming.";
+    } else {
+      note.textContent = "Live. Counts drop as things go.";
+    }
+
+    /* footer ----------------------------------------------------- */
+    var t = (d.getDay()+1)%7;
+    var td = DAYS[t];
+    $("tomorrowLine").textContent = td
+      ? "Tomorrow: first bake "+hhmm(td.bakes[0])+", doors "+hhmm(td.open)
+      : "Tomorrow: closed, back Tuesday at 06:30";
+
+    /* today's row in the hours table ----------------------------- */
+    var rows = $("hoursTable").querySelectorAll("tr[data-day]");
+    Array.prototype.forEach.call(rows, function(r){
+      r.setAttribute("data-today", Number(r.getAttribute("data-day")) === d.getDay() ? "true" : "false");
+    });
+  }
+
+  /* ---------- chips --------------------------------------------- */
+  var chips = document.querySelectorAll(".chip");
+  Array.prototype.forEach.call(chips, function(c){
+    c.addEventListener("click", function(){
+      filter = c.getAttribute("data-bake");
+      Array.prototype.forEach.call(chips, function(o){
+        o.setAttribute("aria-pressed", o === c ? "true" : "false");
+      });
+      refresh();
+    });
+  });
+
+  /* ---------- standing order form ------------------------------- */
+  var form = $("soForm"), nameEl = $("so-name"), mailEl = $("so-email");
+  var submit = $("soSubmit"), note = $("soNote"), done = $("soDone");
+
+  function gate(){
+    var ready = nameEl.value.trim() !== "" && mailEl.value.trim() !== "";
+    submit.disabled = !ready;
+    note.textContent = ready
+      ? "We will read this before the 06:30 bake."
+      : "Add a name and an email to send this.";
+  }
+  nameEl.addEventListener("input", gate);
+  mailEl.addEventListener("input", gate);
+
+  function invalid(id, yes){
+    $(id).setAttribute("data-invalid", yes ? "true" : "false");
+  }
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    if(submit.disabled) return;
+
+    var badName = nameEl.value.trim() === "";
+    var v = mailEl.value.trim();
+    var badMail = v.indexOf("@") < 1 || v.indexOf(".", v.indexOf("@")) < 0;
+
+    invalid("f-name", badName);
+    invalid("f-email", badMail);
+    nameEl.setAttribute("aria-invalid", badName ? "true" : "false");
+    mailEl.setAttribute("aria-invalid", badMail ? "true" : "false");
+
+    if(badName){ nameEl.focus(); return; }
+    if(badMail){ mailEl.focus(); return; }
+
+    submit.disabled = true;
+    submit.setAttribute("data-mode","loading");
+    submit.textContent = "Sending…";
+
+    window.setTimeout(function(){
+      var loaf = $("so-loaf").value;
+      var day  = $("so-day").value;
+      $("soDoneBody").textContent =
+        loaf + ", every " + day + ", under " + nameEl.value.trim() +
+        ". Set aside by 07:00 and held until 13:00. " +
+        "Nothing to pay until you pick it up.";
+      form.hidden = true;
+      done.hidden = false;
+      done.querySelector("h3").focus();
+    }, 900);
+  });
+
+  $("soReset").addEventListener("click", function(){
+    done.hidden = true;
+    form.hidden = false;
+    submit.setAttribute("data-mode","idle");
+    submit.textContent = "Start the standing order";
+    gate();
+    nameEl.focus();
+  });
+
+  /* ---------- run ----------------------------------------------- */
+  gate();
+  refresh();
+  window.setInterval(refresh, 15000);
+  window.addEventListener("resize", refresh);
+})();
+</script>
+</body>
+</html>

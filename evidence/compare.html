@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Baseline against with-skill</title>
+<!--
+  Built under the skill's own rules. Direction: dense utility, tool-first, zero
+  marketing air. No hero, no CTA pair, no tracked all-caps labels, no cards around
+  sections, square corners, two hues plus ink. Palette matches assets/mark.svg.
+  Deliberate risk: the page is only a viewport. It explains nothing and shows both
+  pages live instead, because a claim about how something looks should be checkable
+  rather than described.
+-->
+<style>
+  :root{
+    --ink:#16191B; --ink-2:#394246; --dim:#5C666B; --rule:#C9CFD2;
+    --panel:#EDF0F1; --panel-2:#E3E7E9; --accent:#C4187A;
+    --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+    --ui:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--panel); color:var(--ink);
+    font:400 15px/1.45 var(--ui);
+    display:grid; grid-template-rows:auto auto 1fr;
+  }
+  .bar{
+    display:flex; align-items:baseline; gap:20px; flex-wrap:wrap;
+    padding:12px 16px; border-bottom:1px solid var(--rule);
+  }
+  .bar h1{ font-size:15px; font-weight:600; margin:0; letter-spacing:0 }
+  .bar h1 b{ font-weight:400; color:var(--dim) }
+  nav{ display:flex; gap:0; margin-left:auto; flex-wrap:wrap }
+  nav button{
+    font:500 13px/1 var(--ui); color:var(--ink-2);
+    background:transparent; border:1px solid var(--rule); border-right-width:0;
+    padding:8px 12px; cursor:pointer; border-radius:0;
+  }
+  nav button:last-child{ border-right-width:1px }
+  nav button:hover{ background:#E3E7E9 }
+  nav button[aria-pressed="true"]{ background:var(--ink); color:#fff; border-color:var(--ink) }
+  nav button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; position:relative; z-index:1 }
+
+  .scores{
+    display:grid; grid-template-columns:1fr 1fr; gap:1px;
+    background:var(--rule); border-bottom:1px solid var(--rule);
+  }
+  .scores > div{ background:var(--panel); padding:10px 16px; display:flex; gap:18px; align-items:baseline; flex-wrap:wrap }
+  .scores h2{ font-size:15px; font-weight:600; margin:0 }
+  .scores .n{ font:500 13px/1 var(--mono); color:var(--ink-2) }
+  .scores .n s{ text-decoration:none; color:var(--dim) }
+  .scores .bad{ color:var(--accent); font-weight:600 }
+
+  .panes{ display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule); min-height:0 }
+  .panes section{ background:#fff; min-height:0; display:grid }
+  iframe{ width:100%; height:100%; border:0; display:block }
+
+  .foot{ position:fixed; right:14px; bottom:12px; font:400 12px/1 var(--mono); color:var(--dim) }
+
+  @media (max-width:900px){
+    .panes,.scores{ grid-template-columns:1fr }
+    .panes{ grid-template-rows:1fr 1fr }
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1>Baseline <b>against</b> with-skill</h1>
+  <nav id="pick" aria-label="Choose a prompt"></nav>
+</div>
+
+<div class="scores">
+  <div><h2>No skill</h2><span class="n" id="sL">&nbsp;</span></div>
+  <div><h2>With the skill</h2><span class="n" id="sR">&nbsp;</span></div>
+</div>
+
+<div class="panes">
+  <section><iframe id="L" title="Baseline page"></iframe></section>
+  <section><iframe id="R" title="With-skill page"></iframe></section>
+</div>
+
+<p class="foot">same one-line prompt, both sides</p>
+
+<script>
+// Scores come from score.py, recorded here so the comparison carries its own evidence.
+const PAIRS = [
+  {id:"v042/bakery",  label:"Bakery (v0.4.2)", base:"run2/baseline/bakery", skill:"run4/withskill/bakery",
+   b:{hits:7,t1:3,eye:10,lab:41}, s:{hits:0,t1:0,eye:0,lab:0}},
+  {id:"v03/bakery",   label:"Bakery (v0.3, bland)", base:"run2/baseline/bakery", skill:"run2/withskill/bakery",
+   b:{hits:7,t1:3,eye:10,lab:41}, s:{hits:1,t1:0,eye:0,lab:0}},
+  {id:"v04/docs",     label:"Docs (v0.4)",  base:"run2/baseline/docs",  skill:"run3/withskill/docs",
+   b:{hits:4,t1:1,eye:0,lab:14}, s:{hits:0,t1:0,eye:0,lab:0}},
+  {id:"v04/settings", label:"Settings (v0.4)", base:"run2/baseline/settings", skill:"run3/withskill/settings",
+   b:{hits:2,t1:0,eye:0,lab:9}, s:{hits:0,t1:0,eye:0,lab:0}},
+  {id:"ctl/fintech",   label:"Payments API", base:"control/baseline/fintech-api", skill:"control/withskill/fintech-api",
+   b:{hits:8,t1:3,eye:0,lab:16},  s:{hits:1,t1:0,eye:0,lab:1}},
+  {id:"r1/blog",       label:"Writer blog (v0.1)", base:"run-clean/baseline/writer-blog", skill:"run-clean/withskill/writer-blog",
+   b:{hits:5,t1:3,eye:15,lab:59}, s:{hits:1,t1:1,eye:4,lab:53}},
+];
+
+const nav = document.getElementById("pick");
+const L = document.getElementById("L"), R = document.getElementById("R");
+const sL = document.getElementById("sL"), sR = document.getElementById("sR");
+
+function fmt(x){
+  const t1 = x.t1 ? `<span class="bad">${x.t1} tier-1</span>` : `<s>0 tier-1</s>`;
+  const eye = x.eye ? `<span class="bad">${x.eye} eyebrows</span>` : `<s>0 eyebrows</s>`;
+  const lab = x.lab >= 12 ? `<span class="bad">${x.lab} labels</span>` : `<s>${x.lab} labels</s>`;
+  return `${x.hits} hits &nbsp; ${t1} &nbsp; ${eye} &nbsp; ${lab}`;
+}
+
+function show(p, btn){
+  L.src = p.base + "/index.html";
+  R.src = p.skill + "/index.html";
+  sL.innerHTML = fmt(p.b);
+  sR.innerHTML = fmt(p.s);
+  [...nav.children].forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+  location.hash = p.id;
+}
+
+PAIRS.forEach((p, i) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = p.label; b.setAttribute("aria-pressed","false");
+  b.onclick = () => show(p, b);
+  nav.appendChild(b);
+});
+
+const want = PAIRS.find(p => p.id === decodeURIComponent(location.hash.slice(1)));
+const start = want || PAIRS[0];
+show(start, nav.children[PAIRS.indexOf(start)]);
+</script>
+</body>
+</html>

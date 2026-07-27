@@ -1,0 +1,1943 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kestrel — a scheduler for async work</title>
+<meta name="description" content="Kestrel gives every async call a lane: bounded concurrency, rate limits, retries, priority and cancellation behind one small API. 3.1 kB, zero dependencies.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script>
+  /* Set the theme before first paint so there is no flash. */
+  (function () {
+    try {
+      var saved = localStorage.getItem('kestrel-theme');
+      var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', saved === 'dark' || saved === 'light' ? saved : sys);
+      if (!saved) document.documentElement.setAttribute('data-theme-auto', '');
+    } catch (e) {}
+  })();
+</script>
+<style>
+/* ------------------------------------------------------------------ *
+   Tokens
+ * ------------------------------------------------------------------ */
+:root{
+  --font-sans:'IBM Plex Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;
+
+  --bg:#f4f5f7;
+  --surface:#ffffff;
+  --surface-2:#eceef1;
+  --ink:#14171b;
+  --ink-2:#3d444d;
+  --muted:#646c76;
+  --faint:#8a929b;
+  --line:#dfe3e8;
+  --line-strong:#c7ced6;
+
+  --accent:#bc3f1b;
+  --accent-hover:#93300f;
+  --accent-wash:#f8ece7;
+
+  --slate:#3f6079;
+  --moss:#4a7238;
+  --amber:#8a6410;
+
+  --code-bg:#14181d;
+  --code-ink:#ccd5de;
+  --code-line:#242b33;
+  --code-head:#1a1f25;
+
+  --top-h:57px;
+  --shadow:0 1px 2px rgba(16,20,26,.06),0 10px 28px -14px rgba(16,20,26,.24);
+  --radius:6px;
+}
+[data-theme="dark"]{
+  --bg:#0b0d10;
+  --surface:#111418;
+  --surface-2:#171b21;
+  --ink:#e7ebef;
+  --ink-2:#c3cad2;
+  --muted:#98a1ab;
+  --faint:#6f7883;
+  --line:#222831;
+  --line-strong:#333b46;
+
+  --accent:#ff8355;
+  --accent-hover:#ffa480;
+  --accent-wash:#241610;
+
+  --slate:#7ea6c6;
+  --moss:#8fbf74;
+  --amber:#d9a441;
+
+  --code-bg:#0e1217;
+  --code-line:#1e242b;
+  --code-head:#131920;
+
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 14px 34px -18px rgba(0,0,0,.8);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  font-size:15.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{color:var(--accent-hover);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+code,kbd,pre,samp{font-family:var(--font-mono)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+::selection{background:var(--accent);color:#fff}
+
+.skip{
+  position:absolute;left:-9999px;top:0;z-index:100;
+  background:var(--surface);color:var(--ink);
+  padding:10px 16px;border:1px solid var(--line-strong);border-radius:var(--radius)
+}
+.skip:focus{left:12px;top:12px}
+
+/* ------------------------------------------------------------------ *
+   Top bar
+ * ------------------------------------------------------------------ */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  height:var(--top-h);
+  display:flex;align-items:center;gap:18px;
+  padding:0 20px;
+  background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:saturate(180%) blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px;color:var(--ink);flex:none}
+.brand:hover{text-decoration:none;color:var(--ink)}
+.brand svg{display:block}
+.brand-name{font-weight:600;letter-spacing:-.01em;font-size:16px}
+.ver{
+  font-family:var(--font-mono);font-size:11.5px;color:var(--muted);
+  border:1px solid var(--line);border-radius:99px;padding:1px 8px;
+  background:var(--surface);
+}
+.topbar-mid{flex:1;display:flex;justify-content:center;min-width:0}
+.search-btn{
+  width:100%;max-width:400px;
+  display:flex;align-items:center;gap:9px;
+  height:32px;padding:0 8px 0 10px;
+  background:var(--surface);color:var(--faint);
+  border:1px solid var(--line);border-radius:var(--radius);
+  font:inherit;font-size:13.5px;cursor:pointer;text-align:left;
+}
+.search-btn:hover{border-color:var(--line-strong);color:var(--muted)}
+.search-btn .sb-label{flex:1}
+kbd{
+  font-size:11px;line-height:1;padding:3px 5px;
+  border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;
+  background:var(--bg);color:var(--muted);
+}
+.topbar-end{display:flex;align-items:center;gap:4px;flex:none}
+.icon-btn{
+  height:32px;min-width:32px;padding:0 8px;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:transparent;border:1px solid transparent;border-radius:var(--radius);
+  color:var(--muted);cursor:pointer;font:inherit;font-size:13.5px;
+}
+.icon-btn:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
+.icon-btn svg{display:block}
+.burger{display:none}
+
+/* ------------------------------------------------------------------ *
+   Shell
+ * ------------------------------------------------------------------ */
+.shell{
+  display:grid;
+  grid-template-columns:266px minmax(0,1fr) 218px;
+  max-width:1460px;margin:0 auto;
+  align-items:start;
+}
+
+/* Sidebar */
+.sidebar{
+  position:sticky;top:var(--top-h);
+  height:calc(100dvh - var(--top-h));
+  overflow-y:auto;overscroll-behavior:contain;
+  border-right:1px solid var(--line);
+  padding:26px 18px 60px 20px;
+  font-size:14px;
+}
+.nav-group + .nav-group{margin-top:24px}
+.nav-title{
+  font-family:var(--font-mono);font-size:11px;font-weight:600;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+  padding:0 8px;margin:0 0 7px;
+}
+.sidebar ul{list-style:none;margin:0;padding:0}
+.sidebar li a{
+  display:block;padding:4.5px 9px;border-radius:5px;
+  color:var(--ink-2);border-left:2px solid transparent;margin-left:-2px;
+}
+.sidebar li a:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
+.sidebar li a[aria-current="page"]{
+  color:var(--accent);font-weight:500;
+  border-left-color:var(--accent);background:var(--accent-wash);
+}
+.sidebar-foot{
+  margin-top:30px;padding-top:16px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--faint);font-family:var(--font-mono)
+}
+
+/* Main column */
+main{padding:40px 56px 110px;min-width:0}
+.rail{
+  position:sticky;top:var(--top-h);
+  height:calc(100dvh - var(--top-h));overflow-y:auto;
+  padding:44px 22px 60px 4px;font-size:13px;
+}
+.rail h2{
+  font-family:var(--font-mono);font-size:11px;font-weight:600;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+  margin:0 0 10px;
+}
+.rail ul{list-style:none;margin:0;padding:0;border-left:1px solid var(--line)}
+.rail a{
+  display:block;padding:4px 0 4px 12px;color:var(--muted);
+  border-left:2px solid transparent;margin-left:-1px;line-height:1.45;
+}
+.rail a:hover{color:var(--ink);text-decoration:none}
+.rail a.on{color:var(--accent);border-left-color:var(--accent)}
+
+/* ------------------------------------------------------------------ *
+   Typography
+ * ------------------------------------------------------------------ */
+.crumb{
+  font-family:var(--font-mono);font-size:12px;color:var(--faint);
+  margin:0 0 14px;letter-spacing:.01em
+}
+.crumb a{color:var(--faint)}
+.crumb a:hover{color:var(--muted)}
+h1{
+  font-size:clamp(32px,4.4vw,42px);line-height:1.12;letter-spacing:-.028em;
+  font-weight:600;margin:0 0 14px;
+}
+.lede{
+  font-size:19px;line-height:1.55;color:var(--ink-2);
+  margin:0 0 22px;max-width:64ch;
+}
+.lede strong{font-weight:600;color:var(--ink)}
+.meta-row{
+  display:flex;flex-wrap:wrap;align-items:center;gap:0 10px;
+  font-family:var(--font-mono);font-size:12.5px;color:var(--muted);
+  padding:11px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  margin:0 0 40px;
+}
+.meta-row span::after{content:'·';margin-left:10px;color:var(--line-strong)}
+.meta-row span:last-child::after{content:''}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:6px;vertical-align:1px}
+
+main h2{
+  font-size:25px;line-height:1.25;letter-spacing:-.018em;font-weight:600;
+  margin:64px 0 6px;padding-top:8px;scroll-margin-top:calc(var(--top-h) + 18px)
+}
+main h2:first-of-type{margin-top:0}
+main h3{
+  font-size:17.5px;line-height:1.35;letter-spacing:-.01em;font-weight:600;
+  margin:38px 0 4px;scroll-margin-top:calc(var(--top-h) + 18px)
+}
+main h4{font-size:15px;font-weight:600;margin:26px 0 4px}
+.sub{color:var(--muted);margin:0 0 22px;font-size:14.5px}
+main p{margin:0 0 16px;max-width:70ch}
+main ul,main ol{margin:0 0 18px;padding-left:22px;max-width:70ch}
+main li{margin:5px 0}
+main li::marker{color:var(--faint)}
+strong{font-weight:600}
+
+.anchor{
+  color:var(--line-strong);font-weight:400;margin-left:8px;
+  opacity:0;transition:opacity .12s ease;font-family:var(--font-mono)
+}
+h2:hover .anchor,h3:hover .anchor,.anchor:focus{opacity:1;text-decoration:none}
+
+/* inline code — wraps at spaces so long signatures cannot escape narrow columns;
+   box-decoration-break keeps the border intact across a line break. */
+:not(pre) > code{
+  font-size:.875em;padding:1.5px 5px;border-radius:4px;
+  background:var(--surface-2);color:var(--ink);
+  border:1px solid var(--line);
+  overflow-wrap:break-word;
+  -webkit-box-decoration-break:clone;box-decoration-break:clone
+}
+a > code{color:var(--accent);border-color:var(--line)}
+
+/* ------------------------------------------------------------------ *
+   Code blocks
+ * ------------------------------------------------------------------ */
+.code{
+  position:relative;margin:0 0 20px;
+  background:var(--code-bg);border:1px solid var(--code-line);
+  border-radius:var(--radius);overflow:hidden;
+}
+.code-head{
+  display:flex;align-items:center;gap:10px;
+  padding:0 10px 0 14px;height:37px;
+  background:var(--code-head);border-bottom:1px solid var(--code-line);
+  font-family:var(--font-mono);font-size:12px;color:#8b96a2;
+}
+.code-head .file{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.code-head .lang{
+  color:#6d7884;text-transform:lowercase;letter-spacing:.04em;
+  border:1px solid #2a323b;border-radius:3px;padding:0 6px;line-height:17px;font-size:10.5px
+}
+.copy{
+  background:transparent;border:1px solid transparent;border-radius:4px;
+  color:#8b96a2;font:inherit;font-size:11.5px;font-family:var(--font-mono);
+  padding:3px 7px;cursor:pointer;flex:none
+}
+.copy:hover{background:#232a32;color:#d7dee5}
+.copy[data-done="1"]{color:#9dd18a}
+.code pre{
+  margin:0;padding:16px 18px;overflow-x:auto;
+  font-size:13px;line-height:1.72;color:var(--code-ink);
+  tab-size:2;
+}
+.code pre::-webkit-scrollbar{height:9px}
+.code pre::-webkit-scrollbar-thumb{background:#2c343d;border-radius:9px}
+.code.plain pre{color:#939ea9}
+
+.tok-com{color:#6a747f;font-style:italic}
+.tok-str{color:#9dd18a}
+.tok-num{color:#ecc48d}
+.tok-kw{color:#ff8f60}
+.tok-fn{color:#79b8e8}
+.tok-typ{color:#c8a6e8}
+.tok-flag{color:#ecc48d}
+.tok-cmd{color:#79b8e8}
+
+/* tabbed code groups */
+.tabs{margin:0 0 22px}
+.tabbar{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:-1px;flex-wrap:wrap}
+.tabbar button{
+  background:transparent;border:1px solid transparent;border-bottom:none;
+  border-radius:5px 5px 0 0;padding:6px 13px;cursor:pointer;
+  font-family:var(--font-mono);font-size:12.5px;color:var(--muted);
+  position:relative;top:1px
+}
+.tabbar button:hover{color:var(--ink)}
+.tabbar button[aria-selected="true"]{
+  color:var(--ink);background:var(--code-bg);border-color:var(--code-line);
+  color:#d7dee5
+}
+.tabs .code{border-top-left-radius:0;margin-bottom:0}
+.tabs [role="tabpanel"][hidden]{display:none}
+
+/* ------------------------------------------------------------------ *
+   Callouts
+ * ------------------------------------------------------------------ */
+.note{
+  border-left:2px solid var(--slate);
+  background:var(--surface);
+  border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  border-radius:0 var(--radius) var(--radius) 0;
+  padding:14px 18px;margin:0 0 22px;max-width:70ch;
+}
+.note > :last-child{margin-bottom:0}
+.note .label{
+  display:block;font-family:var(--font-mono);font-size:11px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--slate);margin-bottom:4px
+}
+.note.tip{border-left-color:var(--moss)}
+.note.tip .label{color:var(--moss)}
+.note.warn{border-left-color:var(--amber)}
+.note.warn .label{color:var(--amber)}
+
+/* ------------------------------------------------------------------ *
+   Tables
+ * ------------------------------------------------------------------ */
+.table-wrap{overflow-x:auto;margin:0 0 24px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{
+  font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--faint);background:var(--surface-2);
+  white-space:nowrap;border-bottom:1px solid var(--line)
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+td code{white-space:nowrap}
+td.sig{font-family:var(--font-mono);font-size:12.5px;color:var(--ink);white-space:nowrap}
+.yes{color:var(--moss);font-weight:600}
+.no{color:var(--faint)}
+
+/* ------------------------------------------------------------------ *
+   Concept rows
+ * ------------------------------------------------------------------ */
+.rows{border-top:1px solid var(--line);margin:0 0 26px}
+.row{
+  display:grid;grid-template-columns:170px minmax(0,1fr);
+  gap:22px;padding:16px 0;border-bottom:1px solid var(--line)
+}
+.row dt{font-family:var(--font-mono);font-size:13.5px;font-weight:500;color:var(--ink)}
+.row dt .kind{display:block;font-size:11px;color:var(--faint);font-weight:400;margin-top:3px}
+.row dd{margin:0;color:var(--ink-2);font-size:14.5px}
+
+/* ------------------------------------------------------------------ *
+   Steps
+ * ------------------------------------------------------------------ */
+.steps{list-style:none;counter-reset:step;padding:0;margin:0;max-width:none}
+.steps > li{
+  counter-increment:step;position:relative;
+  padding:0 0 8px 54px;margin:0 0 30px;
+  border-left:1px solid var(--line);
+}
+.steps > li::before{
+  content:counter(step,decimal-leading-zero);
+  position:absolute;left:0;top:0;transform:translateX(-50%);
+  width:30px;height:22px;line-height:22px;text-align:center;
+  background:var(--bg);color:var(--accent);
+  font-family:var(--font-mono);font-size:12px;font-weight:600;
+}
+.steps > li:last-child{border-left-color:transparent}
+.steps h3{margin-top:0}
+
+/* ------------------------------------------------------------------ *
+   Diagram
+ * ------------------------------------------------------------------ */
+figure{margin:0 0 26px}
+.diagram{
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--surface);padding:22px 20px 14px;overflow-x:auto
+}
+.diagram svg{display:block;width:100%;min-width:600px;height:auto}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px;font-style:italic}
+
+/* ------------------------------------------------------------------ *
+   Details / FAQ
+ * ------------------------------------------------------------------ */
+details{
+  border-bottom:1px solid var(--line);
+  max-width:74ch
+}
+details:first-of-type{border-top:1px solid var(--line)}
+summary{
+  cursor:pointer;padding:13px 0 13px 26px;position:relative;
+  font-weight:500;list-style:none;color:var(--ink)
+}
+summary::-webkit-details-marker{display:none}
+summary::before{
+  content:'';position:absolute;left:6px;top:21px;
+  width:6px;height:6px;border-right:1.5px solid var(--faint);border-bottom:1.5px solid var(--faint);
+  transform:rotate(-45deg);transition:transform .15s ease
+}
+details[open] summary::before{transform:rotate(45deg);border-color:var(--accent)}
+summary:hover{color:var(--accent)}
+.details-body{padding:0 0 18px 26px}
+.details-body > :last-child{margin-bottom:0}
+.details-body p, .details-body ul{max-width:66ch}
+
+/* API details use a boxed variant */
+details.opts{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);margin:0 0 20px;max-width:none}
+details.opts summary{padding:12px 16px 12px 34px;font-family:var(--font-mono);font-size:13.5px}
+details.opts summary::before{left:15px;top:20px}
+details.opts .details-body{padding:0 16px 8px 16px;border-top:1px solid var(--line)}
+details.opts .table-wrap{border:none;margin:0}
+
+/* ------------------------------------------------------------------ *
+   Footer
+ * ------------------------------------------------------------------ */
+.pager{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:70px
+}
+.pager a{
+  border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);
+  padding:13px 16px;display:block;color:var(--ink)
+}
+.pager a:hover{border-color:var(--accent);text-decoration:none}
+.pager .dir{display:block;font-family:var(--font-mono);font-size:11px;color:var(--faint);letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
+.pager .next{text-align:right}
+
+.site-foot{
+  border-top:1px solid var(--line);
+  background:var(--surface);
+  padding:44px 20px 34px;margin-top:0
+}
+.foot-inner{
+  max-width:1460px;margin:0 auto;padding:0 36px;
+  display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:34px
+}
+.foot-inner h3{
+  font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--faint);margin:0 0 10px
+}
+.foot-inner ul{list-style:none;margin:0;padding:0;font-size:14px}
+.foot-inner li{margin:6px 0}
+.foot-inner li a{color:var(--ink-2)}
+.foot-inner li a:hover{color:var(--accent)}
+.foot-blurb{font-size:14px;color:var(--muted);max-width:34ch;margin:10px 0 0}
+.foot-bottom{
+  max-width:1460px;margin:34px auto 0;padding:18px 36px 0;
+  border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;
+  font-family:var(--font-mono);font-size:12px;color:var(--faint)
+}
+
+/* ------------------------------------------------------------------ *
+   Command palette
+ * ------------------------------------------------------------------ */
+.palette-backdrop{
+  position:fixed;inset:0;z-index:80;
+  background:rgba(10,13,17,.45);
+  display:flex;justify-content:center;align-items:flex-start;
+  padding:12vh 16px 16px
+}
+[data-theme="dark"] .palette-backdrop{background:rgba(0,0,0,.62)}
+.palette{
+  width:100%;max-width:560px;background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:10px;box-shadow:var(--shadow);
+  overflow:hidden;display:flex;flex-direction:column;max-height:66vh
+}
+.palette input{
+  width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;
+  padding:15px 18px;font:inherit;font-size:15px;color:var(--ink);outline:none
+}
+.palette input::placeholder{color:var(--faint)}
+.palette-results{overflow-y:auto;padding:6px}
+.presult{
+  display:flex;align-items:baseline;gap:10px;
+  padding:8px 12px;border-radius:5px;color:var(--ink);cursor:pointer
+}
+.presult:hover,.presult.sel{background:var(--surface-2);text-decoration:none}
+.presult.sel{background:var(--accent-wash);color:var(--accent)}
+.presult .ptitle{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.presult .pkind{
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);flex:none
+}
+.palette-empty{padding:22px 18px;color:var(--muted);font-size:14px;text-align:center}
+.palette-foot{
+  border-top:1px solid var(--line);padding:8px 14px;display:flex;gap:14px;
+  font-size:11.5px;color:var(--faint);font-family:var(--font-mono)
+}
+
+/* ------------------------------------------------------------------ *
+   Responsive
+ * ------------------------------------------------------------------ */
+@media (max-width:1180px){
+  .shell{grid-template-columns:250px minmax(0,1fr)}
+  .rail{display:none}
+  main{padding:36px 40px 100px}
+  .foot-inner{grid-template-columns:1fr 1fr;gap:28px}
+}
+@media (max-width:920px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .burger{display:inline-flex}
+  .sidebar{
+    position:fixed;top:var(--top-h);left:0;z-index:60;
+    width:282px;background:var(--surface);
+    transform:translateX(-102%);transition:transform .2s ease;
+    box-shadow:var(--shadow)
+  }
+  body.nav-open .sidebar{transform:none}
+  .nav-backdrop{position:fixed;inset:var(--top-h) 0 0;background:rgba(10,13,17,.4);z-index:50}
+  main{padding:30px 22px 90px}
+  .row{grid-template-columns:1fr;gap:4px}
+  .pager{grid-template-columns:1fr}
+  .foot-inner,.foot-bottom{padding-left:20px;padding-right:20px}
+  h1{font-size:31px}
+  .lede{font-size:17.5px}
+  .steps > li{padding-left:34px}
+  .steps > li::before{width:24px;left:0}
+}
+@media (max-width:620px){
+  .search-btn .sb-label{display:none}
+  .search-btn{max-width:44px;justify-content:center;padding:0}
+  .search-btn kbd{display:none}
+  .ver{display:none}
+  .foot-inner{grid-template-columns:1fr}
+  .hide-sm{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;scroll-behavior:auto!important}
+}
+html{scroll-behavior:smooth}
+@media print{.topbar,.sidebar,.rail,.site-foot,.pager{display:none}}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+  <button class="icon-btn burger" id="burger" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+  </button>
+
+  <a class="brand" href="#top">
+    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+      <rect x="1" y="1" width="18" height="18" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".28"/>
+      <rect x="5" y="5.5" width="10" height="2" rx="1" fill="var(--accent)"/>
+      <rect x="5" y="9" width="6.5" height="2" rx="1" fill="currentColor" opacity=".62"/>
+      <rect x="5" y="12.5" width="3" height="2" rx="1" fill="currentColor" opacity=".34"/>
+    </svg>
+    <span class="brand-name">Kestrel</span>
+  </a>
+  <span class="ver">v2.4.1</span>
+
+  <div class="topbar-mid">
+    <button class="search-btn" id="searchBtn" aria-label="Search documentation">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14" stroke-linecap="round"/></svg>
+      <span class="sb-label">Search docs</span>
+      <kbd>⌘K</kbd>
+    </button>
+  </div>
+
+  <div class="topbar-end">
+    <a class="icon-btn hide-sm" href="#" aria-label="Changelog">Changelog</a>
+    <a class="icon-btn" href="#" aria-label="Kestrel on GitHub">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+    </a>
+    <button class="icon-btn" id="themeBtn" aria-label="Toggle colour theme" title="Toggle colour theme">
+      <svg id="iconSun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3.2"/><path d="M8 .8v1.8M8 13.4v1.8M15.2 8h-1.8M2.6 8H.8M13.1 13.1l-1.3-1.3M4.2 4.2 2.9 2.9M13.1 2.9l-1.3 1.3M4.2 11.8l-1.3 1.3" stroke-linecap="round"/></svg>
+      <svg id="iconMoon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" hidden><path d="M13.5 9.6A5.9 5.9 0 0 1 6.4 2.5a5.9 5.9 0 1 0 7.1 7.1z" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="shell" id="top">
+
+  <!-- ================= Sidebar ================= -->
+  <aside class="sidebar" id="sidebar" data-nav aria-label="Documentation navigation">
+    <div class="nav-group">
+      <p class="nav-title">Getting started</p>
+      <ul>
+        <li><a href="#overview" aria-current="page">Introduction</a></li>
+        <li><a href="#install">Installation</a></li>
+        <li><a href="#quickstart">Quick start</a></li>
+        <li><a href="#why">Why Kestrel</a></li>
+      </ul>
+    </div>
+    <div class="nav-group">
+      <p class="nav-title">Core concepts</p>
+      <ul>
+        <li><a href="#concepts">Queues</a></li>
+        <li><a href="#concept-lanes">Lanes</a></li>
+        <li><a href="#step-rate">Rate limits</a></li>
+        <li><a href="#concept-retry">Retries and backoff</a></li>
+        <li><a href="#step-cancel">Cancellation</a></li>
+        <li><a href="#concept-priority">Priority</a></li>
+      </ul>
+    </div>
+    <div class="nav-group">
+      <p class="nav-title">Guides</p>
+      <ul>
+        <li><a href="#walkthrough">Rate-limited crawling</a></li>
+        <li><a href="#recipe-navigation">Cancel on navigation</a></li>
+        <li><a href="#recipe-dedupe">Deduplicating requests</a></li>
+        <li><a href="#recipe-shutdown">Graceful shutdown</a></li>
+        <li><a href="#recipe-testing">Testing with fake timers</a></li>
+      </ul>
+    </div>
+    <div class="nav-group">
+      <p class="nav-title">API reference</p>
+      <ul>
+        <li><a href="#api-createqueue">createQueue()</a></li>
+        <li><a href="#api-queue">Queue</a></li>
+        <li><a href="#api-lane">Lane</a></li>
+        <li><a href="#api-events">Events</a></li>
+        <li><a href="#api-errors">Errors</a></li>
+      </ul>
+    </div>
+    <div class="nav-group">
+      <p class="nav-title">Ecosystem</p>
+      <ul>
+        <li><a href="#adapters">Framework adapters</a></li>
+        <li><a href="#comparison">Comparison</a></li>
+        <li><a href="#support">Runtime support</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#contributing">Contributing</a></li>
+      </ul>
+    </div>
+    <p class="sidebar-foot">v2.4.1 &middot; MIT<br>Last updated 12 Jul 2026</p>
+  </aside>
+
+  <!-- ================= Main ================= -->
+  <main id="content">
+
+    <p class="crumb"><a href="#top">Docs</a> / Getting started / Introduction</p>
+
+    <h1 id="overview">Kestrel</h1>
+    <p class="lede">Kestrel is a scheduler for async work. It gives every call a <strong>lane</strong> with its own concurrency cap, rate limit, retry policy and priority, so the shape of your traffic is described in one place instead of scattered through the code that makes the requests.</p>
+
+    <div class="meta-row">
+      <span><span class="dot"></span>v2.4.1</span>
+      <span>MIT</span>
+      <span>3.1 kB min+gzip</span>
+      <span>0 dependencies</span>
+      <span>ESM + CJS</span>
+      <span>TypeScript first</span>
+    </div>
+
+    <p>Every non-trivial front end eventually grows a hand-rolled scheduler: a counter that caps parallel fetches, a <code>setTimeout</code> that spaces out calls to a rate-limited endpoint, a retry loop bolted onto one particularly flaky request. Each piece is small. Together they are impossible to reason about, because no single place knows how much work is in flight.</p>
+
+    <p>Kestrel is that missing place. You declare the limits once, hand it functions, and it decides what runs when.</p>
+
+    <div class="tabs" data-tabs>
+      <div class="tabbar" role="tablist" aria-label="Runtime example">
+        <button role="tab" aria-selected="true" id="t-basic-1" aria-controls="p-basic-1">basic</button>
+        <button role="tab" aria-selected="false" id="t-basic-2" aria-controls="p-basic-2">with lanes</button>
+        <button role="tab" aria-selected="false" id="t-basic-3" aria-controls="p-basic-3">wrapped</button>
+      </div>
+      <div role="tabpanel" id="p-basic-1" aria-labelledby="t-basic-1">
+        <div class="code" data-lang="js" data-file="search.js"><pre>import { createQueue } from 'kestrel'
+
+const queue = createQueue({ concurrency: 4, rate: '10/s' })
+
+// Fires immediately if a slot is free, otherwise waits its turn.
+const results = await Promise.all(
+  ids.map(id => queue.run(() => fetch(`/api/items/${id}`).then(r => r.json())))
+)</pre></div>
+      </div>
+      <div role="tabpanel" id="p-basic-2" aria-labelledby="t-basic-2" hidden>
+        <div class="code" data-lang="js" data-file="queue.js"><pre>import { createQueue } from 'kestrel'
+
+export const queue = createQueue({
+  concurrency: 8,
+  lanes: {
+    search:   { concurrency: 2, rate: '10/s' },
+    upload:   { concurrency: 1, retries: 3, timeout: 30_000 },
+    prefetch: { concurrency: 4, priority: -1 }
+  }
+})
+
+queue.lane('search').run(() => searchItems(term))
+queue.lane('prefetch').run(() => warmCache(nextPage))</pre></div>
+      </div>
+      <div role="tabpanel" id="p-basic-3" aria-labelledby="t-basic-3" hidden>
+        <div class="code" data-lang="js" data-file="api.js"><pre>import { queue } from './queue.js'
+
+// wrap() returns a function with the same signature, already scheduled.
+export const searchItems = queue.lane('search').wrap(async (term, { signal } = {}) => {
+  const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal })
+  if (!res.ok) throw new Error(`search failed: ${res.status}`)
+  return res.json()
+})
+
+// Callers never think about the queue.
+const hits = await searchItems('peregrine')</pre></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="label">Scope</span>
+      <p>Kestrel schedules work <em>inside one process</em>. It is not a job queue and it does not coordinate across servers, tabs or workers. If you need durable jobs or a shared limit across instances, see <a href="#comparison">when not to use Kestrel</a>.</p>
+    </div>
+
+    <!-- ============ Installation ============ -->
+    <h2 id="install">Installation</h2>
+    <p class="sub">Kestrel ships as ESM and CJS with bundled type definitions. There is no peer dependency and no postinstall step.</p>
+
+    <div class="tabs" data-tabs>
+      <div class="tabbar" role="tablist" aria-label="Package manager">
+        <button role="tab" aria-selected="true" id="t-i1" aria-controls="p-i1">npm</button>
+        <button role="tab" aria-selected="false" id="t-i2" aria-controls="p-i2">pnpm</button>
+        <button role="tab" aria-selected="false" id="t-i3" aria-controls="p-i3">yarn</button>
+        <button role="tab" aria-selected="false" id="t-i4" aria-controls="p-i4">bun</button>
+        <button role="tab" aria-selected="false" id="t-i5" aria-controls="p-i5">deno</button>
+        <button role="tab" aria-selected="false" id="t-i6" aria-controls="p-i6">cdn</button>
+      </div>
+      <div role="tabpanel" id="p-i1" aria-labelledby="t-i1">
+        <div class="code" data-lang="bash"><pre>npm install kestrel</pre></div>
+      </div>
+      <div role="tabpanel" id="p-i2" aria-labelledby="t-i2" hidden>
+        <div class="code" data-lang="bash"><pre>pnpm add kestrel</pre></div>
+      </div>
+      <div role="tabpanel" id="p-i3" aria-labelledby="t-i3" hidden>
+        <div class="code" data-lang="bash"><pre>yarn add kestrel</pre></div>
+      </div>
+      <div role="tabpanel" id="p-i4" aria-labelledby="t-i4" hidden>
+        <div class="code" data-lang="bash"><pre>bun add kestrel</pre></div>
+      </div>
+      <div role="tabpanel" id="p-i5" aria-labelledby="t-i5" hidden>
+        <div class="code" data-lang="bash"><pre>deno add npm:kestrel
+# or import it directly, no install required
+# import { createQueue } from 'npm:kestrel@2.4.1'</pre></div>
+      </div>
+      <div role="tabpanel" id="p-i6" aria-labelledby="t-i6" hidden>
+        <div class="code" data-lang="html" data-file="index.html"><pre>&lt;script type="module"&gt;
+  import { createQueue } from 'https://esm.sh/kestrel@2.4.1'
+  const queue = createQueue({ concurrency: 3 })
+&lt;/script&gt;</pre></div>
+      </div>
+    </div>
+
+    <p>TypeScript users need nothing extra. <code>Queue</code>, <code>Lane</code>, <code>TaskOptions</code> and the error classes are all exported, and <code>queue.run()</code> infers its return type from the task you hand it.</p>
+
+    <!-- ============ Quick start ============ -->
+    <h2 id="quickstart">Quick start</h2>
+    <p class="sub">A queue, four slots, and a rate limit that matches what the upstream API actually allows.</p>
+
+    <div class="code" data-lang="js" data-file="thumbnails.js"><pre>import { createQueue, isCancelled } from 'kestrel'
+
+const queue = createQueue({
+  concurrency: 4,        // never more than 4 requests in flight
+  rate: '20/s',          // and never more than 20 started per second
+  retries: 2,            // retry twice on failure, exponential backoff
+  timeout: 8_000         // abort any task that runs longer than 8s
+})
+
+async function loadThumbnail(id, signal) {
+  const res = await fetch(`/api/thumbnails/${id}`, { signal })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.blob()
+}
+
+const controller = new AbortController()
+
+try {
+  const blobs = await Promise.all(
+    ids.map(id => queue.run(sig => loadThumbnail(id, sig), {
+      signal: controller.signal,
+      priority: isVisible(id) ? 10 : 0
+    }))
+  )
+  render(blobs)
+} catch (err) {
+  if (!isCancelled(err)) throw err
+}</pre></div>
+
+    <p>Three things are worth noticing in that snippet.</p>
+    <ul>
+      <li>The task receives its own <code>AbortSignal</code>. Kestrel aborts it on timeout, on cancellation, and when the queue is cleared, so you forward it to <code>fetch</code> and stop thinking about teardown.</li>
+      <li><code>priority</code> is evaluated when the task is <em>enqueued</em>, not when it starts. Visible thumbnails jump the line ahead of everything already waiting.</li>
+      <li>Failures reject the promise returned by <code>run()</code> after the retry budget is spent. Kestrel never swallows an error.</li>
+    </ul>
+
+    <div class="note tip">
+      <span class="label">Tip</span>
+      <p>Create the queue once at module scope and import it. A queue created inside a component or request handler is a queue with a concurrency limit of one caller, which is another way of saying no limit at all.</p>
+    </div>
+
+    <!-- ============ Why ============ -->
+    <h2 id="why">Why Kestrel</h2>
+    <p class="sub">The same program, written twice.</p>
+
+    <p>Concurrency control on its own is easy. A dozen lines get you a semaphore. The cost shows up later, when the semaphore needs to also understand rate limits, retries, timeouts, cancellation and ordering, and every one of those features has to be threaded through the same fragile counter.</p>
+
+    <h3 id="why-before">Hand-rolled</h3>
+    <div class="code" data-lang="js" data-file="before.js"><pre>let active = 0
+const waiting = []
+let lastCall = 0
+
+async function limited(fn, attempt = 0) {
+  if (active &gt;= 4) await new Promise(resolve =&gt; waiting.push(resolve))
+  const gap = Date.now() - lastCall
+  if (gap &lt; 100) await sleep(100 - gap)   // crude 10/s
+  active++
+  lastCall = Date.now()
+  try {
+    return await fn()
+  } catch (err) {
+    if (attempt &lt; 2) return limited(fn, attempt + 1)   // recursion re-queues, so
+    throw err                                          // the retry waits behind
+  } finally {                                          // everything else. Oops.
+    active--
+    waiting.shift()?.()
+  }
+}</pre></div>
+    <p>That code has at least three bugs, and every one of them only shows up under load: the rate limiter drifts because it measures the gap before acquiring a slot, retries lose their place in the queue, and there is no way to cancel anything. Adding priority means rewriting <code>waiting</code> as a heap.</p>
+
+    <h3 id="why-after">With Kestrel</h3>
+    <div class="code" data-lang="js" data-file="after.js"><pre>import { createQueue } from 'kestrel'
+
+const queue = createQueue({ concurrency: 4, rate: '10/s', retries: 2 })
+
+const limited = queue.wrap(fn)</pre></div>
+
+    <p>Retries keep their slot instead of going to the back of the line. The rate limiter is a sliding window measured at dispatch. Cancellation is an <code>AbortSignal</code> away, and priority is a number.</p>
+
+    <!-- ============ Concepts ============ -->
+    <h2 id="concepts">Core concepts</h2>
+    <p class="sub">Four nouns. Everything in the API is one of them.</p>
+
+    <dl class="rows">
+      <div class="row" id="concept-queue">
+        <dt>Queue<span class="kind">createQueue()</span></dt>
+        <dd>The root scheduler. Owns the global concurrency cap and the default policy that every lane inherits. One queue per external system is the usual shape: one for your API, one for the image CDN, one for analytics.</dd>
+      </div>
+      <div class="row" id="concept-lanes">
+        <dt>Lane<span class="kind">queue.lane(name)</span></dt>
+        <dd>A named slice of a queue with its own limits. Lanes compete for the queue's global slots but can never exceed their own cap, which is how a burst of prefetches is prevented from starving user-initiated searches. Lanes are created on first use and are cheap.</dd>
+      </div>
+      <div class="row" id="concept-retry">
+        <dt>Policy<span class="kind">retries, rate, timeout</span></dt>
+        <dd>The rules applied to a task: how many attempts, how long to wait between them, how fast tasks may start, and when to give up. Policy is resolved per task by merging queue defaults, lane options and per-call options, in that order.</dd>
+      </div>
+      <div class="row" id="concept-priority">
+        <dt>Task<span class="kind">queue.run(fn, options)</span></dt>
+        <dd>One unit of work: a function, a priority, and a signal. Kestrel calls it with a fresh <code>AbortSignal</code> and returns a promise that settles exactly once, after retries are exhausted or on the first success.</dd>
+      </div>
+    </dl>
+
+    <figure>
+      <div class="diagram">
+        <svg viewBox="0 0 700 208" role="img" aria-labelledby="diagTitle diagDesc">
+          <title id="diagTitle">How lanes share a queue's global concurrency</title>
+          <desc id="diagDesc">Incoming tasks are split into three lanes. Each lane has its own concurrency cap, and all lanes draw from a shared pool of eight global slots.</desc>
+          <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor">
+
+            <!-- incoming -->
+            <text x="8" y="16" opacity=".55">incoming</text>
+            <g fill="currentColor" opacity=".38">
+              <circle cx="16" cy="42" r="5"/><circle cx="34" cy="42" r="5"/><circle cx="52" cy="42" r="5"/>
+              <circle cx="16" cy="60" r="5"/><circle cx="34" cy="60" r="5"/><circle cx="52" cy="60" r="5"/>
+              <circle cx="16" cy="78" r="5"/><circle cx="34" cy="78" r="5"/><circle cx="52" cy="78" r="5"/>
+              <circle cx="16" cy="96" r="5"/><circle cx="34" cy="96" r="5"/>
+            </g>
+            <path d="M74 68 H108" stroke="currentColor" stroke-width="1" opacity=".3" fill="none"/>
+            <path d="M104 64 l6 4 -6 4" stroke="currentColor" stroke-width="1" opacity=".3" fill="none"/>
+
+            <!-- lanes -->
+            <g>
+              <rect x="118" y="18" width="330" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="1" opacity=".22"/>
+              <text x="130" y="36" opacity=".8">search</text>
+              <text x="130" y="52" opacity=".45">concurrency 2 · 10/s</text>
+              <circle cx="392" cy="40" r="6" fill="var(--accent)"/>
+              <circle cx="414" cy="40" r="6" fill="var(--accent)"/>
+              <circle cx="436" cy="40" r="6" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"/>
+            </g>
+            <g>
+              <rect x="118" y="72" width="330" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="1" opacity=".22"/>
+              <text x="130" y="90" opacity=".8">upload</text>
+              <text x="130" y="106" opacity=".45">concurrency 1 · retries 3</text>
+              <circle cx="392" cy="94" r="6" fill="var(--accent)"/>
+              <circle cx="414" cy="94" r="6" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"/>
+              <circle cx="436" cy="94" r="6" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"/>
+            </g>
+            <g>
+              <rect x="118" y="126" width="330" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="1" opacity=".22"/>
+              <text x="130" y="144" opacity=".8">prefetch</text>
+              <text x="130" y="160" opacity=".45">concurrency 4 · priority -1</text>
+              <circle cx="392" cy="148" r="6" fill="var(--accent)"/>
+              <circle cx="414" cy="148" r="6" fill="var(--accent)"/>
+              <circle cx="436" cy="148" r="6" fill="var(--accent)"/>
+            </g>
+
+            <!-- global pool -->
+            <path d="M462 68 H500" stroke="currentColor" stroke-width="1" opacity=".3" fill="none"/>
+            <path d="M496 64 l6 4 -6 4" stroke="currentColor" stroke-width="1" opacity=".3" fill="none"/>
+            <path d="M462 122 H500" stroke="currentColor" stroke-width="1" opacity=".3" fill="none"/>
+            <path d="M496 118 l6 4 -6 4" stroke="currentColor" stroke-width="1" opacity=".3" fill="none"/>
+
+            <rect x="508" y="18" width="180" height="152" rx="4" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"/>
+            <text x="522" y="38" opacity=".8">global slots</text>
+            <text x="522" y="54" opacity=".45">6 of 8 in use</text>
+            <g>
+              <circle cx="530" cy="82" r="7" fill="var(--accent)"/><circle cx="556" cy="82" r="7" fill="var(--accent)"/>
+              <circle cx="582" cy="82" r="7" fill="var(--accent)"/><circle cx="608" cy="82" r="7" fill="var(--accent)"/>
+              <circle cx="530" cy="110" r="7" fill="var(--accent)"/><circle cx="556" cy="110" r="7" fill="var(--accent)"/>
+              <circle cx="582" cy="110" r="7" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".35"/>
+              <circle cx="608" cy="110" r="7" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".35"/>
+            </g>
+            <text x="522" y="152" opacity=".45">2 free · next: search</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>A lane can never run more tasks than its own cap, and all lanes together can never exceed the queue's. When a global slot frees up, the highest-priority waiting task from any unsaturated lane takes it.</figcaption>
+    </figure>
+
+    <!-- ============ Walkthrough ============ -->
+    <h2 id="walkthrough">Walkthrough: a polite crawler</h2>
+    <p class="sub">Four steps, building up a job that reads 40,000 records from an API that allows 600 requests per minute and 5 concurrent connections.</p>
+
+    <ol class="steps">
+      <li>
+        <h3 id="step-bound">Bound the concurrency</h3>
+        <p>Start with the number the upstream documentation gives you. Kestrel has no default concurrency, on purpose: the right value is a property of the service you are calling, not of the library.</p>
+        <div class="code" data-lang="js" data-file="crawl.js"><pre>import { createQueue } from 'kestrel'
+
+const api = createQueue({ concurrency: 5 })
+
+for (const id of recordIds) {
+  api.run(() =&gt; fetchRecord(id))     // returns a promise, does not await
+}
+
+await api.drain()                    // resolves when everything has settled</pre></div>
+        <p>Note that <code>run()</code> is fire-and-track. You can await each promise individually, collect them with <code>Promise.all</code>, or ignore them and await <code>drain()</code> for the whole batch.</p>
+      </li>
+
+      <li>
+        <h3 id="step-rate">Add the rate limit</h3>
+        <p>Concurrency alone will not keep you under a per-minute budget. Five fast requests finish in 50 ms and immediately start five more. The <code>rate</code> option adds a sliding window measured at the moment a task is dispatched.</p>
+        <div class="code" data-lang="js" data-file="crawl.js"><pre>const api = createQueue({
+  concurrency: 5,
+  rate: '600/m'        // also accepts '10/s', '1/250ms', or { max: 600, window: 60_000 }
+})</pre></div>
+        <div class="note">
+          <span class="label">How the window works</span>
+          <p>Kestrel records a timestamp per dispatch and keeps the last <code>max</code> of them. A new task starts only when the oldest timestamp has fallen out of the window. This is a true sliding window, not a token bucket that refills in bursts, so you will never send 600 requests in the last second of one minute and 600 more in the first second of the next.</p>
+        </div>
+      </li>
+
+      <li>
+        <h3 id="step-lanes">Split the traffic into lanes</h3>
+        <p>A crawl is not one kind of request. Listing pages are cheap and drive everything else; detail fetches are the bulk of the work; writes must never run in parallel. Lanes let one queue express all three without three separate limiters fighting over the same budget.</p>
+        <div class="code" data-lang="js" data-file="crawl.js"><pre>const api = createQueue({
+  concurrency: 5,
+  rate: '600/m',
+  lanes: {
+    index:  { concurrency: 1, priority: 10 },              // drives the crawl, always first
+    detail: { concurrency: 4, retries: 3 },                // the bulk of the work
+    write:  { concurrency: 1, retries: 5, timeout: 20_000 }
+  }
+})
+
+const index  = api.lane('index')
+const detail = api.lane('detail')
+const write  = api.lane('write')
+
+for await (const page of paginate(url =&gt; index.run(() =&gt; fetchJson(url)))) {
+  for (const ref of page.items) {
+    detail.run(() =&gt; fetchJson(ref.href))
+      .then(record =&gt; write.run(() =&gt; save(record)))
+  }
+}</pre></div>
+        <p>Because <code>index</code> carries a priority of 10, a listing request will always take the next free slot ahead of the thousands of queued detail fetches. The crawl keeps moving instead of stalling behind its own backlog.</p>
+      </li>
+
+      <li>
+        <h3 id="step-cancel">Wire up cancellation and shutdown</h3>
+        <p>Long-running jobs need a stop button. Pass a signal per task, or clear the queue wholesale. Either way, in-flight tasks receive an abort on the signal Kestrel handed them.</p>
+        <div class="code" data-lang="js" data-file="crawl.js"><pre>const stop = new AbortController()
+process.on('SIGINT', () =&gt; stop.abort())
+
+const detail = api.lane('detail')
+
+detail.run(signal =&gt; fetchJson(ref.href, { signal }), { signal: stop.signal })
+
+// On shutdown: stop accepting work, let in-flight tasks finish, then exit.
+stop.signal.addEventListener('abort', async () =&gt; {
+  api.pause()                       // queued tasks stay queued, nothing new starts
+  await api.drain({ inFlightOnly: true })
+  api.clear({ reason: 'shutdown' }) // pending tasks reject with TaskCancelled
+  process.exit(0)
+})</pre></div>
+        <div class="note tip">
+          <span class="label">Tip</span>
+          <p><code>isCancelled(err)</code> is the safe way to tell a deliberate cancellation apart from a real failure. It returns true for both <code>TaskCancelled</code> and a native <code>AbortError</code>, so it works whether the abort was caught by Kestrel or by <code>fetch</code>.</p>
+        </div>
+      </li>
+    </ol>
+
+    <!-- ============ API ============ -->
+    <h2 id="api">API reference</h2>
+    <p class="sub">The complete surface. Nine functions and three error classes.</p>
+
+    <h3 id="api-createqueue">createQueue(options)</h3>
+    <p>Creates a queue. <code>concurrency</code> is required; everything else is optional and becomes the default policy for every lane and task in the queue.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="sig">concurrency</td><td><code>number</code></td><td class="no">required</td><td>Maximum tasks running at once across all lanes.</td></tr>
+          <tr><td class="sig">rate</td><td><code>string | RateSpec</code></td><td class="no">none</td><td>Sliding-window dispatch limit. <code>'10/s'</code>, <code>'600/m'</code>, <code>'1/250ms'</code>, or <code>{ max, window }</code>.</td></tr>
+          <tr><td class="sig">retries</td><td><code>number | RetrySpec</code></td><td><code>0</code></td><td>Attempts after the first failure. An object form configures backoff, jitter and a predicate.</td></tr>
+          <tr><td class="sig">timeout</td><td><code>number</code></td><td class="no">none</td><td>Milliseconds before a running task is aborted and rejected with <code>TaskTimeout</code>.</td></tr>
+          <tr><td class="sig">priority</td><td><code>number</code></td><td><code>0</code></td><td>Higher runs first. Ties break FIFO, so equal priorities preserve enqueue order.</td></tr>
+          <tr><td class="sig">lanes</td><td><code>Record&lt;string, LaneOptions&gt;</code></td><td><code>{}</code></td><td>Pre-declared lanes. Lanes used without declaration inherit queue defaults.</td></tr>
+          <tr><td class="sig">autoStart</td><td><code>boolean</code></td><td><code>true</code></td><td>When false the queue starts paused and waits for <code>resume()</code>.</td></tr>
+          <tr><td class="sig">onSettled</td><td><code>(result) =&gt; void</code></td><td class="no">none</td><td>Called after every task settles. Useful for metrics without subscribing to events.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <details class="opts">
+      <summary>RetrySpec — full retry configuration</summary>
+      <div class="details-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td class="sig">attempts</td><td><code>number</code></td><td><code>3</code></td><td>Retries after the initial attempt.</td></tr>
+              <tr><td class="sig">backoff</td><td><code>'fixed' | 'linear' | 'exponential'</code></td><td><code>'exponential'</code></td><td>Growth curve for the delay between attempts.</td></tr>
+              <tr><td class="sig">delay</td><td><code>number</code></td><td><code>200</code></td><td>Base delay in milliseconds.</td></tr>
+              <tr><td class="sig">maxDelay</td><td><code>number</code></td><td><code>30_000</code></td><td>Ceiling for the computed delay.</td></tr>
+              <tr><td class="sig">jitter</td><td><code>'none' | 'full' | 'equal'</code></td><td><code>'full'</code></td><td>Randomisation applied to the delay to avoid synchronised retry storms.</td></tr>
+              <tr><td class="sig">on</td><td><code>(err, attempt) =&gt; boolean</code></td><td class="no">retry all</td><td>Predicate deciding whether a given error is retryable.</td></tr>
+              <tr><td class="sig">respectRetryAfter</td><td><code>boolean</code></td><td><code>true</code></td><td>Honour a <code>Retry-After</code> header when the thrown error carries a <code>response</code>.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <div class="code" data-lang="js" data-file="retry.js"><pre>const api = createQueue({
+  concurrency: 6,
+  retry: {
+    attempts: 5,
+    backoff: 'exponential',
+    delay: 250,
+    jitter: 'full',
+    on: (err, attempt) =&gt; {
+      if (err.status === 429) return true          // always retry throttling
+      if (err.status &gt;= 500) return attempt &lt; 3    // give up on 5xx sooner
+      return false                                 // never retry 4xx
+    }
+  }
+})</pre></div>
+
+    <h3 id="api-queue">Queue</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Member</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td class="sig">run(task, options?)</td><td><code>Promise&lt;T&gt;</code></td><td>Schedules a task. <code>task</code> is called with an <code>AbortSignal</code>. Rejects with the last error once retries are exhausted.</td></tr>
+          <tr><td class="sig">wrap(fn, options?)</td><td><code>(...args) =&gt; Promise&lt;T&gt;</code></td><td>Returns a scheduled version of <code>fn</code> with the same signature. The signal is appended as the last argument.</td></tr>
+          <tr><td class="sig">lane(name)</td><td><code>Lane</code></td><td>Returns the named lane, creating it with inherited defaults if it does not exist.</td></tr>
+          <tr><td class="sig">drain(options?)</td><td><code>Promise&lt;void&gt;</code></td><td>Resolves when the queue is empty and idle. Pass <code>{ inFlightOnly: true }</code> to wait only for running tasks.</td></tr>
+          <tr><td class="sig">pause()</td><td><code>void</code></td><td>Stops dispatching. Running tasks continue; queued tasks stay queued.</td></tr>
+          <tr><td class="sig">resume()</td><td><code>void</code></td><td>Resumes dispatching.</td></tr>
+          <tr><td class="sig">clear(options?)</td><td><code>number</code></td><td>Rejects every queued task with <code>TaskCancelled</code> and returns how many were dropped. Running tasks are untouched unless <code>{ abortRunning: true }</code>.</td></tr>
+          <tr><td class="sig">on(event, handler)</td><td><code>() =&gt; void</code></td><td>Subscribes to a lifecycle event. Returns an unsubscribe function.</td></tr>
+          <tr><td class="sig">size</td><td><code>number</code></td><td>Tasks waiting to start.</td></tr>
+          <tr><td class="sig">pending</td><td><code>number</code></td><td>Tasks currently running.</td></tr>
+          <tr><td class="sig">isPaused</td><td><code>boolean</code></td><td>Whether dispatch is stopped.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="api-lane">Lane</h3>
+    <p>A lane exposes the same task-running surface as a queue, scoped to itself. <code>lane.size</code> and <code>lane.pending</code> report that lane only; <code>lane.queue</code> gives you the parent back.</p>
+    <div class="code" data-lang="ts" data-file="types.ts"><pre>interface Lane {
+  readonly name: string
+  readonly queue: Queue
+  readonly size: number
+  readonly pending: number
+  readonly saturated: boolean
+
+  run&lt;T&gt;(task: (signal: AbortSignal) =&gt; Promise&lt;T&gt;, options?: TaskOptions): Promise&lt;T&gt;
+  wrap&lt;A extends unknown[], T&gt;(fn: (...args: A) =&gt; Promise&lt;T&gt;, options?: TaskOptions): (...args: A) =&gt; Promise&lt;T&gt;
+  drain(options?: DrainOptions): Promise&lt;void&gt;
+  clear(options?: ClearOptions): number
+  configure(options: Partial&lt;LaneOptions&gt;): void
+}</pre></div>
+
+    <h3 id="api-events">Events</h3>
+    <p>Events exist for instrumentation. They are synchronous and must not throw; a handler that throws is reported through <code>queue.on('error')</code> and otherwise ignored.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Event</th><th>Payload</th><th>Fired when</th></tr></thead>
+        <tbody>
+          <tr><td class="sig">task:start</td><td><code>{ id, lane, attempt }</code></td><td>A task is dispatched, including on each retry.</td></tr>
+          <tr><td class="sig">task:settle</td><td><code>{ id, lane, ok, ms, attempts }</code></td><td>A task resolves or gives up for good.</td></tr>
+          <tr><td class="sig">task:retry</td><td><code>{ id, lane, attempt, delay, error }</code></td><td>A retry has been scheduled, before the delay elapses.</td></tr>
+          <tr><td class="sig">lane:saturated</td><td><code>{ lane, waiting }</code></td><td>A lane hits its concurrency cap with work still queued.</td></tr>
+          <tr><td class="sig">queue:drain</td><td><code>{ ms, completed }</code></td><td>The queue transitions from busy to idle.</td></tr>
+          <tr><td class="sig">error</td><td><code>{ error, source }</code></td><td>An event handler or internal callback threw.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="code" data-lang="js" data-file="metrics.js"><pre>const off = api.on('task:settle', ({ lane, ok, ms, attempts }) =&gt; {
+  metrics.histogram('api.task.duration', ms, { lane, ok })
+  if (attempts &gt; 1) metrics.increment('api.task.retried', { lane })
+})
+
+api.on('lane:saturated', ({ lane, waiting }) =&gt; {
+  if (waiting &gt; 500) logger.warn(`lane ${lane} is backing up: ${waiting} queued`)
+})
+
+// later
+off()</pre></div>
+
+    <h3 id="api-errors">Errors</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Class</th><th>Thrown when</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="sig">TaskCancelled</td><td>The task's signal aborted, or the queue was cleared.</td><td>Carries <code>reason</code>. Extends <code>KestrelError</code>.</td></tr>
+          <tr><td class="sig">TaskTimeout</td><td>A task exceeded its <code>timeout</code>.</td><td>Carries <code>ms</code> and the last <code>attempt</code> number.</td></tr>
+          <tr><td class="sig">RateLimited</td><td>A task waited longer than <code>maxWait</code> for a rate window.</td><td>Only thrown when <code>maxWait</code> is set. Carries <code>retryIn</code>.</td></tr>
+          <tr><td class="sig">isCancelled(err)</td><td>—</td><td>Helper. True for <code>TaskCancelled</code> and native <code>AbortError</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============ Adapters ============ -->
+    <h2 id="adapters">Framework adapters</h2>
+    <p class="sub">Thin bindings that connect a queue to a component lifecycle. Each is published separately and each is under 1 kB.</p>
+
+    <div class="tabs" data-tabs>
+      <div class="tabbar" role="tablist" aria-label="Framework">
+        <button role="tab" aria-selected="true" id="t-f1" aria-controls="p-f1">React</button>
+        <button role="tab" aria-selected="false" id="t-f2" aria-controls="p-f2">Vue</button>
+        <button role="tab" aria-selected="false" id="t-f3" aria-controls="p-f3">Svelte</button>
+        <button role="tab" aria-selected="false" id="t-f4" aria-controls="p-f4">Node streams</button>
+      </div>
+
+      <div role="tabpanel" id="p-f1" aria-labelledby="t-f1">
+        <div class="code" data-lang="jsx" data-file="SearchResults.jsx"><pre>import { useTask } from 'kestrel/react'
+import { queue } from './queue.js'
+
+export function SearchResults({ term }) {
+  // Re-runs on term change, cancels the previous task, cancels on unmount.
+  const { data, error, status } = useTask(
+    queue.lane('search'),
+    signal =&gt; fetch(`/api/search?q=${term}`, { signal }).then(r =&gt; r.json()),
+    [term]
+  )
+
+  if (status === 'pending') return &lt;Spinner /&gt;
+  if (error) return &lt;ErrorState error={error} /&gt;
+  return &lt;List items={data.items} /&gt;
+}</pre></div>
+      </div>
+
+      <div role="tabpanel" id="p-f2" aria-labelledby="t-f2" hidden>
+        <div class="code" data-lang="js" data-file="useSearch.js"><pre>import { useTask } from 'kestrel/vue'
+import { queue } from './queue.js'
+
+export function useSearch(term) {
+  // term is a ref; the task re-runs and cancels automatically.
+  return useTask(
+    queue.lane('search'),
+    signal =&gt; fetch(`/api/search?q=${term.value}`, { signal }).then(r =&gt; r.json()),
+    [term]
+  )
+}</pre></div>
+      </div>
+
+      <div role="tabpanel" id="p-f3" aria-labelledby="t-f3" hidden>
+        <div class="code" data-lang="js" data-file="search.js"><pre>import { task } from 'kestrel/svelte'
+import { queue } from './queue.js'
+
+// A readable store: { status, data, error }
+export const results = task(
+  queue.lane('search'),
+  (signal, term) =&gt; fetch(`/api/search?q=${term}`, { signal }).then(r =&gt; r.json())
+)
+
+// results.run('peregrine') cancels any in-flight run first.</pre></div>
+      </div>
+
+      <div role="tabpanel" id="p-f4" aria-labelledby="t-f4" hidden>
+        <div class="code" data-lang="js" data-file="pipeline.js"><pre>import { pipeline } from 'node:stream/promises'
+import { scheduled } from 'kestrel/node'
+import { queue } from './queue.js'
+
+// A Transform that applies backpressure from the queue to the stream.
+await pipeline(
+  createReadStream('urls.txt'),
+  splitLines(),
+  scheduled(queue.lane('detail'), async (url, signal) =&gt; {
+    const res = await fetch(url, { signal })
+    return res.json()
+  }),
+  writeRecords()
+)</pre></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="label">Note</span>
+      <p>The adapters do not create queues. You pass in a queue or lane you already own, which keeps the limits declared in one file rather than implied by whichever component happened to render first.</p>
+    </div>
+
+    <!-- ============ Recipes ============ -->
+    <h2 id="recipes">Recipes</h2>
+    <p class="sub">Patterns that come up often enough to be worth writing down.</p>
+
+    <h3 id="recipe-navigation">Cancel in-flight work on navigation</h3>
+    <p>Route changes make most pending requests worthless. Give each route an <code>AbortController</code> and abort it on exit; the queue drops both running and queued work for that route.</p>
+    <div class="code" data-lang="js" data-file="router.js"><pre>let routeAbort = new AbortController()
+
+router.beforeEach(() =&gt; {
+  routeAbort.abort()
+  routeAbort = new AbortController()
+})
+
+export const routeSignal = () =&gt; routeAbort.signal
+
+// in a loader
+const data = await queue.run(s =&gt; fetchJson(url, { signal: s }), { signal: routeSignal() })</pre></div>
+
+    <h3 id="recipe-dedupe">Deduplicate identical in-flight requests</h3>
+    <p>Kestrel does not cache, but <code>key</code> makes it collapse concurrent duplicates: a second task with a key that is already running attaches to the first result instead of starting a new task.</p>
+    <div class="code" data-lang="js" data-file="dedupe.js"><pre>const user = id =&gt; queue.run(
+  signal =&gt; fetchJson(`/api/users/${id}`, { signal }),
+  { key: `user:${id}` }
+)
+
+// One network request, three consumers.
+const [a, b, c] = await Promise.all([user(7), user(7), user(7)])</pre></div>
+    <div class="note warn">
+      <span class="label">Careful</span>
+      <p>Deduplication is scoped to tasks that are queued or running <em>right now</em>. Once a task settles the key is released, so this is request collapsing, not caching. Pair it with a real cache if you want results to survive.</p>
+    </div>
+
+    <h3 id="recipe-priority">Boost what the user can see</h3>
+    <p>Priority is read at enqueue time, so recomputing it as the viewport changes needs a re-enqueue. For lists, the cheaper move is to cancel off-screen work and re-add it at a lower priority.</p>
+    <div class="code" data-lang="js" data-file="viewport.js"><pre>const observer = new IntersectionObserver(entries =&gt; {
+  for (const entry of entries) {
+    const id = entry.target.dataset.id
+    controllers.get(id)?.abort()
+
+    const ac = new AbortController()
+    controllers.set(id, ac)
+    queue.run(s =&gt; loadThumbnail(id, s), {
+      signal: ac.signal,
+      priority: entry.isIntersecting ? 10 : -5
+    }).catch(ignoreCancelled)
+  }
+})</pre></div>
+
+    <h3 id="recipe-shutdown">Graceful shutdown in Node</h3>
+    <div class="code" data-lang="js" data-file="server.js"><pre>async function shutdown(signal) {
+  logger.info(`${signal} received, draining`)
+  server.close()
+  api.pause()
+
+  const timer = setTimeout(() =&gt; {
+    logger.warn('drain timed out, aborting in-flight work')
+    api.clear({ abortRunning: true, reason: 'shutdown-timeout' })
+  }, 15_000)
+
+  await api.drain()
+  clearTimeout(timer)
+  process.exit(0)
+}
+
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () =&gt; shutdown(sig))</pre></div>
+
+    <h3 id="recipe-testing">Testing with fake timers</h3>
+    <p>Kestrel reads the clock through an injectable <code>now</code> and <code>setTimeout</code>, so backoff and rate windows work with any fake-timer implementation without <code>await sleep()</code> in your tests.</p>
+    <div class="code" data-lang="js" data-file="queue.test.js"><pre>import { createQueue } from 'kestrel'
+import { vi, test, expect } from 'vitest'
+
+test('spaces dispatches to the configured rate', async () =&gt; {
+  vi.useFakeTimers()
+  const started = []
+  const queue = createQueue({ concurrency: 10, rate: '2/s' })
+
+  for (let i = 0; i &lt; 6; i++) queue.run(async () =&gt; started.push(Date.now()))
+
+  await vi.advanceTimersByTimeAsync(2_500)
+  expect(started).toHaveLength(6)
+  expect(started[5] - started[0]).toBeGreaterThanOrEqual(2_000)
+})</pre></div>
+
+    <!-- ============ Comparison ============ -->
+    <h2 id="comparison">Comparison</h2>
+    <p class="sub">Kestrel overlaps with several well-established libraries. Here is where it sits.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Kestrel</th><th>p-queue</th><th>bottleneck</th><th>p-limit</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Concurrency cap</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td></tr>
+          <tr><td>Named lanes with independent caps</td><td class="yes">yes</td><td class="no">no</td><td>groups</td><td class="no">no</td></tr>
+          <tr><td>Sliding-window rate limit</td><td class="yes">yes</td><td>interval cap</td><td class="yes">yes</td><td class="no">no</td></tr>
+          <tr><td>Retries with jitter</td><td class="yes">yes</td><td class="no">no</td><td class="yes">yes</td><td class="no">no</td></tr>
+          <tr><td>AbortSignal cancellation</td><td class="yes">yes</td><td>partial</td><td class="no">no</td><td class="no">no</td></tr>
+          <tr><td>Per-task priority</td><td class="yes">yes</td><td class="yes">yes</td><td class="yes">yes</td><td class="no">no</td></tr>
+          <tr><td>Request collapsing by key</td><td class="yes">yes</td><td class="no">no</td><td class="no">no</td><td class="no">no</td></tr>
+          <tr><td>Distributed across processes</td><td class="no">no</td><td class="no">no</td><td>via Redis</td><td class="no">no</td></tr>
+          <tr><td>Size (min+gzip)</td><td>3.1 kB</td><td>3.4 kB</td><td>12 kB</td><td>&lt; 1 kB</td></tr>
+          <tr><td>Dependencies</td><td>0</td><td>2</td><td>1</td><td>1</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="not-for">When not to use Kestrel</h3>
+    <ul>
+      <li><strong>You only need a concurrency cap.</strong> <code>p-limit</code> is under a kilobyte and does exactly that. Reach for Kestrel when the second requirement arrives.</li>
+      <li><strong>You need a shared limit across processes or machines.</strong> Kestrel's state lives in one JavaScript heap. Use a Redis-backed limiter, or push the limit into a gateway.</li>
+      <li><strong>You need durable jobs.</strong> Nothing survives a reload or a crash. If work must not be lost, you want a real job queue such as BullMQ or a hosted worker service.</li>
+      <li><strong>Your bottleneck is the server.</strong> Client-side scheduling smooths the traffic you send; it does not fix an endpoint that takes four seconds. Measure first.</li>
+    </ul>
+
+    <!-- ============ Support ============ -->
+    <h2 id="support">Runtime support</h2>
+    <p class="sub">Kestrel targets ES2022 and depends only on <code>AbortController</code>, <code>Promise</code> and <code>queueMicrotask</code>. No polyfills are bundled.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Runtime</th><th>Minimum</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Node.js</td><td class="sig">18.0</td><td>Tested against 18, 20, 22 and 24. CJS build included for older toolchains.</td></tr>
+          <tr><td>Deno</td><td class="sig">1.30</td><td>Import via <code>npm:kestrel</code>. No permissions required.</td></tr>
+          <tr><td>Bun</td><td class="sig">1.0</td><td>Uses the ESM build.</td></tr>
+          <tr><td>Chrome / Edge</td><td class="sig">88</td><td>Baseline for <code>AbortSignal.reason</code>.</td></tr>
+          <tr><td>Firefox</td><td class="sig">85</td><td>—</td></tr>
+          <tr><td>Safari</td><td class="sig">14.1</td><td>iOS 14.5 and later.</td></tr>
+          <tr><td>Web / Service Workers</td><td class="sig">any</td><td>No DOM access. Safe inside a Service Worker's install handler.</td></tr>
+          <tr><td>React Native</td><td class="sig">0.71</td><td>Hermes. <code>AbortController</code> polyfill needed below 0.71.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============ FAQ ============ -->
+    <h2 id="faq">Frequently asked</h2>
+
+    <details>
+      <summary>Does cancelling a task abort the underlying fetch?</summary>
+      <div class="details-body">
+        <p>Only if you forward the signal. Kestrel calls your task with an <code>AbortSignal</code> and aborts it, but it cannot reach inside <code>fetch</code> on your behalf. Pass it through:</p>
+        <div class="code" data-lang="js"><pre>queue.run(signal =&gt; fetch(url, { signal }))   // aborts the request
+queue.run(() =&gt; fetch(url))                   // request keeps going, result discarded</pre></div>
+        <p>In the second form the promise still rejects immediately with <code>TaskCancelled</code>, and the slot is released, but the network request runs to completion in the background.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>What happens to queued tasks when I call pause()?</summary>
+      <div class="details-body">
+        <p>They stay queued, in order, with their priorities intact. <code>pause()</code> stops dispatch only; running tasks are never interrupted. Call <code>resume()</code> and the queue picks up exactly where it left off. To actually discard queued work, use <code>clear()</code>, which rejects each pending task with <code>TaskCancelled</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Do retries count against the rate limit?</summary>
+      <div class="details-body">
+        <p>Yes. The rate window counts dispatches, and a retry is a dispatch, because from the server's point of view it is another request. A retry does keep its concurrency slot rather than going to the back of the queue, so a retried task is not penalised twice.</p>
+        <p>If the error carries a <code>Retry-After</code> header and <code>respectRetryAfter</code> is on, that value overrides the computed backoff whenever it is longer.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Is scheduling fair across lanes?</summary>
+      <div class="details-body">
+        <p>Not strictly. Kestrel picks the highest-priority waiting task from any lane that is below its own cap, breaking ties FIFO. Lanes with equal priority therefore interleave naturally, but a lane that always enqueues at priority 10 will always win. That is deliberate: fairness is a policy, and the library would rather you state it than infer it.</p>
+        <p>If you need round-robin, give every lane the same priority and cap each one at roughly <code>concurrency / laneCount</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Can I change limits at runtime?</summary>
+      <div class="details-body">
+        <p>Yes. <code>lane.configure({ concurrency, rate, retries })</code> takes effect on the next dispatch decision. Lowering concurrency does not abort anything already running; the queue simply stops starting new tasks until it is back under the new cap. A common use is backing off when the server starts returning 429s:</p>
+        <div class="code" data-lang="js"><pre>queue.on('task:settle', ({ lane, ok, error }) =&gt; {
+  if (!ok &amp;&amp; error?.status === 429) {
+    const l = queue.lane(lane)
+    l.configure({ concurrency: Math.max(1, l.concurrency - 1) })
+  }
+})</pre></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Can the queue be persisted or resumed?</summary>
+      <div class="details-body">
+        <p>No. A task is a closure, and closures cannot be serialised. If you need work to survive a reload, persist the <em>inputs</em> yourself and rebuild the queue on start-up. That is usually a handful of lines and keeps the persistence format under your control rather than the library's.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>How is 3.1 kB measured?</summary>
+      <div class="details-body">
+        <p>Minified with esbuild and gzipped, importing everything the package exports. A realistic app that imports only <code>createQueue</code> and <code>isCancelled</code> tree-shakes down to about 2.2 kB. The React adapter adds 0.6 kB. These numbers are asserted in CI, so a pull request that regresses them fails.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Why is there no default concurrency?</summary>
+      <div class="details-body">
+        <p>Because any default would be wrong. <code>Infinity</code> quietly disables the only feature you installed the library for, and a small number like 4 silently throttles a service that would happily take 50. Requiring the value forces a five-second conversation with the upstream documentation, which is exactly the conversation worth having.</p>
+      </div>
+    </details>
+
+    <!-- ============ Contributing ============ -->
+    <h2 id="contributing">Contributing</h2>
+    <p class="sub">Kestrel is maintained in the open. Issues, discussions and pull requests all live on GitHub.</p>
+
+    <p>The test suite runs on fake timers and is fast; a full run is under three seconds. Scheduling bugs are usually reproducible as a deterministic test, and a failing test attached to an issue is the quickest path to a fix.</p>
+
+    <div class="code" data-lang="bash"><pre>git clone https://github.com/kestreljs/kestrel
+cd kestrel
+pnpm install
+pnpm test            # vitest, fake timers, ~3s
+pnpm test:size       # asserts the bundle budget
+pnpm bench           # dispatch throughput against p-queue and bottleneck</pre></div>
+
+    <p>Two things to know before opening a pull request. Kestrel has a hard rule of zero runtime dependencies, so a change that adds one needs a strong argument. And the bundle budget is enforced: if a feature costs more than about 200 bytes, it probably belongs in an adapter package rather than the core.</p>
+
+    <nav class="pager" aria-label="Page navigation">
+      <a href="#install">
+        <span class="dir">Previous</span>
+        Overview
+      </a>
+      <a class="next" href="#quickstart">
+        <span class="dir">Next</span>
+        Quick start
+      </a>
+    </nav>
+
+  </main>
+
+  <!-- ================= Right rail ================= -->
+  <nav class="rail" id="rail" aria-label="On this page">
+    <h2>On this page</h2>
+    <ul id="railList"></ul>
+  </nav>
+
+</div>
+
+<!-- ================= Footer ================= -->
+<footer class="site-foot">
+  <div class="foot-inner">
+    <div>
+      <a class="brand" href="#top">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+          <rect x="1" y="1" width="18" height="18" rx="4.5" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".28"/>
+          <rect x="5" y="5.5" width="10" height="2" rx="1" fill="var(--accent)"/>
+          <rect x="5" y="9" width="6.5" height="2" rx="1" fill="currentColor" opacity=".62"/>
+          <rect x="5" y="12.5" width="3" height="2" rx="1" fill="currentColor" opacity=".34"/>
+        </svg>
+        <span class="brand-name">Kestrel</span>
+      </a>
+      <p class="foot-blurb">A scheduler for async work. Bounded concurrency, rate limits, retries and cancellation in 3.1 kB.</p>
+    </div>
+    <div>
+      <h3>Docs</h3>
+      <ul>
+        <li><a href="#install">Installation</a></li>
+        <li><a href="#quickstart">Quick start</a></li>
+        <li><a href="#api">API reference</a></li>
+        <li><a href="#recipes">Recipes</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Ecosystem</h3>
+      <ul>
+        <li><a href="#adapters">React adapter</a></li>
+        <li><a href="#adapters">Vue adapter</a></li>
+        <li><a href="#adapters">Svelte adapter</a></li>
+        <li><a href="#adapters">Node streams</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Project</h3>
+      <ul>
+        <li><a href="#">GitHub</a></li>
+        <li><a href="#">npm</a></li>
+        <li><a href="#">Changelog</a></li>
+        <li><a href="#contributing">Contributing</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>MIT licence &middot; &copy; 2026 the Kestrel authors</span>
+    <span>v2.4.1 &middot; docs built 12 Jul 2026</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------------------------------------------------------------- *
+     Syntax highlighting
+   * ---------------------------------------------------------------- */
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  var GRAMMAR = {
+    js: {
+      re: /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(`(?:\\[\s\S]|[^\\`])*`|'(?:\\[\s\S]|[^\\'])*'|"(?:\\[\s\S]|[^\\"])*")|\b(0[xX][\da-fA-F]+|\d[\d_]*(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|\b(const|let|var|function|return|await|async|import|export|from|default|new|class|extends|implements|interface|type|enum|if|else|for|of|in|while|do|switch|case|break|continue|try|catch|finally|throw|typeof|instanceof|delete|void|yield|as|satisfies|readonly|public|private|protected|static|null|undefined|true|false|this|super)\b|([A-Za-z_$][\w$]*)(?=\s*\()|\b([A-Z][\w$]*)\b/g,
+      cls: ['com', 'str', 'num', 'kw', 'fn', 'typ']
+    },
+    bash: {
+      re: /(#[^\n]*)|('[^']*'|"(?:\\[\s\S]|[^"\\])*")|(\B--?[A-Za-z][\w-]*)|\b(npm|pnpm|yarn|bun|npx|node|deno|git|curl|cd|mkdir|rm|echo|export)\b/g,
+      cls: ['com', 'str', 'flag', 'cmd']
+    },
+    html: {
+      re: /(&lt;!--[\s\S]*?--&gt;)|("(?:[^"]*)"|'(?:[^']*)')|(&lt;\/?[a-zA-Z][\w-]*)|(&gt;)/g,
+      cls: ['com', 'str', 'kw', 'kw']
+    }
+  };
+  GRAMMAR.ts = GRAMMAR.js;
+  GRAMMAR.jsx = GRAMMAR.js;
+  GRAMMAR.tsx = GRAMMAR.js;
+
+  function highlight(src, lang) {
+    var g = GRAMMAR[lang];
+    if (!g) return esc(src);
+    var out = '', last = 0, m;
+    g.re.lastIndex = 0;
+    while ((m = g.re.exec(src)) !== null) {
+      if (m[0] === '') { g.re.lastIndex++; continue; }
+      out += esc(src.slice(last, m.index));
+      var cls = null;
+      for (var i = 1; i < m.length; i++) {
+        if (m[i] !== undefined) { cls = g.cls[i - 1]; break; }
+      }
+      out += '<span class="tok-' + cls + '">' + esc(m[0]) + '</span>';
+      last = m.index + m[0].length;
+    }
+    out += esc(src.slice(last));
+    return out;
+  }
+
+  /* ---------------------------------------------------------------- *
+     Code block chrome: header, language tag, copy button
+   * ---------------------------------------------------------------- */
+  $$('.code').forEach(function (block) {
+    var pre = $('pre', block);
+    if (!pre) return;
+
+    var lang = block.getAttribute('data-lang') || '';
+    var file = block.getAttribute('data-file') || '';
+    var source = pre.textContent.replace(/^\n+|\s+$/g, '');
+
+    pre.innerHTML = highlight(source, lang) || esc(source);
+    if (!GRAMMAR[lang]) block.classList.add('plain');
+
+    var head = document.createElement('div');
+    head.className = 'code-head';
+    head.innerHTML =
+      '<span class="file">' + esc(file) + '</span>' +
+      (lang ? '<span class="lang">' + esc(lang) + '</span>' : '');
+
+    var copy = document.createElement('button');
+    copy.className = 'copy';
+    copy.type = 'button';
+    copy.textContent = 'Copy';
+    copy.setAttribute('aria-label', 'Copy code to clipboard');
+    copy.addEventListener('click', function () {
+      var done = function () {
+        copy.textContent = 'Copied';
+        copy.setAttribute('data-done', '1');
+        setTimeout(function () {
+          copy.textContent = 'Copy';
+          copy.removeAttribute('data-done');
+        }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(source).then(done, function () { copy.textContent = 'Failed'; });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = source;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { copy.textContent = 'Failed'; }
+        document.body.removeChild(ta);
+      }
+    });
+
+    head.appendChild(copy);
+    block.insertBefore(head, pre);
+  });
+
+  /* ---------------------------------------------------------------- *
+     Tabbed groups
+   * ---------------------------------------------------------------- */
+  $$('[data-tabs]').forEach(function (group) {
+    var tabs = $$('[role="tab"]', group);
+    var panels = $$('[role="tabpanel"]', group);
+
+    function select(index) {
+      tabs.forEach(function (t, i) {
+        t.setAttribute('aria-selected', i === index ? 'true' : 'false');
+        t.tabIndex = i === index ? 0 : -1;
+      });
+      panels.forEach(function (p, i) {
+        if (i === index) p.removeAttribute('hidden'); else p.setAttribute('hidden', '');
+      });
+    }
+
+    tabs.forEach(function (tab, i) {
+      tab.tabIndex = tab.getAttribute('aria-selected') === 'true' ? 0 : -1;
+      tab.addEventListener('click', function () { select(i); });
+      tab.addEventListener('keydown', function (e) {
+        var next = null;
+        if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
+        if (e.key === 'ArrowLeft') next = (i - 1 + tabs.length) % tabs.length;
+        if (e.key === 'Home') next = 0;
+        if (e.key === 'End') next = tabs.length - 1;
+        if (next !== null) { e.preventDefault(); select(next); tabs[next].focus(); }
+      });
+    });
+  });
+
+  /* ---------------------------------------------------------------- *
+     Heading anchors + right-rail table of contents
+   * ---------------------------------------------------------------- */
+  var headings = $$('main h2[id], main h3[id]');
+
+  headings.forEach(function (h) {
+    var a = document.createElement('a');
+    a.className = 'anchor';
+    a.href = '#' + h.id;
+    a.textContent = '#';
+    a.setAttribute('aria-label', 'Permalink to ' + h.textContent.trim());
+    h.appendChild(a);
+  });
+
+  var railList = $('#railList');
+  var railLinks = [];
+  $$('main h2[id]').forEach(function (h) {
+    var li = document.createElement('li');
+    var a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent.replace(/#$/, '').trim();
+    li.appendChild(a);
+    railList.appendChild(li);
+    railLinks.push({ el: a, target: h });
+  });
+
+  /* Scroll spy across both the rail and the sidebar.
+     Uses document-relative coordinates: offsetTop is measured against the
+     nearest positioned ancestor, and step headings sit inside a relative li. */
+  var sidebarLinks = $$('#sidebar a[href^="#"]');
+  var spyTargets = $$('main h1[id], main h2[id], main h3[id]');
+  var railTargets = $$('main h2[id]');
+
+  function docTop(el) {
+    return el.getBoundingClientRect().top + window.scrollY;
+  }
+
+  function spy() {
+    var line = window.scrollY + 120;
+
+    var current = spyTargets[0];
+    for (var i = 0; i < spyTargets.length; i++) {
+      if (docTop(spyTargets[i]) <= line) current = spyTargets[i];
+    }
+    if (!current) return;
+    var id = current.id;
+
+    var railId = null;
+    for (var j = railTargets.length - 1; j >= 0; j--) {
+      if (docTop(railTargets[j]) <= line) { railId = railTargets[j].id; break; }
+    }
+    railLinks.forEach(function (l) {
+      l.el.classList.toggle('on', l.target.id === railId);
+    });
+
+    /* Prefer an exact match; otherwise light up the enclosing section. */
+    var exact = sidebarLinks.some(function (l) {
+      return l.getAttribute('href').slice(1) === id;
+    });
+    var want = exact ? id : railId;
+    sidebarLinks.forEach(function (l) {
+      if (l.getAttribute('href').slice(1) === want) l.setAttribute('aria-current', 'page');
+      else l.removeAttribute('aria-current');
+    });
+  }
+
+  var ticking = false;
+  window.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () { spy(); ticking = false; });
+  }, { passive: true });
+  window.addEventListener('resize', spy, { passive: true });
+  spy();
+
+  /* ---------------------------------------------------------------- *
+     Theme
+   * ---------------------------------------------------------------- */
+  var themeBtn = $('#themeBtn');
+  var iconSun = $('#iconSun');
+  var iconMoon = $('#iconMoon');
+
+  function paintThemeIcon() {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    iconSun.hidden = !dark;
+    iconMoon.hidden = dark;
+    themeBtn.setAttribute('title', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  }
+  paintThemeIcon();
+
+  themeBtn.addEventListener('click', function () {
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    document.documentElement.removeAttribute('data-theme-auto');
+    try { localStorage.setItem('kestrel-theme', next); } catch (e) {}
+    paintThemeIcon();
+  });
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+    if (!document.documentElement.hasAttribute('data-theme-auto')) return;
+    document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    paintThemeIcon();
+  });
+
+  /* ---------------------------------------------------------------- *
+     Mobile navigation drawer
+   * ---------------------------------------------------------------- */
+  var burger = $('#burger');
+  var backdrop = null;
+
+  function closeNav() {
+    document.body.classList.remove('nav-open');
+    burger.setAttribute('aria-expanded', 'false');
+    if (backdrop) { backdrop.remove(); backdrop = null; }
+  }
+
+  burger.addEventListener('click', function () {
+    var open = document.body.classList.toggle('nav-open');
+    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      backdrop = document.createElement('div');
+      backdrop.className = 'nav-backdrop';
+      backdrop.addEventListener('click', closeNav);
+      document.body.appendChild(backdrop);
+    } else if (backdrop) {
+      backdrop.remove();
+      backdrop = null;
+    }
+  });
+
+  $$('#sidebar a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      if (document.body.classList.contains('nav-open')) closeNav();
+    });
+  });
+
+  /* ---------------------------------------------------------------- *
+     Command palette
+   * ---------------------------------------------------------------- */
+  var index = [];
+  $$('#sidebar a[href^="#"]').forEach(function (a) {
+    var group = a.closest('.nav-group');
+    var section = group ? $('.nav-title', group).textContent : 'Docs';
+    index.push({ title: a.textContent.trim(), kind: section, href: a.getAttribute('href') });
+  });
+  $$('main h3[id]').forEach(function (h) {
+    var title = h.textContent.replace(/#$/, '').trim();
+    if (index.some(function (i) { return i.title.toLowerCase() === title.toLowerCase(); })) return;
+    index.push({ title: title, kind: 'Section', href: '#' + h.id });
+  });
+
+  var overlay = null;
+  var selIndex = 0;
+  var matches = [];
+
+  function score(item, q) {
+    var t = item.title.toLowerCase();
+    if (t === q) return 0;
+    if (t.indexOf(q) === 0) return 1;
+    if (t.indexOf(q) > -1) return 2;
+    if (item.kind.toLowerCase().indexOf(q) > -1) return 3;
+    return -1;
+  }
+
+  function renderResults(container, q) {
+    var query = q.trim().toLowerCase();
+    matches = (!query ? index.slice(0, 9) : index
+      .map(function (i) { return { i: i, s: score(i, query) }; })
+      .filter(function (r) { return r.s > -1; })
+      .sort(function (a, b) { return a.s - b.s; })
+      .slice(0, 12)
+      .map(function (r) { return r.i; }));
+
+    selIndex = 0;
+    if (!matches.length) {
+      container.innerHTML = '<p class="palette-empty">No matches for &ldquo;' + esc(q) + '&rdquo;</p>';
+      return;
+    }
+    container.innerHTML = matches.map(function (m, i) {
+      return '<a class="presult' + (i === 0 ? ' sel' : '') + '" href="' + m.href + '" data-i="' + i + '">' +
+        '<span class="ptitle">' + esc(m.title) + '</span>' +
+        '<span class="pkind">' + esc(m.kind) + '</span></a>';
+    }).join('');
+  }
+
+  function moveSelection(delta, container) {
+    if (!matches.length) return;
+    selIndex = (selIndex + delta + matches.length) % matches.length;
+    $$('.presult', container).forEach(function (el, i) {
+      el.classList.toggle('sel', i === selIndex);
+      if (i === selIndex) el.scrollIntoView({ block: 'nearest' });
+    });
+  }
+
+  function closePalette() {
+    if (!overlay) return;
+    overlay.remove();
+    overlay = null;
+    document.documentElement.style.overflow = '';
+  }
+
+  function openPalette() {
+    if (overlay) return;
+    overlay = document.createElement('div');
+    overlay.className = 'palette-backdrop';
+    overlay.innerHTML =
+      '<div class="palette" role="dialog" aria-modal="true" aria-label="Search documentation">' +
+      '<input type="text" placeholder="Search the docs\u2026" aria-label="Search query" autocomplete="off" spellcheck="false">' +
+      '<div class="palette-results"></div>' +
+      '<div class="palette-foot"><span>\u2191\u2193 navigate</span><span>\u21b5 open</span><span>esc close</span></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    document.documentElement.style.overflow = 'hidden';
+
+    var input = $('input', overlay);
+    var results = $('.palette-results', overlay);
+    renderResults(results, '');
+    input.focus();
+
+    input.addEventListener('input', function () { renderResults(results, input.value); });
+
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) closePalette();
+      var hit = e.target.closest ? e.target.closest('.presult') : null;
+      if (hit) closePalette();
+    });
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveSelection(1, results); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelection(-1, results); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        var el = $$('.presult', results)[selIndex];
+        if (el) { window.location.hash = el.getAttribute('href'); closePalette(); }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closePalette();
+      }
+    });
+  }
+
+  $('#searchBtn').addEventListener('click', openPalette);
+
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target.tagName || '').toLowerCase();
+    var typing = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
+
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      overlay ? closePalette() : openPalette();
+      return;
+    }
+    if (e.key === '/' && !typing && !overlay) {
+      e.preventDefault();
+      openPalette();
+      return;
+    }
+    if (e.key === 'Escape') {
+      if (overlay) closePalette();
+      else if (document.body.classList.contains('nav-open')) closeNav();
+    }
+  });
+})();
+</script>
+</body>
+</html>

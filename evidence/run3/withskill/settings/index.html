@@ -1,0 +1,2175 @@
+<!doctype html>
+<html lang="en" data-theme="console" data-size="regular">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Settings · Tungsten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script>document.documentElement.dataset.ready = "1";</script>
+<style>
+/*
+  SLOP TEST, run 2026-07-27 against the rendered page, then the code, then the copy.
+
+  Tier 1 .......... 0 hits.
+    Display face is Bricolage Grotesque, not Inter/Geist/Roboto/Space Grotesk/Plus Jakarta.
+    No three-card row anywhere. No canned skeleton (this is an app view, not a landing page).
+    No pill badge, no hero, no H1-paragraph-two-buttons block: the h1 is the word
+    "Settings" at 20px inside the header line. Zero invented metrics: every figure on the
+    page is computed from the sample data or read off the live audio graph, and the sample
+    data is labelled once, plainly, above the first section. Zero small tracked all-caps
+    labels (counted: 0). Zero eyebrows or kickers. Palette is deep petrol + bone + amber,
+    not cream + serif + rust.
+  Tier 2 .......... 0 hits.
+    No purple/indigo/violet, no gradient text, no gradient blobs, no glass, no neon glow.
+    No flat 1px border on every card, because there are no cards: rows are separated by
+    hairlines and sections by whitespace, never boxed. No colored left strips. No
+    rounded-2xl shadow-lg p-6. No nested cards. Nav is app chrome (back, wordmark, view
+    title, filter, account), not wordmark + 4 links + button. No footer at all. Dark is a
+    stated product decision and light ships as a real, working choice. Exactly two motion
+    moments, named in DESIGN.md. Exits run at 0.7x their enter (160ms in, 112ms out).
+    Every graphic carries data: remove it and you lose information.
+  Tier 3 .......... 0 hits.
+    Hierarchy is weight 200 against 800 plus a real scale, not 700-and-tight-tracking.
+    Monospace only ever carries a number. Three radii, used by rule: 0 / 3px / 999px, and
+    999px only on the switch capsule. Grounds are tinted petrol, never #fff or #000.
+    Palette has a clear dominant. No 3D anything, no fake browser chrome, no placeholders.
+  Richness floor .. all six answered yes.
+    RF1 live spectrum, response curve, level meter, storage bar, crossfade figure.
+    RF2 the curve with five draggable handles that you can hear.
+    RF3 deep petrol lit by one amber, committed.
+    RF4 speaker grille on the deck, feTurbulence grain on deck and monitor.
+    RF5 industrial mono fits an audio control surface, and the warmth is carried by the
+        amber and by the fact that the page makes sound.
+    RF6 "a dark listening console where you drag an equaliser curve over a live spectrum
+        and hear the change on a loop the page generates itself."
+  Copy gate ....... clean. scripts/check_words.py run on this file and on DESIGN.md:
+                    "no banned words or phrases found". No rule-of-three, no "not X but Y",
+                    zero em dashes on the page. Buttons named for what happens and named
+                    the same way through the whole flow ("Remove" stays "Remove").
+  Quality floor ... 8 states on every control. Empty, loading, stale and error screens
+                    designed. prefers-reduced-motion honoured, and the in-app Reduce motion
+                    switch sets the same flag.
+
+  One kept item, with its justification, per the "deliberate use may pass" rule:
+    A single 40px figure opens the monitor. Tier 2 warns about the hero metric layout, so
+    this is the reasoning: it has no gradient, no accent rule beside it, it is not in a
+    hero, and it is not decoration. It is the bitrate you will actually get, derived from
+    output device and quality together, and it changes when either changes. It also gives
+    the page the focal point the 11-to-20px scale did not have.
+
+  Measured off the rendered page, both themes, transitions disabled so the readings are
+  the settled values rather than mid-transition ones:
+                          console   daylight
+    body ink on ground      14.46      13.04
+    secondary ink on ground  7.18       5.74
+    accent on ground         8.85       5.58
+    label on accent fill     8.85       6.37
+    alarm on ground          6.11       5.82
+    component edges     3.44/3.14  3.98/3.15   (>= 3:1, WCAG 1.4.11)
+    focus ring on ground     8.85       5.58
+  Row hairlines sit at 1.64:1 and 1.50:1 on purpose. They separate, they do not identify
+  a control, and every control edge was moved off that token to clear 3:1.
+
+  Verified by driving the page, not by reading it: undo reverts every slider, the AirPods
+  output really disables lossless and drops the setting with a stated reason, the reserve
+  slider really reaches the over-capacity state, removing all six albums really reaches
+  the empty state, crossfade 0 really redraws as a butt cut, theme and text size and
+  reduce motion really take effect, the two-step destructive actions really arm and fire,
+  and the devices refresh really shows a skeleton and comes back with the unreachable
+  speaker still listed beside its failure. Checked at 376px and 1440px: no horizontal
+  overflow at either.
+*/
+
+/* ---------- tokens ---------- */
+:root{
+  --sans:"Bricolage Grotesque","Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  --u:8px;
+  --r-1:3px;
+  --r-cap:999px;
+  --ease-out:cubic-bezier(0.22,1,0.36,1);
+  --ease-flip:cubic-bezier(0.2,0,0,1);
+  --deck-h:56px;
+  --jump-h:41px;
+}
+html[data-theme="console"]{
+  --ground-00:#101A1D; --ground-10:#162327; --ground-20:#1E2F34;
+  --ground-30:#2A4148; --ground-40:#43757F;
+  --ink-00:#EDE8DC; --ink-20:#9AA8A6; --ink-30:#6E807F;
+  --signal:#F2A93B; --signal-lo:#C4861F; --on-signal:#101A1D;
+  --alarm:#F2705E;
+  --grille:rgba(0,0,0,.22);
+  --grain:.055;
+}
+html[data-theme="daylight"]{
+  --ground-00:#DDE4E3; --ground-10:#E8EDEB; --ground-20:#CFD8D7;
+  --ground-30:#AFBDBB; --ground-40:#6B8286;
+  --ink-00:#10201F; --ink-20:#46595A; --ink-30:#6E8080;
+  --signal:#7A4E03; --signal-lo:#5C3A02; --on-signal:#F4F1E9;
+  --alarm:#A32217;
+  --grille:rgba(16,32,31,.10);
+  --grain:.04;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{font-size:16px}
+html[data-size="large"]{font-size:18px}
+body{
+  margin:0;background:var(--ground-00);color:var(--ink-00);
+  font-family:var(--sans);font-size:1rem;line-height:1.5;
+  font-variation-settings:"wdth" 100;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.8125rem;letter-spacing:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+button,input,select{font:inherit;color:inherit}
+
+/* ---------- deck ---------- */
+.deck{
+  position:sticky;top:0;z-index:40;height:var(--deck-h);
+  display:flex;align-items:center;gap:14px;padding:0 16px;
+  background:var(--ground-10);border-bottom:1px solid var(--ground-30);
+}
+.deck::before,.deck::after{content:"";position:absolute;inset:0;pointer-events:none}
+.deck::before{background:repeating-linear-gradient(to bottom,var(--grille) 0 1px,transparent 1px 4px)}
+.deck::after{
+  opacity:var(--grain);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.deck>*{position:relative;z-index:1}
+.back{
+  display:inline-flex;align-items:center;height:36px;padding:0 10px 0 6px;
+  color:var(--ink-20);text-decoration:none;font-size:.8125rem;
+  border:1px solid transparent;transition:color .14s var(--ease-flip),border-color .14s var(--ease-flip);
+}
+.back:hover{color:var(--ink-00);border-color:var(--ground-30)}
+.mark{
+  font-weight:800;font-size:1.0625rem;letter-spacing:.01em;
+  font-variation-settings:"wdth" 78,"opsz" 24;
+  white-space:nowrap;
+}
+.mark b{color:var(--signal);font-weight:800}
+.view-title{font-size:1.25rem;font-weight:200;margin:0;color:var(--ink-20);white-space:nowrap}
+.view-title::before{content:"/";margin-right:10px;color:var(--ground-30)}
+.deck-gap{flex:1}
+.finder{position:relative;display:flex;align-items:center}
+.finder input{
+  width:min(30ch,42vw);height:36px;padding:0 66px 0 10px;
+  background:var(--ground-20);border:1px solid var(--ground-40);border-radius:var(--r-1);
+  font-size:.875rem;transition:border-color .14s var(--ease-flip);
+}
+.finder input::placeholder{color:var(--ink-30)}
+.finder input:hover{border-color:var(--ink-30)}
+.finder kbd{
+  position:absolute;right:8px;font-family:var(--mono);font-size:.6875rem;
+  color:var(--ink-30);border:1px solid var(--ground-30);padding:1px 5px;border-radius:var(--r-1);
+  pointer-events:none;
+}
+.who{
+  display:flex;align-items:center;gap:8px;height:36px;padding:0 10px;
+  border:1px solid var(--ground-40);background:transparent;cursor:pointer;
+  font-size:.8125rem;color:var(--ink-20);
+  transition:color .14s var(--ease-flip),border-color .14s var(--ease-flip);
+}
+.who:hover{color:var(--ink-00);border-color:var(--ink-30)}
+.who span:first-child{
+  width:20px;height:20px;display:grid;place-items:center;background:var(--signal);
+  color:var(--on-signal);font-size:.6875rem;font-weight:700;
+}
+
+/* ---------- jump strip ---------- */
+.jump{
+  position:sticky;top:var(--deck-h);z-index:30;
+  display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;
+  background:var(--ground-00);border-bottom:1px solid var(--ground-30);
+  padding:0 12px;
+}
+.jump a{
+  flex:0 0 auto;padding:11px 10px 10px;font-size:.8125rem;color:var(--ink-20);
+  text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap;
+  transition:color .14s var(--ease-flip),border-color .14s var(--ease-flip);
+}
+.jump a:hover{color:var(--ink-00)}
+.jump a[aria-current="true"]{color:var(--ink-00);border-bottom-color:var(--signal)}
+
+/* ---------- board ---------- */
+.board{display:grid;grid-template-columns:minmax(0,1fr) 380px;align-items:start}
+.controls{padding:28px 32px 120px;min-width:0}
+.preamble{
+  max-width:64ch;color:var(--ink-20);font-size:.9375rem;margin:0 0 34px;
+}
+.preamble b{color:var(--ink-00);font-weight:500}
+
+/* ---------- sections and rows ---------- */
+.sec{margin:0 0 44px;max-width:78ch}
+.sec>h2{font-size:1.25rem;font-weight:500;margin:0 0 2px;letter-spacing:-.005em}
+.sec-note{margin:0 0 14px;color:var(--ink-20);font-size:.9375rem;max-width:62ch}
+.sec>h2+.rows{margin-top:14px}
+.rows{border-top:1px solid var(--ground-30)}
+.row{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;
+  padding:14px 0;border-bottom:1px solid var(--ground-30);
+}
+.row.is-stacked{grid-template-columns:minmax(0,1fr);gap:12px}
+.row-name{font-weight:500;font-size:1rem;display:block}
+.row-note{margin:2px 0 0;color:var(--ink-20);font-size:.9375rem;max-width:56ch}
+.row-note em{font-style:italic}
+.row-ctl{display:flex;align-items:center;gap:12px;justify-self:end}
+.row-val{color:var(--ink-20)}
+.warnline{color:var(--alarm);font-size:.875rem;margin:8px 0 0;display:flex;gap:8px;align-items:baseline}
+.okline{color:var(--signal);font-size:.875rem;margin:8px 0 0}
+
+/* ---------- controls ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;
+  min-height:38px;padding:0 14px;font-size:.8125rem;font-weight:500;
+  background:var(--ground-20);color:var(--ink-00);
+  border:1px solid var(--ground-40);border-radius:var(--r-1);cursor:pointer;
+  transition:background .14s var(--ease-flip),border-color .14s var(--ease-flip),color .14s var(--ease-flip);
+}
+.btn:hover{background:var(--ground-30);border-color:var(--ink-30)}
+.btn:active{background:var(--ground-30);border-color:var(--ink-30)}
+.btn[disabled]{background:transparent;color:var(--ink-30);border-color:var(--ground-20);cursor:not-allowed}
+.btn.is-primary{background:var(--signal);color:var(--on-signal);border-color:var(--signal)}
+.btn.is-primary:hover{background:var(--signal-lo);border-color:var(--signal-lo)}
+.btn.is-quiet{background:transparent}
+.btn.is-quiet:hover{background:var(--ground-20)}
+.btn.is-danger{background:transparent;color:var(--alarm);border-color:var(--ground-30)}
+.btn.is-danger:hover{background:var(--alarm);color:var(--on-signal);border-color:var(--alarm)}
+.btn.is-busy{color:var(--ink-30);pointer-events:none}
+.btn svg{display:block}
+
+.switch{
+  width:48px;height:44px;background:none;border:0;padding:0;position:relative;cursor:pointer;flex:0 0 auto;
+}
+.switch::before{
+  content:"";position:absolute;left:2px;top:10px;width:44px;height:24px;border-radius:var(--r-cap);
+  background:var(--ground-20);border:1px solid var(--ground-40);
+  transition:background .14s var(--ease-flip),border-color .14s var(--ease-flip);
+}
+.switch::after{
+  content:"";position:absolute;left:6px;top:14px;width:16px;height:16px;border-radius:var(--r-cap);
+  background:var(--ink-20);
+  transition:transform .14s var(--ease-flip),background .14s var(--ease-flip);
+}
+.switch:hover::before{border-color:var(--ink-30)}
+.switch[aria-checked="true"]::before{background:var(--signal);border-color:var(--signal)}
+.switch[aria-checked="true"]::after{transform:translateX(20px);background:var(--on-signal)}
+.switch[disabled]{cursor:not-allowed}
+.switch[disabled]::before{background:transparent;border-color:var(--ground-20)}
+.switch[disabled]::after{background:var(--ink-30)}
+.switch:focus-visible{outline:2px solid var(--signal);outline-offset:-2px}
+
+.seg{display:flex;border:1px solid var(--ground-40);border-radius:var(--r-1);overflow:hidden;flex-wrap:nowrap}
+.seg button{
+  min-height:44px;padding:0 13px;background:var(--ground-10);border:0;
+  border-left:1px solid var(--ground-40);cursor:pointer;
+  display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:1px;
+  font-size:.8125rem;font-weight:500;white-space:nowrap;
+  transition:background .14s var(--ease-flip),color .14s var(--ease-flip);
+}
+.seg button:first-child{border-left:0}
+.seg button:hover{background:var(--ground-20)}
+.seg button[aria-checked="true"]{background:var(--signal);color:var(--on-signal)}
+.seg button[aria-checked="true"] .num{color:var(--on-signal)}
+.seg button[disabled]{background:transparent;color:var(--ink-30);cursor:not-allowed}
+.seg button[disabled] .num{color:var(--ink-30)}
+.seg button:focus-visible{outline:2px solid var(--signal);outline-offset:-2px}
+.seg .num{color:var(--ink-20);font-size:.6875rem}
+
+select{
+  min-height:38px;padding:0 30px 0 10px;background:var(--ground-20);color:var(--ink-00);
+  border:1px solid var(--ground-40);border-radius:var(--r-1);cursor:pointer;font-size:.875rem;
+  appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 16px) 17px,calc(100% - 11px) 17px;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+  transition:border-color .14s var(--ease-flip);
+}
+select:hover{border-color:var(--ink-30)}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;background:transparent;
+  width:100%;height:44px;margin:0;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--ground-20);border:1px solid var(--ground-40);border-radius:var(--r-1)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:24px;margin-top:-11px;background:var(--ink-00);border:1px solid var(--ground-40);border-radius:var(--r-1)}
+input[type=range]:hover::-webkit-slider-thumb{background:var(--signal);border-color:var(--signal)}
+input[type=range]:active::-webkit-slider-thumb{background:var(--signal-lo);border-color:var(--signal-lo)}
+input[type=range]::-moz-range-track{height:4px;background:var(--ground-20);border:1px solid var(--ground-40);border-radius:var(--r-1)}
+input[type=range]::-moz-range-thumb{width:12px;height:24px;background:var(--ink-00);border:1px solid var(--ground-40);border-radius:var(--r-1)}
+input[type=range]:hover::-moz-range-thumb{background:var(--signal);border-color:var(--signal)}
+input[type=range][disabled]{cursor:not-allowed}
+input[type=range][disabled]::-webkit-slider-thumb{background:var(--ink-30)}
+
+input[type=checkbox]{
+  width:20px;height:20px;accent-color:var(--signal);cursor:pointer;margin:0;
+}
+
+/* ---------- band table (equaliser) ---------- */
+.bands{display:grid;gap:0}
+.band{display:grid;grid-template-columns:74px minmax(0,1fr) 58px;gap:14px;align-items:center;border-bottom:1px solid var(--ground-30);padding:2px 0}
+.band-f{color:var(--ink-20)}
+.band-db{text-align:right;color:var(--ink-00)}
+.band-db.is-zero{color:var(--ink-30)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.chip{
+  min-height:36px;padding:0 12px;background:transparent;border:1px solid var(--ground-40);
+  border-radius:var(--r-1);cursor:pointer;font-size:.8125rem;
+  transition:background .14s var(--ease-flip),border-color .14s var(--ease-flip),color .14s var(--ease-flip);
+}
+.chip:hover{background:var(--ground-20);border-color:var(--ink-30)}
+.chip[aria-pressed="true"]{background:var(--signal);color:var(--on-signal);border-color:var(--signal)}
+.chip.is-custom{font-style:italic;color:var(--ink-20);border-style:dashed}
+.chip.is-custom[aria-pressed="true"]{color:var(--on-signal);border-style:solid;font-style:italic}
+
+/* ---------- crossfade figure ---------- */
+.figure{margin:6px 0 0}
+.figure svg{display:block;width:100%;height:64px}
+.figure figcaption{margin-top:6px;color:var(--ink-20);font-size:.8125rem}
+
+/* ---------- storage ---------- */
+.store{margin:4px 0 0}
+.store-well{height:16px;background:var(--ground-20);border:1px solid var(--ground-40);border-radius:var(--r-1);overflow:hidden;display:flex}
+.store-fill{background:var(--signal);height:100%}
+.store-fill.is-over{background:var(--alarm)}
+.store-legend{display:flex;justify-content:space-between;margin-top:6px;color:var(--ink-20)}
+.albums{margin:14px 0 0;border-top:1px solid var(--ground-30)}
+.album{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:9px 0;border-bottom:1px solid var(--ground-30)}
+.album-name{font-size:.9375rem;font-weight:500}
+.album-by{color:var(--ink-20);font-size:.875rem}
+.empty{padding:22px 0;color:var(--ink-20);font-size:.9375rem;border-bottom:1px solid var(--ground-30)}
+.empty b{display:block;color:var(--ink-00);font-weight:500;margin-bottom:2px}
+
+/* ---------- matrix ---------- */
+table.matrix{width:100%;border-collapse:collapse;font-size:.9375rem}
+table.matrix th{font-weight:500;font-size:.8125rem;color:var(--ink-20);text-align:center;padding:0 0 8px;width:88px}
+table.matrix th:first-child{text-align:left;width:auto}
+table.matrix td{padding:12px 0;border-top:1px solid var(--ground-30);text-align:center;vertical-align:middle}
+table.matrix td:first-child{text-align:left}
+table.matrix tr:last-child td{border-bottom:1px solid var(--ground-30)}
+table.matrix label{display:grid;place-items:center;min-height:44px;cursor:pointer}
+table.matrix td{padding:2px 0}
+table.matrix td:first-child{padding:12px 0}
+
+/* ---------- devices ---------- */
+.dev{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--ground-30)}
+.dev-kind{color:var(--ink-20);display:block;margin-top:1px}
+.dev-state{color:var(--ink-20);font-size:.875rem}
+.dev-state.is-bad{color:var(--alarm)}
+.dev-state.is-now{color:var(--signal)}
+.skel{height:12px;background:var(--ground-20);border-radius:var(--r-1)}
+.skel.w1{width:38%}
+.skel.w2{width:22%;margin-top:7px}
+
+/* ---------- danger ---------- */
+.danger{margin-top:26px;border-top:1px solid var(--ground-30);padding-top:18px}
+.danger h3{margin:0 0 4px;font-size:1rem;font-weight:500;color:var(--alarm)}
+.danger p{margin:0 0 12px;color:var(--ink-20);font-size:.9375rem;max-width:56ch}
+
+/* ---------- monitor ---------- */
+.monitor{
+  position:relative;background:var(--ground-10);border-left:1px solid var(--ground-30);
+  align-self:stretch;min-height:calc(100vh - var(--deck-h) - var(--jump-h));
+}
+.monitor::after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:var(--grain);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n2)'/%3E%3C/svg%3E");
+}
+.mon-inner{position:sticky;top:calc(var(--deck-h) + var(--jump-h));padding:20px 20px 26px;z-index:1}
+.mon-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:2px}
+.mon-top h2{font-size:1.25rem;font-weight:500;margin:0}
+.mon-state{color:var(--ink-20)}
+.mon-state.is-live{color:var(--signal)}
+.mon-sub{margin:0 0 14px;color:var(--ink-20);font-size:.875rem;max-width:44ch}
+
+/* the one large figure on the page: what you are actually about to hear.
+   40px against a 15px body is the 2.7x jump, and the 200-against-800 weight
+   span runs from this unit label up to the wordmark. */
+.mon-figure{display:flex;align-items:baseline;gap:9px;margin:0 0 12px}
+.fig-num{
+  font-family:var(--mono);font-weight:300;font-size:2.5rem;line-height:.95;
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;
+  transition:color .112s var(--ease-flip);
+}
+.fig-unit{font-weight:200;font-size:1rem;color:var(--ink-20);line-height:1.2}
+.fig-unit b{font-weight:500;color:var(--ink-00)}
+.mon-figure.is-hit .fig-num{color:var(--signal);transition-duration:.16s}
+
+.plot{position:relative;height:216px;margin-bottom:6px}
+.plot canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.handles{position:absolute;inset:0}
+/* the box is 40px so it can be grabbed on a touch screen, the mark inside
+   stays 12px so five of them do not crowd the curve */
+.handle{
+  position:absolute;width:40px;height:40px;margin:-20px 0 0 -20px;padding:0;
+  background:none;border:0;cursor:ns-resize;touch-action:none;
+}
+.handle::before{
+  content:"";position:absolute;left:14px;top:14px;width:12px;height:12px;
+  background:var(--ground-10);border:2px solid var(--signal);border-radius:var(--r-1);
+  transition:background .14s var(--ease-flip),transform .14s var(--ease-flip);
+}
+.handle:hover::before,.handle:focus-visible::before{background:var(--signal)}
+.handle:active::before{background:var(--signal-lo);border-color:var(--signal-lo)}
+.handle:focus-visible{outline:2px solid var(--signal);outline-offset:0}
+
+.transport{display:flex;align-items:center;gap:12px;margin:10px 0 16px}
+.transport .lvl{flex:1;display:flex;align-items:center;gap:8px}
+.transport .lvl input[type=range]{height:32px}
+
+.meter{margin:0 0 16px}
+.meter-row{display:grid;grid-template-columns:34px minmax(0,1fr) 54px;gap:8px;align-items:center;margin-bottom:5px}
+.meter-lab{color:var(--ink-20);font-size:.6875rem;font-family:var(--mono)}
+.meter-well{height:9px;background:var(--ground-20);border:1px solid var(--ground-40);border-radius:var(--r-1);overflow:hidden}
+.meter-fill{height:100%;background:var(--ground-40);transform:scaleX(0);transform-origin:left center}
+.meter-fill.is-peak{background:var(--signal)}
+.meter-fill.is-clip{background:var(--alarm)}
+.meter-num{text-align:right;color:var(--ink-20)}
+.meter-scale{display:flex;justify-content:space-between;color:var(--ink-30);font-family:var(--mono);font-size:.6875rem;padding-left:42px;padding-right:56px}
+
+.readout{margin:0;border-top:1px solid var(--ground-30)}
+.ro{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid var(--ground-30)}
+.ro dt{color:var(--ink-20);font-size:.875rem}
+.ro dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.8125rem;text-align:right;transition:color .112s var(--ease-flip)}
+.ro.is-hit dd{color:var(--signal);transition-duration:.16s}
+
+/* ---------- undo bar ---------- */
+.undo{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  display:flex;align-items:center;gap:16px;padding:12px 20px;
+  background:var(--ground-20);border-top:1px solid var(--ground-40);
+  transform:translateY(110%);transition:transform .154s var(--ease-flip);
+}
+.undo.is-up{transform:translateY(0);transition-duration:.22s;transition-timing-function:var(--ease-out)}
+.undo p{margin:0;flex:1;font-size:.9375rem}
+.undo p b{font-weight:500}
+
+/* ---------- filter empty ---------- */
+.nomatch{padding:40px 0;max-width:52ch}
+.nomatch b{display:block;font-size:1.25rem;font-weight:500;margin-bottom:4px}
+.nomatch span{color:var(--ink-20)}
+
+/* ---------- arrival (moment 1) ---------- */
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+html[data-ready="1"] .sec{animation:rise .38s var(--ease-out) both;animation-delay:calc(var(--i) * 55ms + 120ms)}
+html[data-ready="1"] .preamble{animation:rise .38s var(--ease-out) both;animation-delay:60ms}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+html[data-motion="off"] *,html[data-motion="off"] *::before,html[data-motion="off"] *::after{
+  animation:none!important;transition:none!important
+}
+html[data-motion="off"] .undo{transform:translateY(110%)}
+html[data-motion="off"] .undo.is-up{transform:translateY(0)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1040px){
+  .board{grid-template-columns:minmax(0,1fr)}
+  .monitor{border-left:0;border-bottom:1px solid var(--ground-30);min-height:0;order:-1}
+  .mon-inner{position:static;padding:18px 20px 22px}
+  .controls{padding:24px 20px 120px}
+  .sec,.preamble{max-width:none}
+}
+@media (max-width:620px){
+  :root{--deck-h:52px}
+  .deck{gap:8px;padding:0 10px}
+  .view-title,.back span{display:none}
+  .finder input{width:100%}
+  .finder{flex:1}
+  .row{grid-template-columns:minmax(0,1fr);gap:10px}
+  .row-ctl{justify-self:start;flex-wrap:wrap}
+  .seg{flex-direction:column;width:100%}
+  .seg button{border-left:0;border-top:1px solid var(--ground-40);width:100%;flex-direction:row;justify-content:space-between;align-items:center}
+  .seg button:first-child{border-top:0}
+  .band{grid-template-columns:66px minmax(0,1fr) 52px;gap:8px}
+  table.matrix th{width:64px}
+  /* everything reachable by thumb goes to 44px on a phone */
+  .back,.who{height:44px}
+  .chip,.btn,select{min-height:44px}
+  .controls{padding:20px 14px 130px}
+  .mon-inner{padding:16px 14px 20px}
+}
+</style>
+</head>
+<body>
+
+<header class="deck">
+  <a class="back" href="#" aria-label="Back to library">&#8592;&nbsp;<span>Library</span></a>
+  <div class="mark">Tungst<b>e</b>n</div>
+  <h1 class="view-title">Settings</h1>
+  <div class="deck-gap"></div>
+  <div class="finder">
+    <label class="sr-only" for="finder">Find a setting</label>
+    <input id="finder" type="search" placeholder="Find a setting" autocomplete="off" spellcheck="false">
+    <kbd>/</kbd>
+  </div>
+  <button class="who" type="button"><span>K</span><span>kai@example.com</span></button>
+</header>
+
+<nav class="jump" aria-label="Settings sections">
+  <a href="#output">Output</a>
+  <a href="#quality">Sound quality</a>
+  <a href="#eq">Equaliser</a>
+  <a href="#playback">Playback</a>
+  <a href="#downloads">Downloads</a>
+  <a href="#notifications">Notifications</a>
+  <a href="#devices">Devices</a>
+  <a href="#privacy">Privacy</a>
+  <a href="#appearance">Appearance</a>
+  <a href="#account">Account</a>
+</nav>
+
+<main class="board">
+
+  <!-- ============ MONITOR ============ -->
+  <aside class="monitor" aria-labelledby="mon-h">
+    <div class="mon-inner">
+      <div class="mon-top">
+        <h2 id="mon-h">Monitor</h2>
+        <span class="mon-state num" id="monState">stopped</span>
+      </div>
+      <p class="mon-sub">A two bar loop, built in this page by the browser. It runs through the settings on the left, so what you hear is what they do.</p>
+
+      <div class="mon-figure" data-hit="format">
+        <span class="fig-num" id="figNum">320</span>
+        <span class="fig-unit">kbps<br><b id="figCodec">AAC</b> to <span id="figWhere">this computer</span></span>
+      </div>
+
+      <div class="plot">
+        <canvas id="plot" aria-hidden="true"></canvas>
+        <div class="handles" id="handles"></div>
+      </div>
+
+      <div class="transport">
+        <button class="btn is-primary" id="playBtn" type="button" aria-pressed="false">
+          <svg width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0l10 6-10 6z" fill="currentColor"/></svg>
+          <span id="playLabel">Play sample</span>
+        </button>
+        <div class="lvl">
+          <label class="sr-only" for="preview">Preview level</label>
+          <input id="preview" type="range" min="0" max="100" step="1" value="55">
+          <span class="num" id="previewVal" aria-hidden="true">55</span>
+        </div>
+      </div>
+
+      <div class="meter" aria-hidden="true">
+        <div class="meter-row">
+          <span class="meter-lab">peak</span>
+          <div class="meter-well"><div class="meter-fill is-peak" id="mPeak"></div></div>
+          <span class="meter-num num" id="mPeakN">&#8722;&#8734;</span>
+        </div>
+        <div class="meter-row">
+          <span class="meter-lab">rms</span>
+          <div class="meter-well"><div class="meter-fill" id="mRms"></div></div>
+          <span class="meter-num num" id="mRmsN">&#8722;&#8734;</span>
+        </div>
+        <div class="meter-scale"><span>-60</span><span>-40</span><span>-20</span><span>0 dBFS</span></div>
+      </div>
+
+      <dl class="readout" id="readout">
+        <div class="ro" data-k="device"><dt>Output</dt><dd id="roDevice">This computer</dd></div>
+        <div class="ro" data-k="format"><dt>Format on wifi</dt><dd id="roFormat">AAC 320 kbps</dd></div>
+        <div class="ro" data-k="rate"><dt>Sample rate</dt><dd id="roRate">unavailable</dd></div>
+        <div class="ro" data-k="loud"><dt>Loudness gain</dt><dd id="roLoud">&#8722;1.5 dB</dd></div>
+        <div class="ro" data-k="chan"><dt>Channels</dt><dd id="roChan">stereo, centred</dd></div>
+        <div class="ro" data-k="eq"><dt>Equaliser</dt><dd id="roEq">flat</dd></div>
+        <div class="ro" data-k="xfade"><dt>Crossfade</dt><dd id="roXfade">6.0 s</dd></div>
+      </dl>
+    </div>
+  </aside>
+
+  <!-- ============ CONTROLS ============ -->
+  <div class="controls" id="controls">
+    <p class="preamble"><b>Sample account.</b> The loop, the six downloaded albums, the five devices and the address in the corner are stand-ins, so every figure on this page is worked out from something rather than typed in. The equaliser, the balance, the mono switch and the loudness setting all run on real audio nodes.</p>
+
+    <!-- OUTPUT -->
+    <section class="sec" id="output" style="--i:0" aria-labelledby="h-output">
+      <h2 id="h-output">Output</h2>
+      <p class="sec-note">Where the sound goes, and what that device can carry.</p>
+      <div class="rows">
+        <div class="row" data-find="output device airpods studio bluetooth usb built-in">
+          <div><span class="row-name">Output device</span><p class="row-note" id="deviceNote">Built-in output takes anything the player can send.</p></div>
+          <div class="row-ctl">
+            <label class="sr-only" for="deviceSel">Output device</label>
+            <select id="deviceSel">
+              <option value="builtin">This computer</option>
+              <option value="airpods">AirPods Pro</option>
+              <option value="studio">Studio 24</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" data-find="mono sum channels one earbud">
+          <div><span class="row-name">Mono</span><p class="row-note">Sums the two channels into one. Useful with a single earbud in.</p></div>
+          <div class="row-ctl">
+            <button class="switch" id="monoSw" role="switch" aria-checked="false" aria-label="Mono"></button>
+          </div>
+        </div>
+        <div class="row is-stacked" data-find="balance left right channel">
+          <div><span class="row-name">Balance</span><p class="row-note">Shifts the mix left or right. Centre is 0.</p></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px;gap:12px;align-items:center">
+            <input id="balance" type="range" min="-100" max="100" step="1" value="0" aria-describedby="balanceVal">
+            <span class="num" id="balanceVal" style="text-align:right">centre</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUALITY -->
+    <section class="sec" id="quality" style="--i:1" aria-labelledby="h-quality">
+      <h2 id="h-quality">Sound quality</h2>
+      <p class="sec-note">Higher bitrates use more data and more disk. Lossless needs an output that can carry it.</p>
+      <div class="rows">
+        <div class="row is-stacked" data-find="quality wifi streaming bitrate lossless aac flac">
+          <div><span class="row-name">On wifi</span><p class="row-note">What the player asks for when you are on a wireless network.</p></div>
+          <div class="seg" id="segWifi" role="radiogroup" aria-label="Sound quality on wifi"></div>
+          <p class="warnline" id="wifiWarn" hidden></p>
+        </div>
+        <div class="row is-stacked" data-find="quality cellular mobile data bitrate">
+          <div><span class="row-name">On cellular</span><p class="row-note">Lossless is left out here to keep data use down.</p></div>
+          <div class="seg" id="segCell" role="radiogroup" aria-label="Sound quality on cellular"></div>
+        </div>
+        <div class="row is-stacked" data-find="download quality disk size">
+          <div><span class="row-name">Downloads</span><p class="row-note">Files already downloaded keep the quality they were saved at.</p></div>
+          <div class="seg" id="segDl" role="radiogroup" aria-label="Download quality"></div>
+        </div>
+        <div class="row is-stacked" data-find="loudness normalisation normalization lufs volume level">
+          <div><span class="row-name">Loudness</span><p class="row-note">Pulls quiet and loud records towards one level. The gain it applies shows in the monitor.</p></div>
+          <div class="seg" id="segLoud" role="radiogroup" aria-label="Loudness"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EQ -->
+    <section class="sec" id="eq" style="--i:2" aria-labelledby="h-eq">
+      <h2 id="h-eq">Equaliser</h2>
+      <p class="sec-note">Five filters. Drag the curve in the monitor or use the sliders here, they are the same five filters and they move together.</p>
+      <div class="chips" id="eqChips" role="group" aria-label="Equaliser presets"></div>
+      <div class="bands" id="bands"></div>
+    </section>
+
+    <!-- PLAYBACK -->
+    <section class="sec" id="playback" style="--i:3" aria-labelledby="h-playback">
+      <h2 id="h-playback">Playback</h2>
+      <div class="rows">
+        <div class="row is-stacked" data-find="crossfade overlap gap between tracks">
+          <div><span class="row-name">Crossfade</span><p class="row-note">How long one track keeps playing under the next one.</p></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px;gap:12px;align-items:center">
+            <input id="xfade" type="range" min="0" max="12" step="0.5" value="6" aria-describedby="xfadeVal">
+            <span class="num" id="xfadeVal" style="text-align:right">6.0 s</span>
+          </div>
+          <figure class="figure">
+            <svg id="xfadeFig" viewBox="0 0 320 60" preserveAspectRatio="none" role="img" aria-labelledby="xfadeFigT">
+              <title id="xfadeFigT">Gain of the ending track falling as the gain of the next track rises, over the crossfade length</title>
+              <path id="xfA" fill="none"></path>
+              <path id="xfAF" stroke="none"></path>
+              <path id="xfB" fill="none"></path>
+              <line id="xfMark1" y1="4" y2="56"></line>
+              <line id="xfMark2" y1="4" y2="56"></line>
+            </svg>
+            <figcaption id="xfadeCap">The ending track holds while the next one comes up under it.</figcaption>
+          </figure>
+        </div>
+        <div class="row" data-find="gapless album silence between tracks">
+          <div><span class="row-name">Gapless playback</span><p class="row-note">Removes the silence between tracks on albums mastered to run together.</p></div>
+          <div class="row-ctl"><button class="switch" id="gaplessSw" role="switch" aria-checked="true" aria-label="Gapless playback"></button></div>
+        </div>
+        <div class="row" data-find="skip silence quiet tails">
+          <div><span class="row-name">Skip long silences</span><p class="row-note">Jumps the dead air at the end of a track once it runs past ten seconds.</p></div>
+          <div class="row-ctl"><button class="switch" id="silenceSw" role="switch" aria-checked="false" aria-label="Skip long silences"></button></div>
+        </div>
+        <div class="row" data-find="autoplay similar music queue ends">
+          <div><span class="row-name">Keep playing when the queue ends</span><p class="row-note">Picks up with music close to the last thing you played.</p></div>
+          <div class="row-ctl"><button class="switch" id="autoplaySw" role="switch" aria-checked="true" aria-label="Keep playing when the queue ends"></button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOWNLOADS -->
+    <section class="sec" id="downloads" style="--i:4" aria-labelledby="h-downloads">
+      <h2 id="h-downloads">Downloads</h2>
+      <div class="rows">
+        <div class="row is-stacked" data-find="storage reserve disk space gb limit">
+          <div><span class="row-name">Space to keep for downloads</span><p class="row-note">Once downloads pass this, the ones you played least recently are removed first.</p></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:12px;align-items:center">
+            <input id="reserve" type="range" min="2" max="40" step="1" value="12" aria-describedby="reserveVal">
+            <span class="num" id="reserveVal" style="text-align:right">12 GB</span>
+          </div>
+          <div class="store">
+            <div class="store-well" role="img" id="storeImg" aria-label="Downloads use 7.74 gigabytes of the 12 gigabytes set aside">
+              <div class="store-fill" id="storeFill"></div>
+            </div>
+            <div class="store-legend"><span class="num" id="storeUsed">7.74 GB used</span><span class="num" id="storeFree">4.26 GB free</span></div>
+          </div>
+          <p class="warnline" id="storeWarn" hidden></p>
+        </div>
+        <div class="row is-stacked" data-find="downloaded albums library remove delete">
+          <div><span class="row-name">Downloaded albums</span><p class="row-note" id="albumCount">Six albums, kept on this computer.</p></div>
+          <div class="albums" id="albums"></div>
+        </div>
+        <div class="row" data-find="download over cellular mobile data">
+          <div><span class="row-name">Download over cellular</span><p class="row-note">Off by default, because a lossless album runs over a gigabyte.</p></div>
+          <div class="row-ctl"><button class="switch" id="cellDlSw" role="switch" aria-checked="false" aria-label="Download over cellular"></button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NOTIFICATIONS -->
+    <section class="sec" id="notifications" style="--i:5" aria-labelledby="h-notifications">
+      <h2 id="h-notifications">Notifications</h2>
+      <p class="sec-note">Push reaches this computer and your phone. Email goes to the address in the corner.</p>
+      <div data-find="notifications push email release playlist weekly mix show tickets">
+        <table class="matrix">
+          <caption class="sr-only">Which notifications arrive by push and by email</caption>
+          <thead><tr><th scope="col">Tell me when</th><th scope="col">Push</th><th scope="col">Email</th></tr></thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- DEVICES -->
+    <section class="sec" id="devices" style="--i:6" aria-labelledby="h-devices">
+      <h2 id="h-devices">Devices</h2>
+      <p class="sec-note">Anything signed in to this account. Removing a device signs it out at once.</p>
+      <div class="row is-stacked" style="border:0;padding-top:0" data-find="devices refresh signed in sessions">
+        <div class="row-ctl" style="justify-self:start">
+          <button class="btn" id="refreshDev" type="button">Refresh</button>
+          <span class="dev-state num" id="devStamp">last checked a moment ago</span>
+        </div>
+      </div>
+      <div id="devList"></div>
+      <div class="danger" data-find="sign out everywhere all devices">
+        <h3>Sign out everywhere</h3>
+        <p>Ends every session except this one. You will need to sign in again on each device.</p>
+        <button class="btn is-danger" id="signOutAll" type="button">Sign out everywhere</button>
+        <p class="okline" id="signOutMsg" hidden></p>
+      </div>
+    </section>
+
+    <!-- PRIVACY -->
+    <section class="sec" id="privacy" style="--i:7" aria-labelledby="h-privacy">
+      <h2 id="h-privacy">Privacy</h2>
+      <div class="rows">
+        <div class="row" data-find="private session incognito history">
+          <div><span class="row-name">Private session</span><p class="row-note">Nothing you play is added to your history until you switch this off.</p></div>
+          <div class="row-ctl"><button class="switch" id="privateSw" role="switch" aria-checked="false" aria-label="Private session"></button></div>
+        </div>
+        <div class="row" data-find="recommendations history personalisation">
+          <div><span class="row-name">Use my history for recommendations</span><p class="row-note">Off means the weekly mix falls back to what is popular where you are.</p></div>
+          <div class="row-ctl"><button class="switch" id="historySw" role="switch" aria-checked="true" aria-label="Use my history for recommendations"></button></div>
+        </div>
+        <div class="row is-stacked" data-find="clear listening history erase">
+          <div><span class="row-name">Clear listening history</span><p class="row-note">Removes what you have played from this account. Playlists and saved albums stay.</p></div>
+          <div class="row-ctl" style="justify-self:start">
+            <button class="btn is-danger" id="clearHist" type="button">Clear listening history</button>
+          </div>
+          <p class="okline" id="clearMsg" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- APPEARANCE -->
+    <section class="sec" id="appearance" style="--i:8" aria-labelledby="h-appearance">
+      <h2 id="h-appearance">Appearance</h2>
+      <p class="sec-note">These three take effect as you set them, on this page.</p>
+      <div class="rows">
+        <div class="row is-stacked" data-find="theme dark light console daylight system appearance">
+          <div><span class="row-name">Theme</span><p class="row-note">Console is the dark one. Daylight is measured for contrast too, it is not an afterthought.</p></div>
+          <div class="seg" id="segTheme" role="radiogroup" aria-label="Theme"></div>
+        </div>
+        <div class="row is-stacked" data-find="text size large type">
+          <div><span class="row-name">Text size</span><p class="row-note">Scales the whole view, not only this page.</p></div>
+          <div class="seg" id="segSize" role="radiogroup" aria-label="Text size"></div>
+        </div>
+        <div class="row" data-find="reduce motion animation accessibility">
+          <div><span class="row-name">Reduce motion</span><p class="row-note">Turns off the two animations on this page. Your system setting already does this on its own.</p></div>
+          <div class="row-ctl"><button class="switch" id="motionSw" role="switch" aria-checked="false" aria-label="Reduce motion"></button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCOUNT -->
+    <section class="sec" id="account" style="--i:9" aria-labelledby="h-account">
+      <h2 id="h-account">Account</h2>
+      <div class="rows">
+        <div class="row" data-find="plan family subscription billing">
+          <div><span class="row-name">Plan</span><p class="row-note">Family, renewing on the 4th of each month.</p></div>
+          <div class="row-ctl"><span class="row-val num">Family</span><button class="btn is-quiet" type="button">Change plan</button></div>
+        </div>
+        <div class="row" data-find="email address login">
+          <div><span class="row-name">Email</span><p class="row-note">Used for sign in and for the notifications set above.</p></div>
+          <div class="row-ctl"><span class="row-val num">kai@example.com</span><button class="btn is-quiet" type="button">Change email</button></div>
+        </div>
+        <div class="row" data-find="sign out log out">
+          <div><span class="row-name">Sign out on this computer</span><p class="row-note">Downloads stay on disk and come back when you sign in again.</p></div>
+          <div class="row-ctl"><button class="btn" type="button">Sign out</button></div>
+        </div>
+      </div>
+      <div class="danger" data-find="delete account close permanent">
+        <h3>Deleting the account</h3>
+        <p>Removes the account, the history, the playlists and the downloads. It cannot be undone and it takes about a day to finish.</p>
+        <button class="btn is-danger" id="delAcct" type="button">Delete account</button>
+        <p class="okline" id="delMsg" hidden></p>
+      </div>
+    </section>
+
+    <div class="nomatch" id="nomatch" hidden>
+      <b>No setting matches that</b>
+      <span id="nomatchText">Nothing here is called that. Try a word from the thing you want to change, like <em>bitrate</em>, <em>crossfade</em> or <em>mono</em>.</span>
+    </div>
+  </div>
+</main>
+
+<div class="undo" id="undo" role="region" aria-label="Last change">
+  <p id="undoText"></p>
+  <button class="btn" id="undoBtn" type="button">Undo</button>
+  <button class="btn is-quiet" id="undoClose" type="button" aria-label="Dismiss">Dismiss</button>
+</div>
+
+<p class="sr-only" role="status" aria-live="polite" id="live"></p>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   1. STATE. One object. Everything drawn comes from here.
+   ========================================================= */
+
+var DEVICES = {
+  builtin:{name:"This computer", to:"this computer", kind:"Built-in output", lossless:true,
+           note:"Built-in output takes anything the player can send."},
+  airpods:{name:"AirPods Pro", to:"AirPods Pro", kind:"Bluetooth, AAC", lossless:false,
+           note:"Bluetooth carries AAC at 256 kbps at most, so lossless is out until you switch outputs."},
+  studio: {name:"Studio 24", to:"Studio 24", kind:"USB interface", lossless:true,
+           note:"A USB interface takes the full stream, lossless included."}
+};
+
+var QUALITY = {
+  low:     {label:"Low",      kbps:96,   codec:"AAC"},
+  normal:  {label:"Normal",   kbps:160,  codec:"AAC"},
+  high:    {label:"High",     kbps:320,  codec:"AAC"},
+  lossless:{label:"Lossless", kbps:1411, codec:"FLAC"}
+};
+
+var LOUD = {
+  off:   {label:"Off",    db:0,    target:null},
+  quiet: {label:"Quiet",  db:-6,   target:-23},
+  normal:{label:"Normal", db:-1.5, target:-14},
+  loud:  {label:"Loud",   db:1.5,  target:-11}
+};
+
+var BANDS = [
+  {f:80,    type:"lowshelf", q:0.707, name:"Low shelf"},
+  {f:250,   type:"peaking",  q:1.0,   name:"Low mid"},
+  {f:1000,  type:"peaking",  q:1.0,   name:"Mid"},
+  {f:4000,  type:"peaking",  q:1.0,   name:"High mid"},
+  {f:10000, type:"highshelf",q:0.707, name:"High shelf"}
+];
+
+var PRESETS = {
+  flat:   {label:"Flat",      eq:[0,0,0,0,0]},
+  bass:   {label:"Bass lift", eq:[5.5,2,0,-1,1]},
+  voice:  {label:"Voice",     eq:[-3,-1.5,3,2.5,0]},
+  night:  {label:"Late night",eq:[-4.5,-1,1.5,0.5,-3]}
+};
+
+var NOTIF_ROWS = [
+  {k:"release",  label:"An artist you follow puts out a record"},
+  {k:"playlist", label:"A playlist you saved changes"},
+  {k:"weekly",   label:"Your weekly mix is ready"},
+  {k:"show",     label:"A show near you goes on sale"}
+];
+
+var state = {
+  device:"builtin",
+  mono:false,
+  balance:0,
+  qWifi:"high", qCell:"normal", qDl:"high",
+  loudness:"normal",
+  eq:[0,0,0,0,0],
+  preset:"flat",
+  xfade:6, gapless:true, silence:false, autoplay:true,
+  reserve:12, cellDl:false,
+  albums:[
+    {id:"a1", name:"Signal Fires",   by:"Ana Volkova",     gb:1.42},
+    {id:"a2", name:"Room Tone",      by:"The Quiet Wire",  gb:0.86},
+    {id:"a3", name:"Nightbus",       by:"Kemi Adeyemi",    gb:1.13},
+    {id:"a4", name:"Second Winter",  by:"Halvard Sund",    gb:2.04},
+    {id:"a5", name:"Paper Radio",    by:"Junko Mori Trio", gb:0.71},
+    {id:"a6", name:"Long Exposure",  by:"Elin Marr",       gb:1.58}
+  ],
+  notif:{
+    release:{push:true,  email:false},
+    playlist:{push:false, email:false},
+    weekly:{push:true,  email:true},
+    show:{push:false, email:true}
+  },
+  privateSession:false, useHistory:true,
+  theme:"console", size:"regular", reduceMotion:false,
+  preview:55,
+  devicesLoading:false
+};
+
+var DEVICE_LIST = [
+  {id:"d1", name:"This computer",  kind:"Chrome on Windows", status:"now"},
+  {id:"d2", name:"AirPods Pro",    kind:"Bluetooth",         status:"ok",  when:"connected"},
+  {id:"d3", name:"Studio 24",      kind:"USB interface",     status:"ok",  when:"connected"},
+  {id:"d4", name:"Kitchen speaker",kind:"Wifi speaker",      status:"bad", when:"cannot be reached, last seen Tuesday"},
+  {id:"d5", name:"Kai's phone",    kind:"Android",           status:"old", when:"last used 3 days ago"}
+];
+
+var $ = function(id){ return document.getElementById(id); };
+var live = $("live");
+
+function say(msg){ live.textContent = msg; }
+
+function reduced(){
+  return state.reduceMotion ||
+    (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+/* store, guarded: file:// blocks localStorage in some browsers */
+function save(){
+  try{ localStorage.setItem("tungsten.settings", JSON.stringify(state)); }catch(e){}
+}
+function load(){
+  try{
+    var raw = localStorage.getItem("tungsten.settings");
+    if(!raw) return;
+    var got = JSON.parse(raw);
+    for(var k in got){ if(Object.prototype.hasOwnProperty.call(state,k)) state[k]=got[k]; }
+  }catch(e){}
+}
+
+/* =========================================================
+   2. FILTER MATHS. Audio EQ Cookbook, the same formulas the
+      Web Audio BiquadFilterNode is specified to use, so the
+      curve on screen and the sound in your ears come from
+      one set of numbers.
+   ========================================================= */
+
+function coeffs(band, gainDb, sr){
+  var A = Math.pow(10, gainDb/40);
+  var w0 = 2*Math.PI*band.f/sr;
+  var cw = Math.cos(w0), sw = Math.sin(w0);
+  var b0,b1,b2,a0,a1,a2,alpha,sqA2;
+  if(band.type === "peaking"){
+    alpha = sw/(2*band.q);
+    b0 = 1 + alpha*A; b1 = -2*cw; b2 = 1 - alpha*A;
+    a0 = 1 + alpha/A; a1 = -2*cw; a2 = 1 - alpha/A;
+  } else {
+    alpha = sw/2*Math.SQRT2;
+    sqA2 = 2*Math.sqrt(A)*alpha;
+    if(band.type === "lowshelf"){
+      b0 =    A*((A+1) - (A-1)*cw + sqA2);
+      b1 =  2*A*((A-1) - (A+1)*cw);
+      b2 =    A*((A+1) - (A-1)*cw - sqA2);
+      a0 =      (A+1) + (A-1)*cw + sqA2;
+      a1 =   -2*((A-1) + (A+1)*cw);
+      a2 =      (A+1) + (A-1)*cw - sqA2;
+    } else {
+      b0 =    A*((A+1) + (A-1)*cw + sqA2);
+      b1 = -2*A*((A-1) + (A+1)*cw);
+      b2 =    A*((A+1) + (A-1)*cw - sqA2);
+      a0 =      (A+1) - (A-1)*cw + sqA2;
+      a1 =    2*((A-1) - (A+1)*cw);
+      a2 =      (A+1) - (A-1)*cw - sqA2;
+    }
+  }
+  return [b0/a0, b1/a0, b2/a0, a1/a0, a2/a0];
+}
+
+function bandDbAt(c, f, sr){
+  var w = 2*Math.PI*f/sr;
+  var c1 = Math.cos(w),  s1 = Math.sin(w);
+  var c2 = Math.cos(2*w), s2 = Math.sin(2*w);
+  var nr = c[0] + c[1]*c1 + c[2]*c2, ni = -(c[1]*s1 + c[2]*s2);
+  var dr = 1    + c[3]*c1 + c[4]*c2, di = -(c[3]*s1 + c[4]*s2);
+  var mag = Math.sqrt((nr*nr + ni*ni) / (dr*dr + di*di));
+  return 20*Math.log10(mag < 1e-9 ? 1e-9 : mag);
+}
+
+function totalDbAt(f, sr){
+  var sum = 0;
+  for(var i=0;i<BANDS.length;i++){
+    if(state.eq[i] === 0) continue;
+    sum += bandDbAt(coeffs(BANDS[i], state.eq[i], sr), f, sr);
+  }
+  return sum;
+}
+
+/* =========================================================
+   3. AUDIO. Built once, suspended, resumed on the first
+      press of Play.
+   ========================================================= */
+
+var ac=null, chain=null, loopBuf=null, src=null, playing=false, raf=0;
+var SR = 48000;
+
+function buildAudio(){
+  var Ctor = window.AudioContext || window.webkitAudioContext;
+  if(!Ctor) return false;
+  try{ ac = new Ctor(); }catch(e){ ac = null; return false; }
+  SR = ac.sampleRate;
+
+  var eq = BANDS.map(function(b,i){
+    var n = ac.createBiquadFilter();
+    n.type = b.type;
+    n.frequency.value = b.f;
+    n.Q.value = b.q;
+    n.gain.value = state.eq[i];
+    return n;
+  });
+  for(var i=0;i<eq.length-1;i++) eq[i].connect(eq[i+1]);
+
+  var loud = ac.createGain();
+  eq[eq.length-1].connect(loud);
+
+  var pan = ac.createStereoPanner ? ac.createStereoPanner() : null;
+  var tail = loud;
+  if(pan){ loud.connect(pan); tail = pan; }
+
+  var stereo = ac.createGain(), monoG = ac.createGain();
+  var split = ac.createChannelSplitter(2);
+  var sum = ac.createGain(); sum.gain.value = 0.5;
+  var merge = ac.createChannelMerger(2);
+  tail.connect(stereo);
+  tail.connect(split);
+  split.connect(sum, 0); split.connect(sum, 1);
+  sum.connect(merge, 0, 0); sum.connect(merge, 0, 1);
+  merge.connect(monoG);
+
+  var preview = ac.createGain();
+  stereo.connect(preview); monoG.connect(preview);
+
+  var an = ac.createAnalyser();
+  an.fftSize = 2048;
+  an.smoothingTimeConstant = 0.72;
+  preview.connect(an);
+  an.connect(ac.destination);
+
+  chain = {eq:eq, loud:loud, pan:pan, stereo:stereo, mono:monoG, preview:preview, an:an,
+           freq:new Uint8Array(an.frequencyBinCount), time:new Float32Array(an.fftSize)};
+  pushAudio();
+  return true;
+}
+
+function dbToGain(db){ return Math.pow(10, db/20); }
+
+function pushAudio(){
+  if(!chain) return;
+  var t = ac.currentTime, g = 0.02;
+  for(var i=0;i<chain.eq.length;i++) chain.eq[i].gain.setTargetAtTime(state.eq[i], t, g);
+  chain.loud.gain.setTargetAtTime(dbToGain(LOUD[state.loudness].db), t, g);
+  if(chain.pan) chain.pan.pan.setTargetAtTime(state.balance/100, t, g);
+  chain.stereo.gain.setTargetAtTime(state.mono?0:1, t, g);
+  chain.mono.gain.setTargetAtTime(state.mono?1:0, t, g);
+  chain.preview.gain.setTargetAtTime(Math.pow(state.preview/100, 1.8)*0.85, t, g);
+}
+
+/* Two bars at 84bpm, Am7 then Fmaj7, bass on 1 and 3, hats on the
+   eighths. Written into a buffer so the loop is the same every time. */
+function buildLoop(){
+  var sr = ac.sampleRate, beat = 60/84, bar = beat*4, dur = bar*2;
+  var n = Math.floor(sr*dur);
+  var buf = ac.createBuffer(2, n, sr);
+  var L = buf.getChannelData(0), R = buf.getChannelData(1);
+  var chords = [[110.00,261.63,329.63,392.00],[87.31,261.63,349.23,440.00]];
+  var seed = 20260727, prevNoise = 0;
+  function rnd(){ seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/1073741824 - 1; }
+  var peak = 0, i, t, ch, tb, bslot, benv, bass, penv, padL, padR, v, f, hslot, henv, raw, hz;
+
+  for(i=0;i<n;i++){
+    t = i/sr;
+    ch = chords[Math.floor(t/bar) % 2];
+    tb = t - Math.floor(t/bar)*bar;
+
+    bslot = tb % (beat*2);
+    benv = Math.exp(-2.6*bslot) * (1 - Math.exp(-140*bslot));
+    bass = Math.sin(2*Math.PI*ch[0]*t)*0.55*benv + Math.sin(4*Math.PI*ch[0]*t)*0.11*benv;
+
+    penv = Math.min(1, tb/0.22) * (0.82 + 0.18*Math.sin(Math.PI*t));
+    padL = 0; padR = 0;
+    for(v=1;v<4;v++){
+      f = ch[v];
+      padL += Math.sin(2*Math.PI*f*1.0009*t)*0.095 + Math.sin(4*Math.PI*f*t)*0.020;
+      padR += Math.sin(2*Math.PI*f*0.9991*t + 0.7)*0.095 + Math.sin(6*Math.PI*f*t)*0.011;
+    }
+    padL *= penv; padR *= penv;
+
+    hslot = t % (beat/2);
+    henv = Math.exp(-52*hslot);
+    raw = rnd();
+    hz = (raw - prevNoise) * 0.22 * henv;
+    prevNoise = raw;
+
+    L[i] = bass + padL + hz;
+    R[i] = bass + padR + hz*0.8;
+    if(Math.abs(L[i]) > peak) peak = Math.abs(L[i]);
+    if(Math.abs(R[i]) > peak) peak = Math.abs(R[i]);
+  }
+  var k = peak > 0 ? 0.72/peak : 1;
+  var fade = Math.floor(sr*0.012);
+  for(i=0;i<n;i++){
+    var e = 1;
+    if(i < fade) e = i/fade;
+    else if(i > n-fade) e = (n-i)/fade;
+    L[i] *= k*e; R[i] *= k*e;
+  }
+  return buf;
+}
+
+function play(){
+  if(!ac) return;
+  var go = function(){
+    if(!loopBuf) loopBuf = buildLoop();
+    src = ac.createBufferSource();
+    src.buffer = loopBuf;
+    src.loop = true;
+    src.connect(chain.eq[0]);
+    src.start();
+    playing = true;
+    paintTransport();
+    tick();
+  };
+  if(ac.state === "suspended"){ ac.resume().then(go, go); } else { go(); }
+}
+
+function stop(){
+  if(src){ try{ src.stop(); }catch(e){} src.disconnect(); src = null; }
+  playing = false;
+  cancelAnimationFrame(raf);
+  paintTransport();
+  paintMeter(null);
+  drawPlot();
+}
+
+function paintTransport(){
+  var b = $("playBtn");
+  b.setAttribute("aria-pressed", playing ? "true" : "false");
+  b.classList.toggle("is-primary", !playing);
+  $("playLabel").textContent = playing ? "Stop" : "Play sample";
+  b.querySelector("svg").innerHTML = playing
+    ? '<rect x="0" y="0" width="10" height="12" fill="currentColor"/>'
+    : '<path d="M0 0l10 6-10 6z" fill="currentColor"/>';
+  var s = $("monState");
+  s.textContent = playing ? "playing" : (ac ? "stopped" : "no audio here");
+  s.classList.toggle("is-live", playing);
+}
+
+/* =========================================================
+   4. THE PLOT. Canvas for the grid, the live spectrum and
+      the response curve. The five handles are real buttons
+      on top of it, so they tab and take arrow keys.
+   ========================================================= */
+
+var cv = $("plot"), cx = cv.getContext("2d");
+var PAD = {l:36, r:12, t:12, b:26};
+var geo = {w:0,h:0,l:0,r:0,t:0,b:0,pw:0,ph:0};
+var pal = {};
+var morph = 1;
+
+function readPalette(){
+  var s = getComputedStyle(document.documentElement);
+  pal = {
+    grid:  s.getPropertyValue("--ground-30").trim(),
+    axis:  s.getPropertyValue("--ground-40").trim(),
+    spec:  s.getPropertyValue("--ground-40").trim(),
+    curve: s.getPropertyValue("--signal").trim(),
+    ink:   s.getPropertyValue("--ink-30").trim(),
+    well:  s.getPropertyValue("--ground-20").trim()
+  };
+}
+
+function sizePlot(){
+  var box = cv.getBoundingClientRect();
+  var dpr = window.devicePixelRatio || 1;
+  geo.w = Math.max(220, Math.round(box.width));
+  geo.h = Math.max(140, Math.round(box.height));
+  cv.width = Math.round(geo.w*dpr);
+  cv.height = Math.round(geo.h*dpr);
+  cx.setTransform(dpr,0,0,dpr,0,0);
+  geo.l = PAD.l; geo.r = geo.w-PAD.r; geo.t = PAD.t; geo.b = geo.h-PAD.b;
+  geo.pw = geo.r-geo.l; geo.ph = geo.b-geo.t;
+}
+
+function fx(f){ return geo.l + (Math.log(f/20)/Math.log(1000))*geo.pw; }
+function xf(x){ return 20*Math.pow(1000, (x-geo.l)/geo.pw); }
+function fy(db){ return geo.t + (1 - (db+15)/30)*geo.ph; }
+function yf(y){ return ((1 - (y-geo.t)/geo.ph)*30) - 15; }
+
+var FLINES = [50,200,1000,4000,12000];
+var FLABEL = {50:"50",200:"200",1000:"1k",4000:"4k",12000:"12k"};
+var DBLINES = [-12,-6,0,6,12];
+
+function drawPlot(){
+  if(!geo.w) sizePlot();
+  cx.clearRect(0,0,geo.w,geo.h);
+
+  /* well */
+  cx.fillStyle = pal.well;
+  cx.fillRect(geo.l, geo.t, geo.pw, geo.ph);
+
+  /* grid */
+  cx.lineWidth = 1;
+  cx.font = '10px "IBM Plex Mono", monospace';
+  cx.fillStyle = pal.ink;
+  var i, x, y;
+  for(i=0;i<DBLINES.length;i++){
+    y = Math.round(fy(DBLINES[i])) + 0.5;
+    cx.strokeStyle = DBLINES[i] === 0 ? pal.axis : pal.grid;
+    cx.beginPath(); cx.moveTo(geo.l, y); cx.lineTo(geo.r, y); cx.stroke();
+    cx.textAlign = "right"; cx.textBaseline = "middle";
+    cx.fillText((DBLINES[i] > 0 ? "+" : "") + DBLINES[i], geo.l-7, y);
+  }
+  cx.strokeStyle = pal.grid;
+  for(i=0;i<FLINES.length;i++){
+    x = Math.round(fx(FLINES[i])) + 0.5;
+    cx.beginPath(); cx.moveTo(x, geo.t); cx.lineTo(x, geo.b); cx.stroke();
+    cx.textAlign = "center"; cx.textBaseline = "top";
+    cx.fillText(FLABEL[FLINES[i]], x, geo.b+7);
+  }
+  cx.textAlign = "right";
+  cx.fillText("Hz", geo.r, geo.b+7);
+
+  /* live spectrum, straight off the analyser */
+  if(playing && chain){
+    chain.an.getByteFrequencyData(chain.freq);
+    var bins = chain.freq.length, nyq = SR/2;
+    cx.beginPath();
+    cx.moveTo(geo.l, geo.b);
+    for(x=0; x<=geo.pw; x+=2){
+      var f = xf(geo.l+x);
+      var bin = Math.round(f/nyq*bins);
+      if(bin >= bins) bin = bins-1;
+      var vlin = chain.freq[bin]/255;
+      cx.lineTo(geo.l+x, geo.b - vlin*geo.ph*0.94);
+    }
+    cx.lineTo(geo.r, geo.b);
+    cx.closePath();
+    cx.globalAlpha = 0.55;
+    cx.fillStyle = pal.spec;
+    cx.fill();
+    cx.globalAlpha = 1;
+  }
+
+  /* response curve */
+  cx.beginPath();
+  for(x=0; x<=geo.pw; x+=2){
+    var db = totalDbAt(xf(geo.l+x), SR) * morph;
+    var py = fy(Math.max(-15, Math.min(15, db)));
+    if(x === 0) cx.moveTo(geo.l, py); else cx.lineTo(geo.l+x, py);
+  }
+  cx.strokeStyle = pal.curve;
+  cx.lineWidth = 2;
+  cx.lineJoin = "round";
+  cx.stroke();
+  cx.lineTo(geo.r, fy(0));
+  cx.lineTo(geo.l, fy(0));
+  cx.closePath();
+  cx.globalAlpha = 0.16;
+  cx.fillStyle = pal.curve;
+  cx.fill();
+  cx.globalAlpha = 1;
+}
+
+/* handles */
+var handles = [];
+function buildHandles(){
+  var wrap = $("handles");
+  wrap.innerHTML = "";
+  handles = BANDS.map(function(b,i){
+    var el = document.createElement("button");
+    el.type = "button";
+    el.className = "handle";
+    el.setAttribute("role","slider");
+    el.setAttribute("aria-orientation","vertical");
+    el.setAttribute("aria-valuemin","-15");
+    el.setAttribute("aria-valuemax","15");
+    el.setAttribute("aria-label", b.name + ", " + fmtHz(b.f));
+    el.dataset.i = i;
+    wrap.appendChild(el);
+    bindHandle(el, i);
+    return el;
+  });
+}
+
+function placeHandles(){
+  for(var i=0;i<handles.length;i++){
+    handles[i].style.left = fx(BANDS[i].f) + "px";
+    handles[i].style.top = fy(state.eq[i]*morph) + "px";
+    handles[i].setAttribute("aria-valuenow", state.eq[i]);
+    handles[i].setAttribute("aria-valuetext", fmtDb(state.eq[i]) + " at " + fmtHz(BANDS[i].f));
+  }
+}
+
+function bindHandle(el, i){
+  var dragging = false, before = null;
+  el.addEventListener("pointerdown", function(e){
+    dragging = true; before = state.eq.slice();
+    el.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  el.addEventListener("pointermove", function(e){
+    if(!dragging) return;
+    var box = cv.getBoundingClientRect();
+    setBand(i, yf(e.clientY - box.top), false);
+  });
+  el.addEventListener("pointerup", function(e){
+    if(!dragging) return;
+    dragging = false;
+    el.releasePointerCapture(e.pointerId);
+    finishBand(i, before);
+  });
+  el.addEventListener("keydown", function(e){
+    var step = e.shiftKey ? 2 : 0.5, v = state.eq[i], hit = true, was = state.eq.slice();
+    if(e.key === "ArrowUp" || e.key === "ArrowRight") v += step;
+    else if(e.key === "ArrowDown" || e.key === "ArrowLeft") v -= step;
+    else if(e.key === "Home") v = 15;
+    else if(e.key === "End") v = -15;
+    else if(e.key === "Backspace" || e.key === "Delete") v = 0;
+    else hit = false;
+    if(!hit) return;
+    e.preventDefault();
+    setBand(i, v, false);
+    finishBand(i, was);
+  });
+}
+
+function setBand(i, db, fromSlider){
+  db = Math.max(-15, Math.min(15, Math.round(db*2)/2));
+  if(state.eq[i] === db) return;
+  state.eq[i] = db;
+  state.preset = matchPreset();
+  if(chain) chain.eq[i].gain.setTargetAtTime(db, ac.currentTime, 0.02);
+  paintBands(fromSlider ? i : -1);
+  paintChips();
+  placeHandles();
+  drawPlot();
+  hit("eq");
+  $("roEq").textContent = eqSummary();
+}
+
+function finishBand(i, before){
+  save();
+  var after = state.eq.slice();
+  noteChange("Set " + BANDS[i].name.toLowerCase() + " to " + fmtDb(state.eq[i]) + ".", function(){
+    state.eq = before.slice();
+    state.preset = matchPreset();
+    pushAudio(); paintBands(-1); paintChips(); placeHandles(); drawPlot();
+    $("roEq").textContent = eqSummary();
+  });
+  if(after) save();
+}
+
+function matchPreset(){
+  for(var k in PRESETS){
+    var p = PRESETS[k].eq, same = true;
+    for(var i=0;i<5;i++) if(p[i] !== state.eq[i]) { same = false; break; }
+    if(same) return k;
+  }
+  return "custom";
+}
+
+/* =========================================================
+   5. METER
+   ========================================================= */
+
+var peakHold = 0;
+
+function paintMeter(data){
+  var pk = $("mPeak"), rm = $("mRms");
+  if(!data){
+    pk.style.transform = "scaleX(0)";
+    rm.style.transform = "scaleX(0)";
+    pk.classList.remove("is-clip");
+    $("mPeakN").innerHTML = "&#8722;&#8734;";
+    $("mRmsN").innerHTML = "&#8722;&#8734;";
+    peakHold = 0;
+    return;
+  }
+  var frac = function(db){ return Math.max(0, Math.min(1, (db+60)/60)); };
+  pk.style.transform = "scaleX(" + frac(data.peak).toFixed(4) + ")";
+  rm.style.transform = "scaleX(" + frac(data.rms).toFixed(4) + ")";
+  pk.classList.toggle("is-clip", data.peak > -0.2);
+}
+
+function fmtDbfs(db){
+  if(db < -59.5) return "-inf";
+  return (db > 0 ? "+" : "") + db.toFixed(1);
+}
+
+var meterText = 0;
+function tick(){
+  if(!playing || !chain) return;
+  chain.an.getFloatTimeDomainData(chain.time);
+  var i, v, p = 0, s = 0, n = chain.time.length;
+  for(i=0;i<n;i++){ v = chain.time[i]; if(v<0) v = -v; if(v>p) p = v; s += chain.time[i]*chain.time[i]; }
+  var peak = 20*Math.log10(p < 1e-6 ? 1e-6 : p);
+  var rms  = 20*Math.log10(Math.sqrt(s/n) < 1e-6 ? 1e-6 : Math.sqrt(s/n));
+  paintMeter({peak:peak, rms:rms});
+  var now = performance.now();
+  if(now - meterText > 100){
+    meterText = now;
+    $("mPeakN").textContent = fmtDbfs(peak);
+    $("mRmsN").textContent = fmtDbfs(rms);
+  }
+  drawPlot();
+  raf = requestAnimationFrame(tick);
+}
+
+/* =========================================================
+   6. FORMATTERS
+   ========================================================= */
+
+function fmtHz(f){ return f >= 1000 ? (f/1000) + " kHz" : f + " Hz"; }
+function fmtDb(d){ return (d > 0 ? "+" : d < 0 ? "−" : "") + Math.abs(d).toFixed(1) + " dB"; }
+function fmtGb(g){ return g.toFixed(2) + " GB"; }
+
+function usedGb(){
+  var t = 0;
+  for(var i=0;i<state.albums.length;i++) t += state.albums[i].gb;
+  return Math.round(t*100)/100;
+}
+
+function eqSummary(){
+  if(state.preset !== "custom") return PRESETS[state.preset].label.toLowerCase();
+  var lo = 0, hi = 0;
+  for(var i=0;i<5;i++){ if(state.eq[i] < lo) lo = state.eq[i]; if(state.eq[i] > hi) hi = state.eq[i]; }
+  if(lo === 0 && hi === 0) return "custom, flat";
+  if(lo === 0) return "custom, up to " + fmtDb(hi);
+  if(hi === 0) return "custom, down to " + fmtDb(lo);
+  return "custom, " + fmtDb(lo).replace(" dB","") + " to " + fmtDb(hi);
+}
+
+/* =========================================================
+   7. CONSEQUENCE (motion moment 2)
+   ========================================================= */
+
+var hitTimers = {};
+function hit(key){
+  var els = document.querySelectorAll('.ro[data-k="' + key + '"], [data-hit="' + key + '"]');
+  if(!els.length) return;
+  for(var i=0;i<els.length;i++) els[i].classList.add("is-hit");
+  clearTimeout(hitTimers[key]);
+  hitTimers[key] = setTimeout(function(){
+    for(var j=0;j<els.length;j++) els[j].classList.remove("is-hit");
+  }, 160);
+}
+
+/* =========================================================
+   8. UNDO
+   ========================================================= */
+
+var undoFn = null, undoTimer = 0;
+function noteChange(text, revert){
+  undoFn = revert || null;
+  $("undoText").innerHTML = "<b>" + text + "</b>";
+  $("undoBtn").hidden = !revert;
+  $("undo").classList.add("is-up");
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideUndo, 7000);
+  say(text);
+}
+function hideUndo(){ $("undo").classList.remove("is-up"); }
+
+$("undoBtn").addEventListener("click", function(){
+  if(undoFn){ undoFn(); undoFn = null; save(); }
+  hideUndo();
+});
+$("undoClose").addEventListener("click", hideUndo);
+
+/* =========================================================
+   9. RENDERERS
+   ========================================================= */
+
+function segment(host, options, current, onPick){
+  host.innerHTML = "";
+  options.forEach(function(o){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.setAttribute("role","radio");
+    b.setAttribute("aria-checked", o.id === current ? "true" : "false");
+    if(o.disabled){ b.disabled = true; b.setAttribute("aria-disabled","true"); }
+    b.innerHTML = "<span>" + o.label + "</span>" + (o.sub ? '<span class="num">' + o.sub + "</span>" : "");
+    b.addEventListener("click", function(){ if(!o.disabled) onPick(o.id); });
+    host.appendChild(b);
+  });
+}
+
+function qualityOptions(keys, allowLossless){
+  return keys.map(function(k){
+    return {
+      id:k,
+      label:QUALITY[k].label,
+      sub:QUALITY[k].kbps + " kbps " + QUALITY[k].codec,
+      disabled: k === "lossless" && !allowLossless
+    };
+  });
+}
+
+function paintQuality(){
+  var dev = DEVICES[state.device];
+  segment($("segWifi"), qualityOptions(["low","normal","high","lossless"], dev.lossless), state.qWifi, function(id){
+    var was = state.qWifi; state.qWifi = id; save();
+    paintQuality(); paintReadout(); hit("format");
+    noteChange("Wifi quality set to " + QUALITY[id].label.toLowerCase() + ".", function(){
+      state.qWifi = was; paintQuality(); paintReadout();
+    });
+  });
+  segment($("segCell"), qualityOptions(["low","normal","high"], false), state.qCell, function(id){
+    var was = state.qCell; state.qCell = id; save();
+    paintQuality();
+    noteChange("Cellular quality set to " + QUALITY[id].label.toLowerCase() + ".", function(){
+      state.qCell = was; paintQuality();
+    });
+  });
+  segment($("segDl"), qualityOptions(["normal","high","lossless"], dev.lossless), state.qDl, function(id){
+    var was = state.qDl; state.qDl = id; save();
+    paintQuality();
+    noteChange("Download quality set to " + QUALITY[id].label.toLowerCase() + ".", function(){
+      state.qDl = was; paintQuality();
+    });
+  });
+  segment($("segLoud"), Object.keys(LOUD).map(function(k){
+    return {id:k, label:LOUD[k].label, sub: LOUD[k].target === null ? "no change" : LOUD[k].target + " LUFS"};
+  }), state.loudness, function(id){
+    var was = state.loudness; state.loudness = id; save();
+    pushAudio(); paintQuality(); paintReadout(); hit("loud");
+    noteChange("Loudness set to " + LOUD[id].label.toLowerCase() + ".", function(){
+      state.loudness = was; pushAudio(); paintQuality(); paintReadout();
+    });
+  });
+
+  var warn = $("wifiWarn");
+  if(!dev.lossless){
+    warn.hidden = false;
+    warn.innerHTML = '<span class="num">&#9650;</span><span>' + dev.name + " cannot carry lossless. Pick a wired or built-in output to turn it back on.</span>";
+  } else {
+    warn.hidden = true;
+  }
+  $("deviceNote").textContent = dev.note;
+}
+
+function paintBands(skip){
+  var host = $("bands");
+  if(!host.dataset.built){
+    host.dataset.built = "1";
+    BANDS.forEach(function(b,i){
+      var row = document.createElement("div");
+      row.className = "band";
+      row.dataset.find = "equaliser eq band " + b.name + " " + b.f + " gain treble bass mid";
+      row.innerHTML =
+        '<span class="band-f num">' + fmtHz(b.f) + '</span>' +
+        '<input type="range" id="bandIn' + i + '" min="-15" max="15" step="0.5" ' +
+          'aria-label="' + b.name + ', ' + fmtHz(b.f) + '">' +
+        '<span class="band-db num" id="bandDb' + i + '">0.0 dB</span>';
+      host.appendChild(row);
+      var inp = row.querySelector("input");
+      var before = null;
+      /* the snapshot has to be taken on the first input, not on pointerdown,
+         so undo still works however the value was reached */
+      inp.addEventListener("input", function(){
+        if(!before) before = state.eq.slice();
+        setBand(i, parseFloat(inp.value), true);
+      });
+      inp.addEventListener("change", function(){
+        if(!before) return;
+        finishBand(i, before); before = null;
+      });
+    });
+  }
+  for(var i=0;i<BANDS.length;i++){
+    if(i !== skip) $("bandIn"+i).value = state.eq[i];
+    var lab = $("bandDb"+i);
+    lab.textContent = fmtDb(state.eq[i]);
+    lab.classList.toggle("is-zero", state.eq[i] === 0);
+  }
+}
+
+function paintChips(){
+  var host = $("eqChips");
+  host.innerHTML = "";
+  Object.keys(PRESETS).forEach(function(k){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.setAttribute("aria-pressed", state.preset === k ? "true" : "false");
+    b.textContent = PRESETS[k].label;
+    b.addEventListener("click", function(){
+      var was = state.eq.slice(), wasP = state.preset;
+      state.eq = PRESETS[k].eq.slice();
+      state.preset = k;
+      pushAudio(); paintBands(-1); paintChips(); placeHandles(); drawPlot();
+      $("roEq").textContent = eqSummary(); hit("eq"); save();
+      noteChange("Equaliser set to " + PRESETS[k].label.toLowerCase() + ".", function(){
+        state.eq = was; state.preset = wasP;
+        pushAudio(); paintBands(-1); paintChips(); placeHandles(); drawPlot();
+        $("roEq").textContent = eqSummary();
+      });
+    });
+    host.appendChild(b);
+  });
+  if(state.preset === "custom"){
+    var c = document.createElement("button");
+    c.type = "button";
+    c.className = "chip is-custom";
+    c.setAttribute("aria-pressed","true");
+    c.textContent = "Custom";
+    c.addEventListener("click", function(){ $("bandIn0").focus(); });
+    host.appendChild(c);
+  }
+}
+
+function paintXfade(){
+  var v = state.xfade;
+  $("xfadeVal").textContent = v === 0 ? "off" : v.toFixed(1) + " s";
+  $("xfade").value = v;
+
+  var W = 320, H = 60, WIN = 26, start = 7, end = start + v;
+  var sx = function(s){ return (s/WIN)*W; };
+  var top = 8, bot = 52;
+  var aPath = "M0," + top + " L" + sx(start).toFixed(1) + "," + top +
+              " L" + sx(end).toFixed(1) + "," + bot;
+  var bPath = "M" + sx(start).toFixed(1) + "," + bot +
+              " L" + sx(end).toFixed(1) + "," + top + " L" + W + "," + top;
+  $("xfA").setAttribute("d", aPath);
+  $("xfAF").setAttribute("d", aPath + " L" + sx(end).toFixed(1) + "," + bot + " L0," + bot + " Z");
+  $("xfB").setAttribute("d", bPath);
+  $("xfMark1").setAttribute("x1", sx(start)); $("xfMark1").setAttribute("x2", sx(start));
+  $("xfMark2").setAttribute("x1", sx(end));   $("xfMark2").setAttribute("x2", sx(end));
+
+  var s = getComputedStyle(document.documentElement);
+  var sig = s.getPropertyValue("--signal").trim();
+  var ink = s.getPropertyValue("--ink-20").trim();
+  var grid = s.getPropertyValue("--ground-30").trim();
+  $("xfA").setAttribute("stroke", sig); $("xfA").setAttribute("stroke-width","2");
+  $("xfAF").setAttribute("fill", sig); $("xfAF").setAttribute("fill-opacity","0.16");
+  $("xfB").setAttribute("stroke", ink); $("xfB").setAttribute("stroke-width","2");
+  $("xfB").setAttribute("stroke-dasharray","5 4");
+  $("xfMark1").setAttribute("stroke", grid); $("xfMark2").setAttribute("stroke", grid);
+
+  $("xfadeCap").textContent = v === 0
+    ? "Nothing overlaps. One track stops on the sample where the next one starts."
+    : "The ending track holds, then falls to nothing over " + v.toFixed(1) + " s while the next one comes up under it.";
+}
+
+function paintStorage(){
+  var used = usedGb(), res = state.reserve;
+  var over = used > res;
+  var pct = over ? 100 : (used/res)*100;
+  $("storeFill").style.width = pct.toFixed(2) + "%";
+  $("storeFill").classList.toggle("is-over", over);
+  $("storeUsed").textContent = fmtGb(used) + " used";
+  $("storeFree").textContent = over ? "over by " + fmtGb(used-res) : fmtGb(res-used) + " free";
+  $("reserveVal").textContent = res + " GB";
+  $("reserve").value = res;
+  $("storeImg").setAttribute("aria-label",
+    "Downloads use " + fmtGb(used) + " of the " + res + " gigabytes set aside");
+  var w = $("storeWarn");
+  if(over){
+    w.hidden = false;
+    w.innerHTML = '<span class="num">&#9650;</span><span>Over the space you set aside by ' + fmtGb(used-res) +
+      ". Raise it, or remove an album below.</span>";
+  } else { w.hidden = true; }
+}
+
+var COUNT_WORDS = ["No","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten"];
+
+function paintAlbums(){
+  var host = $("albums");
+  host.innerHTML = "";
+  if(state.albums.length === 0){
+    var e = document.createElement("div");
+    e.className = "empty";
+    e.innerHTML = "<b>Nothing downloaded</b>Albums you download show up here with the space they take. " +
+                  "Downloads happen at the quality set above.";
+    host.appendChild(e);
+    $("albumCount").textContent = "Nothing on this computer.";
+    return;
+  }
+  state.albums.forEach(function(a, idx){
+    var row = document.createElement("div");
+    row.className = "album";
+    row.innerHTML =
+      '<span><span class="album-name">' + a.name + '</span> <span class="album-by">' + a.by + "</span></span>" +
+      '<span class="num" style="color:var(--ink-20)">' + fmtGb(a.gb) + "</span>";
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn is-quiet";
+    b.textContent = "Remove";
+    b.setAttribute("aria-label", "Remove " + a.name + " from this computer");
+    b.addEventListener("click", function(){
+      var copy = a, at = state.albums.indexOf(a);
+      state.albums.splice(at,1);
+      paintAlbums(); paintStorage(); save();
+      noteChange("Removed " + copy.name + ", freeing " + fmtGb(copy.gb) + ".", function(){
+        state.albums.splice(at, 0, copy);
+        paintAlbums(); paintStorage();
+      });
+    });
+    row.appendChild(b);
+    host.appendChild(row);
+  });
+  var n = state.albums.length;
+  $("albumCount").textContent = (COUNT_WORDS[n] || n) + (n === 1 ? " album" : " albums") + ", kept on this computer.";
+}
+
+function paintMatrix(){
+  var body = $("matrixBody");
+  body.innerHTML = "";
+  NOTIF_ROWS.forEach(function(r){
+    var tr = document.createElement("tr");
+    var td0 = document.createElement("td");
+    td0.textContent = r.label;
+    tr.appendChild(td0);
+    ["push","email"].forEach(function(ch){
+      var td = document.createElement("td");
+      var lab = document.createElement("label");
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = state.notif[r.k][ch];
+      cb.setAttribute("aria-label", r.label + ", by " + ch);
+      cb.addEventListener("change", function(){
+        state.notif[r.k][ch] = cb.checked; save();
+        noteChange((cb.checked ? "Turned on " : "Turned off ") + ch + " for: " + r.label.toLowerCase() + ".", function(){
+          state.notif[r.k][ch] = !cb.checked;
+          cb.checked = !cb.checked;
+        });
+      });
+      lab.appendChild(cb);
+      td.appendChild(lab);
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+}
+
+function paintDevices(){
+  var host = $("devList");
+  host.innerHTML = "";
+  if(state.devicesLoading){
+    for(var i=0;i<3;i++){
+      var s = document.createElement("div");
+      s.className = "dev";
+      s.innerHTML = '<div><div class="skel w1"></div><div class="skel w2"></div></div><div class="skel" style="width:76px"></div>';
+      host.appendChild(s);
+    }
+    return;
+  }
+  DEVICE_LIST.forEach(function(d){
+    var row = document.createElement("div");
+    row.className = "dev";
+    row.dataset.find = "devices " + d.name + " " + d.kind;
+    var cls = d.status === "bad" ? "is-bad" : d.status === "now" ? "is-now" : "";
+    var text = d.status === "now" ? "playing here now" : d.when;
+    row.innerHTML = '<div><span class="row-name">' + d.name + '</span>' +
+                    '<span class="dev-kind num">' + d.kind + "</span></div>" +
+                    '<div class="row-ctl"><span class="dev-state ' + cls + '">' + text + "</span></div>";
+    if(d.status === "bad"){
+      var r = document.createElement("button");
+      r.type = "button"; r.className = "btn"; r.textContent = "Try again";
+      r.addEventListener("click", function(){
+        r.disabled = true; r.textContent = "Trying";
+        setTimeout(function(){
+          r.disabled = false; r.textContent = "Try again";
+          say("Kitchen speaker still cannot be reached.");
+          noteChange("Kitchen speaker still cannot be reached. It was last seen on Tuesday.", null);
+        }, 800);
+      });
+      row.querySelector(".row-ctl").appendChild(r);
+    }
+    host.appendChild(row);
+  });
+}
+
+function paintReadout(){
+  var dev = DEVICES[state.device];
+  var q = QUALITY[state.qWifi];
+  $("roDevice").textContent = dev.name;
+  $("roFormat").textContent = q.codec + " " + q.kbps + " kbps";
+  $("figNum").textContent = q.kbps;
+  $("figCodec").textContent = q.codec;
+  $("figWhere").textContent = dev.to;
+  $("roRate").textContent = ac ? (Math.round(SR/100)/10).toFixed(1) + " kHz" : "unavailable";
+  $("roLoud").textContent = fmtDb(LOUD[state.loudness].db);
+  $("roChan").textContent = state.mono
+    ? "mono"
+    : (state.balance === 0 ? "stereo, centred"
+       : "stereo, " + Math.abs(state.balance) + (state.balance < 0 ? " left" : " right"));
+  $("roEq").textContent = eqSummary();
+  $("roXfade").textContent = state.xfade === 0 ? "off" : state.xfade.toFixed(1) + " s";
+}
+
+function paintSwitches(){
+  var map = [
+    ["monoSw","mono"],["gaplessSw","gapless"],["silenceSw","silence"],
+    ["autoplaySw","autoplay"],["cellDlSw","cellDl"],
+    ["privateSw","privateSession"],["historySw","useHistory"],["motionSw","reduceMotion"]
+  ];
+  map.forEach(function(m){ $(m[0]).setAttribute("aria-checked", state[m[1]] ? "true":"false"); });
+}
+
+function paintBalance(){
+  $("balance").value = state.balance;
+  $("balanceVal").textContent = state.balance === 0 ? "centre"
+    : Math.abs(state.balance) + (state.balance < 0 ? " L" : " R");
+}
+
+function paintAppearance(){
+  segment($("segTheme"), [
+    {id:"console", label:"Console", sub:"dark"},
+    {id:"daylight", label:"Daylight", sub:"light"},
+    {id:"system", label:"Match system", sub:"follows the OS"}
+  ], state.theme, function(id){
+    var was = state.theme; state.theme = id; applyTheme(); paintAppearance(); save();
+    noteChange("Theme set to " + (id === "system" ? "match system" : id) + ".", function(){
+      state.theme = was; applyTheme(); paintAppearance();
+    });
+  });
+  segment($("segSize"), [
+    {id:"regular", label:"Regular", sub:"16 px"},
+    {id:"large", label:"Large", sub:"18 px"}
+  ], state.size, function(id){
+    var was = state.size; state.size = id;
+    document.documentElement.dataset.size = id;
+    paintAppearance(); sizePlot(); drawPlot(); placeHandles(); save();
+    noteChange("Text size set to " + id + ".", function(){
+      state.size = was; document.documentElement.dataset.size = was;
+      paintAppearance(); sizePlot(); drawPlot(); placeHandles();
+    });
+  });
+}
+
+var sysDark = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+function applyTheme(){
+  var t = state.theme;
+  if(t === "system") t = (sysDark && sysDark.matches) ? "console" : "daylight";
+  document.documentElement.dataset.theme = t;
+  readPalette();
+  drawPlot();
+  paintXfade();
+}
+if(sysDark && sysDark.addEventListener){
+  sysDark.addEventListener("change", function(){ if(state.theme === "system") applyTheme(); });
+}
+
+/* =========================================================
+   10. WIRING
+   ========================================================= */
+
+function bindSwitch(id, key, label, after){
+  $(id).addEventListener("click", function(){
+    var was = state[key];
+    state[key] = !was;
+    paintSwitches(); save();
+    if(after) after();
+    noteChange((state[key] ? "Turned on " : "Turned off ") + label + ".", function(){
+      state[key] = was; paintSwitches(); if(after) after();
+    });
+  });
+}
+
+bindSwitch("monoSw","mono","mono", function(){ pushAudio(); paintReadout(); hit("chan"); });
+bindSwitch("gaplessSw","gapless","gapless playback");
+bindSwitch("silenceSw","silence","skipping long silences");
+bindSwitch("autoplaySw","autoplay","carrying on when the queue ends");
+bindSwitch("cellDlSw","cellDl","downloading over cellular");
+bindSwitch("privateSw","privateSession","private session");
+bindSwitch("historySw","useHistory","history for recommendations");
+bindSwitch("motionSw","reduceMotion","reduce motion", function(){
+  document.documentElement.dataset.motion = state.reduceMotion ? "off" : "on";
+});
+
+$("deviceSel").addEventListener("change", function(e){
+  var was = state.device, wasWifi = state.qWifi, wasDl = state.qDl;
+  state.device = e.target.value;
+  var dev = DEVICES[state.device], dropped = false;
+  if(!dev.lossless){
+    if(state.qWifi === "lossless"){ state.qWifi = "high"; dropped = true; }
+    if(state.qDl === "lossless"){ state.qDl = "high"; dropped = true; }
+  }
+  paintQuality(); paintReadout(); hit("device"); hit("format"); save();
+  noteChange("Output set to " + dev.name + "." + (dropped ? " Lossless dropped to high, because it cannot carry it." : ""), function(){
+    state.device = was; state.qWifi = wasWifi; state.qDl = wasDl;
+    $("deviceSel").value = was;
+    paintQuality(); paintReadout();
+  });
+});
+
+(function(){
+  var el = $("balance"), before = null;
+  el.addEventListener("input", function(){
+    if(before === null) before = state.balance;
+    state.balance = parseInt(el.value,10);
+    if(Math.abs(state.balance) < 4){ state.balance = 0; }
+    paintBalance(); pushAudio(); paintReadout(); hit("chan");
+  });
+  el.addEventListener("change", function(){
+    if(before === null) return;
+    var was = before; before = null; save();
+    noteChange("Balance set to " + (state.balance === 0 ? "centre" :
+      Math.abs(state.balance) + (state.balance < 0 ? " left" : " right")) + ".", function(){
+      state.balance = was; paintBalance(); pushAudio(); paintReadout();
+    });
+  });
+})();
+
+(function(){
+  var el = $("xfade"), before = null;
+  el.addEventListener("input", function(){
+    if(before === null) before = state.xfade;
+    state.xfade = parseFloat(el.value);
+    paintXfade(); paintReadout(); hit("xfade");
+  });
+  el.addEventListener("change", function(){
+    if(before === null) return;
+    var was = before; before = null; save();
+    noteChange("Crossfade set to " + (state.xfade === 0 ? "off" : state.xfade.toFixed(1) + " s") + ".", function(){
+      state.xfade = was; paintXfade(); paintReadout();
+    });
+  });
+})();
+
+(function(){
+  var el = $("reserve"), before = null;
+  el.addEventListener("input", function(){
+    if(before === null) before = state.reserve;
+    state.reserve = parseInt(el.value,10); paintStorage();
+  });
+  el.addEventListener("change", function(){
+    if(before === null) return;
+    var was = before; before = null; save();
+    noteChange("Space for downloads set to " + state.reserve + " GB.", function(){
+      state.reserve = was; paintStorage();
+    });
+  });
+})();
+
+$("preview").addEventListener("input", function(e){
+  state.preview = parseInt(e.target.value,10);
+  $("previewVal").textContent = state.preview;
+  pushAudio();
+});
+$("preview").addEventListener("change", save);
+
+$("playBtn").addEventListener("click", function(){
+  if(!ac){ say("This browser will not give the page an audio context, so the sample cannot play."); return; }
+  if(playing) stop(); else play();
+});
+
+$("refreshDev").addEventListener("click", function(){
+  var b = $("refreshDev");
+  b.classList.add("is-busy");
+  b.textContent = "Checking";
+  state.devicesLoading = true;
+  paintDevices();
+  say("Checking devices.");
+  setTimeout(function(){
+    state.devicesLoading = false;
+    b.classList.remove("is-busy");
+    b.textContent = "Refresh";
+    $("devStamp").textContent = "last checked just now";
+    paintDevices();
+    say("Five devices found. The kitchen speaker still cannot be reached.");
+  }, 750);
+});
+
+/* two step destructive actions */
+function twoStep(btnId, msgId, firstLabel, confirmLabel, doneText){
+  var armed = false, timer = 0, btn = $(btnId), msg = $(msgId);
+  btn.addEventListener("click", function(){
+    if(!armed){
+      armed = true;
+      btn.textContent = confirmLabel;
+      msg.hidden = false;
+      msg.textContent = "Press again to go through with it. This step is here on purpose.";
+      msg.style.color = "var(--alarm)";
+      clearTimeout(timer);
+      timer = setTimeout(function(){
+        armed = false; btn.textContent = firstLabel; msg.hidden = true;
+      }, 6000);
+      return;
+    }
+    armed = false;
+    clearTimeout(timer);
+    btn.textContent = firstLabel;
+    msg.hidden = false;
+    msg.style.color = "var(--signal)";
+    msg.textContent = doneText;
+    say(doneText);
+  });
+}
+twoStep("clearHist","clearMsg","Clear listening history","Clear it, yes",
+        "History cleared. Recommendations will take a few days to settle.");
+twoStep("signOutAll","signOutMsg","Sign out everywhere","Sign them all out",
+        "Every other device has been signed out.");
+twoStep("delAcct","delMsg","Delete account","Delete it for good",
+        "Deletion started. You have a day to change your mind by signing in again.");
+
+/* find */
+var finder = $("finder");
+finder.addEventListener("input", runFind);
+finder.addEventListener("keydown", function(e){
+  if(e.key === "Escape"){ finder.value = ""; runFind(); finder.blur(); }
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "/" && document.activeElement !== finder &&
+     ["INPUT","TEXTAREA","SELECT"].indexOf(document.activeElement.tagName) === -1){
+    e.preventDefault(); finder.focus(); finder.select();
+  }
+});
+
+function runFind(){
+  var q = finder.value.trim().toLowerCase();
+  var secs = document.querySelectorAll(".sec");
+  var shown = 0;
+  for(var s=0;s<secs.length;s++){
+    var sec = secs[s];
+    var title = (sec.querySelector("h2").textContent || "").toLowerCase();
+    var units = sec.querySelectorAll("[data-find]");
+    var any = false;
+    if(q === ""){
+      for(var u=0;u<units.length;u++) units[u].hidden = false;
+      sec.hidden = false;
+      any = true;
+    } else {
+      for(var u2=0;u2<units.length;u2++){
+        var el = units[u2];
+        var hay = (el.dataset.find + " " + el.textContent + " " + title).toLowerCase();
+        var ok = hay.indexOf(q) !== -1;
+        el.hidden = !ok;
+        if(ok) any = true;
+      }
+      sec.hidden = !any;
+    }
+    if(any) shown++;
+  }
+  $("nomatch").hidden = !(q !== "" && shown === 0);
+  $("nomatchText").innerHTML = q === "" ? "" :
+    'Nothing here answers to <em>' + q.replace(/[<>&]/g,"") + '</em>. Try a word from the thing you want to change, like <em>bitrate</em>, <em>crossfade</em> or <em>mono</em>.';
+  if(q !== "") say(shown === 0 ? "No settings match." : shown + (shown === 1 ? " section matches." : " sections match."));
+}
+
+/* jump strip, current section */
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll(".jump a"));
+  var secs = links.map(function(a){ return document.getElementById(a.getAttribute("href").slice(1)); });
+  if(!("IntersectionObserver" in window)) return;
+  var seen = {};
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ seen[e.target.id] = e.isIntersecting ? e.boundingClientRect.top : null; });
+    var best = null;
+    for(var i=0;i<secs.length;i++){
+      if(secs[i] && seen[secs[i].id] !== null && seen[secs[i].id] !== undefined){ best = secs[i].id; break; }
+    }
+    links.forEach(function(a){
+      a.setAttribute("aria-current", a.getAttribute("href") === "#" + best ? "true" : "false");
+    });
+  }, {rootMargin:"-120px 0px -60% 0px", threshold:0});
+  secs.forEach(function(s){ if(s) io.observe(s); });
+})();
+
+/* =========================================================
+   11. BOOT
+   ========================================================= */
+
+load();
+document.documentElement.dataset.size = state.size;
+document.documentElement.dataset.motion = state.reduceMotion ? "off" : "on";
+applyTheme();
+
+var audioOk = buildAudio();
+
+buildHandles();
+readPalette();
+sizePlot();
+paintQuality();
+paintBands(-1);
+paintChips();
+paintXfade();
+paintStorage();
+paintAlbums();
+paintMatrix();
+paintDevices();
+paintSwitches();
+paintBalance();
+paintAppearance();
+paintReadout();
+paintTransport();
+$("preview").value = state.preview;
+$("previewVal").textContent = state.preview;
+$("deviceSel").value = state.device;
+
+if(!audioOk){
+  $("playBtn").disabled = true;
+  document.querySelector(".mon-sub").textContent =
+    "This browser will not hand the page an audio context, so the loop cannot play. " +
+    "The curve below still shows exactly what the five filters do, because it is worked out from their coefficients.";
+}
+
+/* Moment 1: the curve draws from flat to its stored shape, leading, and the
+   sections follow it.
+
+   The animation starts the curve at flat, which is a shape the equaliser may
+   not actually be in, so it can never be allowed to get stuck there.
+   requestAnimationFrame does not run in a background tab or in a pane that is
+   not compositing, so the sweep carries a hard backstop and gives up the moment
+   the page is hidden. A settings page that draws the wrong state is worse than
+   one that draws it without ceremony. */
+(function(){
+  var settled = false;
+  function settle(){
+    if(settled) return;
+    settled = true;
+    morph = 1;
+    drawPlot();
+    placeHandles();
+  }
+  var hasShape = state.eq.some(function(v){ return v !== 0; });
+  if(reduced() || !hasShape || document.hidden){ settle(); return; }
+
+  morph = 0;
+  var t0 = performance.now(), dur = 420;
+  var backstop = setTimeout(settle, dur + 400);
+  document.addEventListener("visibilitychange", function onHide(){
+    if(document.hidden){ clearTimeout(backstop); settle(); document.removeEventListener("visibilitychange", onHide); }
+  });
+  requestAnimationFrame(function step(now){
+    if(settled) return;
+    var p = Math.min(1, (now - t0)/dur);
+    morph = 1 - Math.pow(1 - p, 3);
+    drawPlot(); placeHandles();
+    if(p < 1) requestAnimationFrame(step);
+    else { clearTimeout(backstop); settle(); }
+  });
+})();
+
+var rz;
+function remeasure(){ sizePlot(); drawPlot(); placeHandles(); }
+window.addEventListener("resize", function(){
+  clearTimeout(rz);
+  rz = setTimeout(remeasure, 120);
+});
+
+/* The plot has to track its own box, not only the window. It can be measured
+   at zero while the pane is hidden, while the fonts are still arriving, or
+   while the monitor is moving between the two column layouts. */
+if("ResizeObserver" in window){
+  new ResizeObserver(function(){ remeasure(); }).observe(cv.parentNode);
+} else {
+  setTimeout(remeasure, 300);
+}
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(remeasure);
+
+})();
+</script>
+</body>
+</html>

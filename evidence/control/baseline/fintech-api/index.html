@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trestle: payment rails for platforms that move other people's money</title>
+<meta name="description" content="One API for ACH, RTP, FedNow, SEPA, Faster Payments and 13 more rails, with a double-entry ledger under every cent. Ship payouts in a week, reconcile in real time.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2308090B'/%3E%3Cpath d='M6 10h20M16 10v14M9 24l7-9 7 9' stroke='%23FF6B2C' stroke-width='2.4' fill='none' stroke-linecap='square'/%3E%3C/svg%3E">
+
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --ink:#08090B;
+  --ink-2:#0C0E12;
+  --surface:#101317;
+  --surface-2:#171B21;
+  --surface-3:#1D222A;
+  --line:#232830;
+  --line-soft:#191D24;
+  --text:#EDEFF2;
+  --muted:#949CA8;
+  --muted-2:#6B737E;
+  --primary:#FF6B2C;
+  --primary-deep:#E04E12;
+  --primary-wash:rgba(255,107,44,.10);
+  --mint:#4FD1A1;
+  --sky:#7FB4FF;
+  --gold:#E8B94A;
+  --violet:#B08BFF;
+
+  --font-display:"Space Grotesk", system-ui, sans-serif;
+  --font-body:"IBM Plex Sans", system-ui, sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --maxw:1240px;
+  --gut:clamp(20px,4vw,48px);
+  --r:6px;
+  --r-lg:10px;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:88px}
+body{
+  margin:0;
+  background:var(--ink);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;line-height:1.08;margin:0}
+p{margin:0}
+a{color:inherit;text-decoration:none}
+ul,ol{margin:0;padding:0;list-style:none}
+img,svg{display:block;max-width:100%}
+button,input,select{font:inherit;color:inherit}
+::selection{background:var(--primary);color:#0A0A0A}
+
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:2px}
+
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:var(--gut)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+
+/* ============================================================
+   REVEAL
+   ============================================================ */
+.rv{opacity:0;transform:translateY(14px);transition:opacity .6s cubic-bezier(.22,.61,.36,1),transform .6s cubic-bezier(.22,.61,.36,1)}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .rv{opacity:1;transform:none;transition:none}
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+.nav{
+  position:sticky;top:0;z-index:80;
+  background:rgba(8,9,11,.78);
+  backdrop-filter:blur(14px) saturate(140%);
+  border-bottom:1px solid transparent;
+  transition:border-color .25s ease, background .25s ease;
+}
+.nav.stuck{border-bottom-color:var(--line);background:rgba(8,9,11,.94)}
+.nav-in{display:flex;align-items:center;gap:32px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;flex:none}
+.brand svg{width:24px;height:24px}
+.brand b{font-family:var(--font-display);font-weight:700;font-size:18px;letter-spacing:-.03em}
+.nav-links{display:flex;gap:26px;margin-left:8px}
+.nav-links a{font-size:14.5px;color:var(--muted);transition:color .16s}
+.nav-links a:hover{color:var(--text)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:18px}
+.status-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-mono);font-size:11.5px;letter-spacing:.02em;
+  color:var(--muted);border:1px solid var(--line);border-radius:100px;
+  padding:5px 11px 5px 9px;transition:border-color .2s,color .2s;
+}
+.status-pill:hover{border-color:var(--surface-3);color:var(--text)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(79,209,161,.6);animation:pulse 2.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,209,161,.5)}70%{box-shadow:0 0 0 7px rgba(79,209,161,0)}100%{box-shadow:0 0 0 0 rgba(79,209,161,0)}}
+.nav-signin{font-size:14.5px;color:var(--muted)}
+.nav-signin:hover{color:var(--text)}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  font-family:var(--font-body);font-weight:500;font-size:14.5px;
+  padding:10px 18px;border-radius:var(--r);border:1px solid transparent;
+  cursor:pointer;transition:background .18s,border-color .18s,color .18s,transform .12s;
+  white-space:nowrap;
+}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--primary);color:#100702;font-weight:600}
+.btn-primary:hover{background:#FF7F49}
+.btn-ghost{border-color:var(--line);color:var(--text);background:transparent}
+.btn-ghost:hover{border-color:var(--surface-3);background:var(--surface)}
+.btn-lg{padding:13px 24px;font-size:15.5px}
+
+.burger{display:none;background:none;border:1px solid var(--line);border-radius:var(--r);width:38px;height:34px;align-items:center;justify-content:center;cursor:pointer}
+.burger span{display:block;width:16px;height:1.5px;background:var(--text);position:relative}
+.burger span::before,.burger span::after{content:"";position:absolute;left:0;width:16px;height:1.5px;background:var(--text)}
+.burger span::before{top:-5px}.burger span::after{top:5px}
+.mobile-menu{display:none;border-top:1px solid var(--line);background:var(--ink-2);padding:14px var(--gut) 22px}
+.mobile-menu.open{display:block}
+.mobile-menu a{display:block;padding:11px 0;border-bottom:1px solid var(--line-soft);font-size:15px;color:var(--muted)}
+.mobile-menu a.btn{display:flex;justify-content:center;width:100%;margin-top:16px;padding:12px 18px;border-bottom:none;color:#100702;font-size:15px}
+
+@media (max-width:960px){
+  .nav-links,.nav-right .status-pill,.nav-right .nav-signin{display:none}
+  .burger{display:flex}
+}
+
+/* ============================================================
+   SECTION SCAFFOLD
+   ============================================================ */
+section{position:relative}
+.rule{border-top:1px solid var(--line)}
+.sec{padding:clamp(72px,9vw,124px) 0}
+.sec-head{
+  display:grid;grid-template-columns:180px 1fr;gap:32px;
+  align-items:start;margin-bottom:clamp(38px,5vw,64px);
+}
+.sec-idx{
+  font-family:var(--font-mono);font-size:11.5px;letter-spacing:.14em;
+  color:var(--muted-2);text-transform:uppercase;padding-top:9px;
+  border-top:1px solid var(--line);
+}
+.sec-idx b{color:var(--primary);font-weight:500}
+.sec-title{font-size:clamp(28px,3.6vw,44px);max-width:20ch}
+.sec-sub{color:var(--muted);font-size:17px;margin-top:16px;max-width:56ch;line-height:1.62}
+@media (max-width:820px){
+  .sec-head{grid-template-columns:1fr;gap:18px}
+  .sec-idx{padding-top:0;border-top:none}
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{position:relative;overflow:hidden;padding:clamp(56px,7vw,92px) 0 clamp(48px,6vw,76px)}
+.hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(var(--line-soft) 1px,transparent 1px),linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(120% 80% at 30% 0%,#000 0%,transparent 72%);
+  -webkit-mask-image:radial-gradient(120% 80% at 30% 0%,#000 0%,transparent 72%);
+  opacity:.6;
+}
+.hero::after{
+  content:"";position:absolute;top:-260px;left:-140px;width:760px;height:620px;pointer-events:none;
+  background:radial-gradient(circle at center,rgba(255,107,44,.13),transparent 62%);
+  filter:blur(10px);
+}
+.hero-in{position:relative;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1fr);gap:clamp(36px,5vw,68px);align-items:center}
+@media (max-width:1020px){.hero-in{grid-template-columns:1fr;gap:44px}}
+
+.tagline{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--font-mono);font-size:12px;letter-spacing:.02em;color:var(--muted);
+  border:1px solid var(--line);border-radius:100px;padding:5px 13px 5px 6px;margin-bottom:26px;
+}
+.tagline em{
+  font-style:normal;background:var(--primary-wash);color:var(--primary);
+  padding:2px 8px;border-radius:100px;font-weight:500;
+}
+h1{font-size:clamp(38px,5.4vw,66px);letter-spacing:-.035em;line-height:1.02}
+h1 .hl{color:var(--primary)}
+.hero-sub{color:var(--muted);font-size:clamp(16.5px,1.6vw,19px);line-height:1.6;margin-top:24px;max-width:54ch}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
+.hero-install{
+  display:flex;align-items:center;gap:12px;margin-top:30px;padding-top:22px;
+  border-top:1px solid var(--line);font-family:var(--font-mono);font-size:13.5px;color:var(--muted);
+}
+.hero-install .pr{color:var(--primary)}
+.copy-mini{
+  margin-left:auto;background:none;border:1px solid var(--line);border-radius:4px;
+  color:var(--muted-2);font-family:var(--font-mono);font-size:11px;padding:4px 9px;cursor:pointer;
+  transition:color .16s,border-color .16s;
+}
+.copy-mini:hover{color:var(--text);border-color:var(--surface-3)}
+
+/* console */
+.console{
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);
+  box-shadow:0 30px 70px -30px rgba(0,0,0,.9);overflow:hidden;
+}
+.console-bar{display:flex;align-items:center;border-bottom:1px solid var(--line);background:var(--ink-2)}
+.tabs{display:flex;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  background:none;border:none;border-right:1px solid var(--line-soft);
+  font-family:var(--font-mono);font-size:12.5px;color:var(--muted-2);
+  padding:11px 16px;cursor:pointer;transition:color .16s,background .16s;position:relative;white-space:nowrap;
+}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{color:var(--text);background:var(--surface)}
+.tab[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--primary)}
+.console-act{margin-left:auto;padding-right:10px;display:flex;gap:6px}
+.console-body{position:relative}
+pre{
+  margin:0;padding:20px 22px;overflow-x:auto;
+  font-family:var(--font-mono);font-size:12.9px;line-height:1.72;
+  tab-size:2;
+}
+pre::-webkit-scrollbar{height:8px}
+pre::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:8px}
+.k{color:var(--violet)}       /* keyword */
+.s{color:var(--mint)}         /* string */
+.n{color:var(--gold)}         /* number */
+.f{color:var(--sky)}          /* function / property */
+.c{color:var(--muted-2);font-style:italic} /* comment */
+.p{color:#7C8492}             /* punctuation */
+.fl{color:var(--primary)}     /* flag */
+
+.console-out{border-top:1px solid var(--line);background:var(--ink-2)}
+.out-head{
+  display:flex;align-items:center;gap:12px;padding:9px 22px;border-bottom:1px solid var(--line-soft);
+  font-family:var(--font-mono);font-size:11.5px;color:var(--muted-2);letter-spacing:.04em;
+}
+.badge-200{color:var(--mint);border:1px solid rgba(79,209,161,.3);border-radius:3px;padding:1px 6px;background:rgba(79,209,161,.07)}
+.out-head .ms{margin-left:auto;color:var(--muted)}
+
+.hidden{display:none !important}
+
+/* ============================================================
+   METRIC STRIP
+   ============================================================ */
+.strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--ink-2)}
+.strip-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.metric{padding:26px 28px;border-right:1px solid var(--line)}
+.metric:last-child{border-right:none}
+.metric .v{font-family:var(--font-display);font-size:clamp(24px,2.6vw,32px);font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.metric .l{font-family:var(--font-mono);font-size:11.5px;color:var(--muted-2);letter-spacing:.08em;text-transform:uppercase;margin-top:6px}
+@media (max-width:820px){
+  .strip-grid{grid-template-columns:repeat(2,1fr)}
+  .metric:nth-child(2n){border-right:none}
+  .metric:nth-child(-n+2){border-bottom:1px solid var(--line)}
+}
+
+/* ============================================================
+   LOGOS
+   ============================================================ */
+.logos{padding:44px 0}
+.logos-lab{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.12em;color:var(--muted-2);text-transform:uppercase;text-align:center;margin-bottom:26px}
+.logos-row{display:flex;flex-wrap:wrap;justify-content:center;gap:14px 52px;align-items:center}
+.logo-word{
+  font-family:var(--font-display);font-weight:600;font-size:16.5px;letter-spacing:.04em;
+  color:#5C636E;transition:color .2s;
+}
+.logo-word:hover{color:var(--muted)}
+.logo-word.thin{font-weight:400;letter-spacing:.12em;text-transform:uppercase;font-size:14px}
+
+/* ============================================================
+   PROBLEM LIST
+   ============================================================ */
+.fails{display:grid;gap:0;border-top:1px solid var(--line)}
+.fail{
+  display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.05fr);gap:28px;
+  padding:32px 0;border-bottom:1px solid var(--line);align-items:start;
+}
+.fail-n{font-family:var(--font-mono);font-size:13px;color:var(--primary);padding-top:4px}
+.fail h3{font-size:21px;letter-spacing:-.02em}
+.fail p{color:var(--muted);font-size:15.5px;line-height:1.66}
+.fail .tag{
+  display:inline-block;margin-top:14px;font-family:var(--font-mono);font-size:11.5px;
+  color:var(--muted-2);border:1px solid var(--line);border-radius:3px;padding:3px 8px;
+}
+@media (max-width:860px){
+  .fail{grid-template-columns:40px 1fr;gap:16px}
+  .fail p{grid-column:2}
+}
+
+/* ============================================================
+   CAPABILITIES
+   ============================================================ */
+.caps{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.cap{padding:30px 28px 32px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);transition:background .22s}
+.cap:hover{background:var(--surface)}
+.cap-ico{width:30px;height:30px;color:var(--primary);margin-bottom:20px}
+.cap h3{font-size:18px;margin-bottom:10px}
+.cap p{color:var(--muted);font-size:14.8px;line-height:1.62}
+.cap ul{margin-top:18px;border-top:1px solid var(--line-soft);padding-top:14px}
+.cap li{
+  font-family:var(--font-mono);font-size:12px;color:var(--muted-2);
+  padding:5px 0;display:flex;gap:9px;align-items:baseline;
+}
+.cap li::before{content:"›";color:var(--primary);flex:none}
+@media (max-width:1000px){.caps{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:660px){.caps{grid-template-columns:1fr}}
+
+/* ============================================================
+   STEPS
+   ============================================================ */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;position:relative}
+.step{padding:0 26px 0 0;position:relative}
+.step:not(:last-child){border-right:1px solid var(--line)}
+.step:not(:first-child){padding-left:26px}
+.step-n{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border:1px solid var(--primary);color:var(--primary);
+  border-radius:50%;font-family:var(--font-mono);font-size:12.5px;margin-bottom:18px;
+}
+.step h3{font-size:19px;margin-bottom:10px}
+.step p{color:var(--muted);font-size:14.8px;line-height:1.62;margin-bottom:20px}
+.step pre{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  font-size:12.2px;padding:14px 16px;line-height:1.7;
+}
+@media (max-width:900px){
+  .steps{grid-template-columns:1fr;gap:36px}
+  .step{padding:0 !important;border-right:none !important;border-bottom:1px solid var(--line);padding-bottom:36px !important}
+  .step:last-child{border-bottom:none;padding-bottom:0 !important}
+}
+
+/* ============================================================
+   RAILS TABLE
+   ============================================================ */
+.rail-tabs{display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r);width:max-content;overflow:hidden;margin-bottom:26px}
+.rail-tab{
+  background:none;border:none;border-right:1px solid var(--line);
+  font-family:var(--font-mono);font-size:12.5px;color:var(--muted);
+  padding:9px 18px;cursor:pointer;transition:background .18s,color .18s;
+}
+.rail-tab:last-child{border-right:none}
+.rail-tab[aria-selected="true"]{background:var(--primary);color:#100702;font-weight:500}
+.tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg)}
+table{width:100%;border-collapse:collapse;min-width:760px}
+thead th{
+  text-align:left;font-family:var(--font-mono);font-weight:400;font-size:11.5px;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--muted-2);
+  padding:13px 18px;border-bottom:1px solid var(--line);background:var(--ink-2);white-space:nowrap;
+}
+tbody td{padding:15px 18px;border-bottom:1px solid var(--line-soft);font-size:14.5px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{transition:background .16s}
+tbody tr:hover{background:var(--surface)}
+.rail-name{font-weight:600;font-family:var(--font-display);letter-spacing:-.01em}
+.rail-code{font-family:var(--font-mono);font-size:11.5px;color:var(--muted-2);display:block;margin-top:2px}
+.speed{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:12.5px}
+.speed i{width:6px;height:6px;border-radius:50%;font-style:normal;flex:none}
+.speed.instant i{background:var(--mint)}
+.speed.fast i{background:var(--gold)}
+.speed.slow i{background:var(--muted-2)}
+.cell-mono{font-family:var(--font-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cost{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums}
+.rails-note{margin-top:16px;font-size:13.5px;color:var(--muted-2)}
+
+/* ============================================================
+   LEDGER
+   ============================================================ */
+.ledger-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(32px,4.5vw,60px);align-items:center}
+@media (max-width:960px){.ledger-grid{grid-template-columns:1fr}}
+.ledger-copy h3{font-size:clamp(24px,3vw,34px);margin-bottom:18px}
+.ledger-copy p{color:var(--muted);font-size:16px;line-height:1.66;margin-bottom:16px}
+.ledger-pts{margin-top:26px;border-top:1px solid var(--line)}
+.ledger-pts li{padding:15px 0;border-bottom:1px solid var(--line-soft);display:flex;gap:14px;align-items:flex-start;font-size:14.8px}
+.ledger-pts b{font-family:var(--font-mono);font-size:11.5px;color:var(--primary);flex:none;padding-top:3px;letter-spacing:.04em}
+.ledger-pts span{color:var(--muted)}
+.ledger-card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
+.ledger-head{
+  display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);
+  background:var(--ink-2);font-family:var(--font-mono);font-size:11.5px;color:var(--muted-2);letter-spacing:.05em;
+}
+.ledger-head .bal{margin-left:auto;color:var(--text)}
+.ledger-tbl{width:100%;min-width:0;border-collapse:collapse}
+.ledger-tbl th{
+  font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted-2);text-align:left;padding:10px 18px;border-bottom:1px solid var(--line-soft);font-weight:400;background:transparent;
+}
+.ledger-tbl td{padding:11px 18px;font-family:var(--font-mono);font-size:12.4px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
+.ledger-tbl td.acct{color:var(--text)}
+.ledger-tbl td.dr{color:var(--sky);text-align:right}
+.ledger-tbl td.cr{color:var(--mint);text-align:right}
+.ledger-tbl tr.tot td{border-bottom:none;color:var(--muted);border-top:1px solid var(--line)}
+.ledger-foot{padding:12px 18px;display:flex;align-items:center;gap:10px;font-family:var(--font-mono);font-size:11.5px;color:var(--mint);border-top:1px solid var(--line);background:var(--ink-2)}
+
+/* ============================================================
+   TRUST / COMPLIANCE
+   ============================================================ */
+.trust-grid{display:grid;grid-template-columns:repeat(4,1fr);border-left:1px solid var(--line);border-top:1px solid var(--line)}
+.trust{padding:26px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.trust h4{font-family:var(--font-display);font-size:15.5px;margin-bottom:8px;font-weight:600}
+.trust p{color:var(--muted);font-size:13.8px;line-height:1.58}
+.trust .chk{color:var(--mint);font-family:var(--font-mono);font-size:11px;display:block;margin-bottom:12px;letter-spacing:.06em}
+@media (max-width:980px){.trust-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.trust-grid{grid-template-columns:1fr}}
+
+.uptime{
+  margin-top:36px;border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--surface);padding:24px 26px;display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:32px;align-items:center;
+}
+@media (max-width:820px){.uptime{grid-template-columns:1fr;gap:22px}}
+.uptime-stat .v{font-family:var(--font-display);font-size:34px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.uptime-stat .l{font-family:var(--font-mono);font-size:11.5px;color:var(--muted-2);letter-spacing:.08em;text-transform:uppercase;margin-top:5px}
+.uptime-stat .sub{color:var(--muted);font-size:13.5px;margin-top:12px;line-height:1.55}
+.spark-wrap{position:relative}
+.spark-lab{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10.5px;color:var(--muted-2);margin-top:8px;letter-spacing:.06em}
+
+/* ============================================================
+   CALCULATOR
+   ============================================================ */
+.calc{
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);overflow:hidden;
+  display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+}
+@media (max-width:900px){.calc{grid-template-columns:1fr}}
+.calc-left{padding:clamp(26px,3.4vw,40px);border-right:1px solid var(--line)}
+@media (max-width:900px){.calc-left{border-right:none;border-bottom:1px solid var(--line)}}
+.calc-lab{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted-2);margin-bottom:12px}
+.calc-vol{display:flex;align-items:baseline;gap:10px;margin-bottom:26px}
+.calc-vol .v{font-family:var(--font-display);font-size:clamp(32px,4vw,44px);font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.calc-vol .u{color:var(--muted);font-size:14.5px}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:2px;
+  background:linear-gradient(to right,var(--primary) var(--pct,40%),var(--surface-3) var(--pct,40%));
+  outline:none;cursor:pointer;margin:6px 0 4px;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--primary);border:3px solid var(--ink);cursor:grab;
+  box-shadow:0 0 0 1px var(--primary);
+}
+input[type=range]::-moz-range-thumb{
+  width:14px;height:14px;border-radius:50%;background:var(--primary);
+  border:3px solid var(--ink);cursor:grab;box-shadow:0 0 0 1px var(--primary);
+}
+.range-lab{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--muted-2);margin-top:8px}
+
+.plan-toggle{display:flex;border:1px solid var(--line);border-radius:var(--r);width:max-content;overflow:hidden;margin-top:30px}
+.plan-toggle button{
+  background:none;border:none;border-right:1px solid var(--line);padding:8px 18px;cursor:pointer;
+  font-family:var(--font-mono);font-size:12.5px;color:var(--muted);transition:background .18s,color .18s;
+}
+.plan-toggle button:last-child{border-right:none}
+.plan-toggle button[aria-pressed="true"]{background:var(--surface-3);color:var(--text)}
+
+.bands{margin-top:30px;border-top:1px solid var(--line)}
+.band{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft);font-family:var(--font-mono);font-size:12.2px}
+.band .rng{color:var(--muted-2);flex:none;width:150px}
+.band .bar{flex:1;height:4px;background:var(--surface-3);border-radius:2px;overflow:hidden}
+.band .bar i{display:block;height:100%;background:var(--primary);width:0;transition:width .45s cubic-bezier(.22,.61,.36,1)}
+.band .amt{color:var(--muted);width:92px;text-align:right;font-variant-numeric:tabular-nums}
+.band.dim{opacity:.38}
+
+.calc-right{padding:clamp(26px,3.4vw,40px);background:var(--ink-2);display:flex;flex-direction:column}
+.calc-line{display:flex;justify-content:space-between;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line-soft);font-size:14.5px}
+.calc-line span{color:var(--muted)}
+.calc-line b{font-family:var(--font-mono);font-weight:500;font-variant-numeric:tabular-nums;font-size:14px}
+.calc-total{display:flex;justify-content:space-between;align-items:baseline;padding-top:20px;margin-top:8px;border-top:1px solid var(--line)}
+.calc-total span{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2)}
+.calc-total b{font-family:var(--font-display);font-size:clamp(28px,3.4vw,38px);font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.calc-blend{margin-top:auto;padding-top:24px;font-size:13.5px;color:var(--muted);line-height:1.6}
+.calc-blend b{color:var(--primary);font-family:var(--font-mono);font-weight:500}
+
+/* ============================================================
+   PLANS
+   ============================================================ */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.plan{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:30px 28px 34px;display:flex;flex-direction:column;position:relative}
+.plan.feat{background:var(--surface)}
+.plan.feat::before{content:"";position:absolute;top:-1px;left:-1px;right:-1px;height:2px;background:var(--primary)}
+.plan-name{font-family:var(--font-display);font-size:17px;font-weight:600}
+.plan-for{color:var(--muted-2);font-size:13.2px;margin-top:6px;min-height:38px}
+.plan-price{display:flex;align-items:baseline;gap:8px;margin:22px 0 4px}
+.plan-price .fig{font-family:var(--font-display);font-size:38px;font-weight:600;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--text)}
+.plan-price .per{color:var(--muted-2);font-size:13.5px;font-family:var(--font-mono)}
+.plan-rate{font-family:var(--font-mono);font-size:12.5px;color:var(--primary);margin-bottom:24px}
+.plan .btn{width:100%;margin-bottom:24px}
+.plan-feat{border-top:1px solid var(--line);padding-top:18px}
+.plan-feat li{display:flex;gap:11px;padding:7px 0;font-size:14px;color:var(--muted);line-height:1.5}
+.plan-feat li::before{content:"+";color:var(--primary);font-family:var(--font-mono);flex:none}
+.plan-feat li.off{color:var(--muted-2);opacity:.55}
+.plan-feat li.off::before{content:"–";color:var(--muted-2)}
+@media (max-width:940px){.plans{grid-template-columns:1fr}}
+
+/* ============================================================
+   QUOTE
+   ============================================================ */
+.quote-main{border-left:2px solid var(--primary);padding-left:clamp(24px,3.5vw,44px)}
+.quote-main blockquote{
+  font-family:var(--font-display);font-size:clamp(21px,2.8vw,32px);
+  line-height:1.34;letter-spacing:-.02em;margin:0;font-weight:500;
+}
+.quote-meta{display:flex;align-items:center;gap:14px;margin-top:28px}
+.avatar{
+  width:42px;height:42px;border-radius:50%;flex:none;
+  background:linear-gradient(140deg,var(--surface-3),var(--surface));
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--primary);
+}
+.quote-meta .who{font-size:14.5px;font-weight:600}
+.quote-meta .role{color:var(--muted-2);font-size:13.2px}
+.quotes-sm{display:grid;grid-template-columns:repeat(2,1fr);gap:0;margin-top:clamp(40px,5vw,64px);border-top:1px solid var(--line)}
+.qs{padding:28px 30px 28px 0;border-bottom:1px solid var(--line)}
+.qs:nth-child(2){padding-left:30px;border-left:1px solid var(--line)}
+.qs p{font-size:15.5px;line-height:1.62;color:var(--text)}
+.qs .who{margin-top:16px;font-family:var(--font-mono);font-size:12px;color:var(--muted-2)}
+@media (max-width:760px){
+  .quotes-sm{grid-template-columns:1fr}
+  .qs:nth-child(2){padding-left:0;border-left:none}
+}
+
+/* ============================================================
+   DX
+   ============================================================ */
+.dx-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,4.5vw,56px);align-items:start}
+@media (max-width:900px){.dx-grid{grid-template-columns:1fr}}
+.sdks{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.sdk{
+  padding:18px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  transition:background .2s;
+}
+.sdk:hover{background:var(--surface)}
+.sdk .nm{font-family:var(--font-display);font-size:14.5px;font-weight:600}
+.sdk .vr{font-family:var(--font-mono);font-size:11px;color:var(--muted-2);margin-top:4px}
+.dx-list{border-top:1px solid var(--line)}
+.dx-list li{padding:17px 0;border-bottom:1px solid var(--line-soft)}
+.dx-list h4{font-family:var(--font-display);font-size:15.5px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.dx-list h4 code{font-family:var(--font-mono);font-size:11.5px;color:var(--primary);background:var(--primary-wash);padding:2px 7px;border-radius:3px;font-weight:400}
+.dx-list p{color:var(--muted);font-size:14.5px;line-height:1.6}
+
+/* ============================================================
+   FAQ
+   ============================================================ */
+.faq{border-top:1px solid var(--line);max-width:900px}
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-q{
+  width:100%;background:none;border:none;text-align:left;cursor:pointer;
+  display:flex;align-items:center;gap:20px;padding:22px 0;
+  font-family:var(--font-display);font-size:17.5px;font-weight:500;letter-spacing:-.015em;
+  transition:color .18s;
+}
+.faq-q:hover{color:var(--primary)}
+.faq-q .ix{font-family:var(--font-mono);font-size:11.5px;color:var(--muted-2);flex:none;font-weight:400;letter-spacing:.06em}
+.faq-q .pm{margin-left:auto;flex:none;width:14px;height:14px;position:relative}
+.faq-q .pm::before,.faq-q .pm::after{content:"";position:absolute;background:var(--muted);transition:transform .28s ease,background .18s}
+.faq-q .pm::before{top:6px;left:0;width:14px;height:1.5px}
+.faq-q .pm::after{left:6px;top:0;width:1.5px;height:14px}
+.faq-q[aria-expanded="true"] .pm::after{transform:rotate(90deg)}
+.faq-q[aria-expanded="true"] .pm::before,.faq-q[aria-expanded="true"] .pm::after{background:var(--primary)}
+.faq-a{overflow:hidden;height:0;transition:height .32s cubic-bezier(.22,.61,.36,1)}
+.faq-a-in{padding:0 0 24px 46px;color:var(--muted);font-size:15.5px;line-height:1.68;max-width:74ch}
+.faq-a-in code{font-family:var(--font-mono);font-size:13px;color:var(--sky)}
+@media (max-width:640px){.faq-a-in{padding-left:0}}
+
+/* ============================================================
+   CTA
+   ============================================================ */
+.cta{position:relative;overflow:hidden;border-top:1px solid var(--line);background:var(--ink-2)}
+.cta::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(70% 130% at 50% 120%,rgba(255,107,44,.15),transparent 66%);
+}
+.cta-in{position:relative;padding:clamp(64px,8vw,104px) 0;text-align:center}
+.cta h2{font-size:clamp(30px,4.2vw,52px);letter-spacing:-.035em;max-width:18ch;margin:0 auto}
+.cta p{color:var(--muted);font-size:17px;margin:20px auto 0;max-width:52ch}
+.cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+.cta-fine{margin-top:22px;font-family:var(--font-mono);font-size:12px;color:var(--muted-2)}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer{border-top:1px solid var(--line);padding:clamp(48px,6vw,72px) 0 34px}
+.foot-top{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(4,minmax(0,1fr));gap:32px;padding-bottom:44px;border-bottom:1px solid var(--line)}
+@media (max-width:960px){.foot-top{grid-template-columns:repeat(2,1fr);gap:36px 24px}}
+@media (max-width:520px){.foot-top{grid-template-columns:1fr}}
+.foot-brand p{color:var(--muted-2);font-size:13.8px;line-height:1.6;margin-top:14px;max-width:34ch}
+.foot-col h5{font-family:var(--font-mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted-2);margin:0 0 16px;font-weight:400}
+.foot-col li{margin-bottom:10px}
+.foot-col a{font-size:14px;color:var(--muted);transition:color .16s}
+.foot-col a:hover{color:var(--text)}
+.foot-bot{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:center;padding-top:26px}
+.foot-bot p{font-size:12.8px;color:var(--muted-2);max-width:70ch;line-height:1.6}
+.foot-bot .right{margin-left:auto;display:flex;gap:20px;font-family:var(--font-mono);font-size:11.5px;color:var(--muted-2)}
+@media (max-width:760px){.foot-bot .right{margin-left:0}}
+
+.toast{
+  position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);
+  background:var(--surface-2);border:1px solid var(--line);color:var(--text);
+  font-family:var(--font-mono);font-size:12.5px;padding:9px 16px;border-radius:var(--r);
+  opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:200;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<!-- ================= NAV ================= -->
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a href="#top" class="brand" aria-label="Trestle home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 9h24M16 9v16M8 25l8-11 8 11" stroke="#FF6B2C" stroke-width="2.2" fill="none" stroke-linecap="square"/></svg>
+      <b>Trestle</b>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#capabilities">Product</a>
+      <a href="#rails">Rails</a>
+      <a href="#ledger">Ledger</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#developers">Docs</a>
+    </nav>
+    <div class="nav-right">
+      <a href="#reliability" class="status-pill"><span class="dot"></span> All rails operational</a>
+      <a href="#top" class="nav-signin">Sign in</a>
+      <a href="#cta" class="btn btn-primary">Get API keys</a>
+      <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu"><span></span></button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#capabilities">Product</a>
+    <a href="#rails">Rails</a>
+    <a href="#ledger">Ledger</a>
+    <a href="#reliability">Reliability</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#developers">Docs</a>
+    <a href="#faq">FAQ</a>
+    <a href="#cta" class="btn btn-primary">Get API keys</a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="wrap hero-in">
+    <div>
+      <span class="tagline rv"><em>v3</em> 17 rails, 1 ledger, 0 spreadsheets</span>
+      <h1 class="rv">Payment rails for platforms that move <span class="hl">other people's money</span>.</h1>
+      <p class="hero-sub rv">One API for ACH, RTP, FedNow, SEPA, Faster Payments and twelve more, with a double-entry ledger underneath every cent. Ship payouts in a week, reconcile in real time, and hand your auditor a link instead of a CSV.</p>
+      <div class="hero-cta rv">
+        <a href="#cta" class="btn btn-primary btn-lg">Start in sandbox</a>
+        <a href="#rails" class="btn btn-ghost btn-lg">See rail coverage</a>
+      </div>
+      <div class="hero-install rv">
+        <span><span class="pr">$</span> npm i @trestle/node</span>
+        <button class="copy-mini" data-copy="npm i @trestle/node">COPY</button>
+      </div>
+    </div>
+
+    <!-- console -->
+    <div class="console rv" role="region" aria-label="API example">
+      <div class="console-bar">
+        <div class="tabs" role="tablist" aria-label="Language">
+          <button class="tab" role="tab" aria-selected="true" aria-controls="p-curl" id="t-curl">cURL</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="p-node" id="t-node">Node</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="p-py" id="t-py">Python</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="p-go" id="t-go">Go</button>
+        </div>
+        <div class="console-act">
+          <button class="copy-mini" id="copyCode">COPY</button>
+        </div>
+      </div>
+
+      <div class="console-body">
+<pre id="p-curl" role="tabpanel" aria-labelledby="t-curl"><code><span class="f">curl</span> https://api.trestle.dev/v1/payouts <span class="p">\</span>
+  <span class="fl">-H</span> <span class="s">"Authorization: Bearer sk_live_9f2c…"</span> <span class="p">\</span>
+  <span class="fl">-H</span> <span class="s">"Idempotency-Key: po_8837_2026_02"</span> <span class="p">\</span>
+  <span class="fl">-d</span> amount=<span class="n">48250</span> <span class="p">\</span>
+  <span class="fl">-d</span> currency=<span class="s">usd</span> <span class="p">\</span>
+  <span class="fl">-d</span> rail=<span class="s">rtp</span> <span class="p">\</span>
+  <span class="fl">-d</span> counterparty=<span class="s">cp_3KfQz1Rb</span></code></pre>
+
+<pre id="p-node" class="hidden" role="tabpanel" aria-labelledby="t-node"><code><span class="k">import</span> Trestle <span class="k">from</span> <span class="s">"@trestle/node"</span>;
+
+<span class="k">const</span> trestle = <span class="k">new</span> <span class="f">Trestle</span>(process.env.TRESTLE_KEY);
+
+<span class="k">const</span> payout = <span class="k">await</span> trestle.payouts.<span class="f">create</span>({
+  amount:       <span class="n">48_250</span>,
+  currency:     <span class="s">"usd"</span>,
+  rail:         <span class="s">"rtp"</span>,
+  counterparty: <span class="s">"cp_3KfQz1Rb"</span>,
+}, { idempotencyKey: <span class="s">"po_8837_2026_02"</span> });
+
+console.<span class="f">log</span>(payout.status); <span class="c">// "settled"</span></code></pre>
+
+<pre id="p-py" class="hidden" role="tabpanel" aria-labelledby="t-py"><code><span class="k">import</span> os, trestle
+
+client = trestle.<span class="f">Client</span>(os.environ[<span class="s">"TRESTLE_KEY"</span>])
+
+payout = client.payouts.<span class="f">create</span>(
+    amount=<span class="n">48_250</span>,
+    currency=<span class="s">"usd"</span>,
+    rail=<span class="s">"rtp"</span>,
+    counterparty=<span class="s">"cp_3KfQz1Rb"</span>,
+    idempotency_key=<span class="s">"po_8837_2026_02"</span>,
+)
+
+<span class="f">print</span>(payout.status)  <span class="c"># "settled"</span></code></pre>
+
+<pre id="p-go" class="hidden" role="tabpanel" aria-labelledby="t-go"><code>client := trestle.<span class="f">New</span>(os.<span class="f">Getenv</span>(<span class="s">"TRESTLE_KEY"</span>))
+
+payout, err := client.Payouts.<span class="f">Create</span>(ctx, &amp;trestle.PayoutParams{
+    Amount:       <span class="n">48250</span>,
+    Currency:     <span class="s">"usd"</span>,
+    Rail:         <span class="s">"rtp"</span>,
+    Counterparty: <span class="s">"cp_3KfQz1Rb"</span>,
+    IdempotencyKey: <span class="s">"po_8837_2026_02"</span>,
+})
+<span class="k">if</span> err != <span class="k">nil</span> {
+    <span class="k">return</span> err
+}
+
+fmt.<span class="f">Println</span>(payout.Status)</code></pre>
+      </div>
+
+      <div class="console-out">
+        <div class="out-head">
+          <span class="badge-200">200 OK</span>
+          <span>POST /v1/payouts</span>
+          <span class="ms">142 ms</span>
+        </div>
+<pre><code>{
+  <span class="f">"id"</span><span class="p">:</span> <span class="s">"po_1QsdKZ2eZvKY"</span>,
+  <span class="f">"object"</span><span class="p">:</span> <span class="s">"payout"</span>,
+  <span class="f">"amount"</span><span class="p">:</span> <span class="n">48250</span>,
+  <span class="f">"currency"</span><span class="p">:</span> <span class="s">"usd"</span>,
+  <span class="f">"rail"</span><span class="p">:</span> <span class="s">"rtp"</span>,
+  <span class="f">"status"</span><span class="p">:</span> <span class="s">"settled"</span>,
+  <span class="f">"settled_at"</span><span class="p">:</span> <span class="s">"2026-02-11T14:22:07Z"</span>,
+  <span class="f">"ledger_entry"</span><span class="p">:</span> <span class="s">"le_7Yb2Q"</span>,
+  <span class="f">"trace"</span><span class="p">:</span> <span class="s">"026009593T0938291"</span>
+}</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= METRIC STRIP ================= -->
+<div class="strip">
+  <div class="wrap" style="padding-inline:0">
+    <div class="strip-grid">
+      <div class="metric"><div class="v"><span data-count="184" data-prefix="$" data-suffix="B">$0B</span></div><div class="l">Settled in 2025</div></div>
+      <div class="metric"><div class="v"><span data-count="99.993" data-dec="3" data-suffix="%">0%</span></div><div class="l">Rolling 12mo uptime</div></div>
+      <div class="metric"><div class="v"><span data-count="142" data-suffix=" ms">0 ms</span></div><div class="l">p99 API latency</div></div>
+      <div class="metric"><div class="v"><span data-count="38" data-suffix="">0</span></div><div class="l">Countries payable</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= LOGOS ================= -->
+<section class="logos">
+  <div class="wrap">
+    <p class="logos-lab rv">Powering money movement for</p>
+    <div class="logos-row rv">
+      <span class="logo-word">Northwind Freight</span>
+      <span class="logo-word thin">Halcyon</span>
+      <span class="logo-word">Cargospine</span>
+      <span class="logo-word thin">Meridian Health</span>
+      <span class="logo-word">Foundry Payroll</span>
+      <span class="logo-word thin">Orbital Marketplace</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PROBLEM ================= -->
+<section class="sec rule">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>01</b> / The problem</div>
+      <div>
+        <h2 class="sec-title">Nobody sets out to build a bank. It happens anyway.</h2>
+        <p class="sec-sub">You started with one payout flow. Three years later you have a NACHA file generator, a Slack channel for stuck wires, and a finance team that closes the month by hand. Here is how it usually goes.</p>
+      </div>
+    </div>
+
+    <ol class="fails">
+      <li class="fail rv">
+        <div class="fail-n">01</div>
+        <div>
+          <h3>Every rail is a separate integration</h3>
+          <span class="tag">6 to 14 months per rail</span>
+        </div>
+        <p>ACH is a fixed width file. RTP is ISO 20022. Your UK bank wants SFTP and a PGP key that rotates quarterly. Each one arrives with its own cutoff times, return codes, and a partner bank contact who answers email on Tuesdays. The code is not the hard part. The operational surface is.</p>
+      </li>
+      <li class="fail rv">
+        <div class="fail-n">02</div>
+        <div>
+          <h3>Balances live in three places and agree in none</h3>
+          <span class="tag">Reconciliation drift</span>
+        </div>
+        <p>Your app database says the merchant has $412,900. The bank statement says something else. The processor's API says a third number, and it is eventually consistent. Without a real ledger you are diffing systems that were never designed to agree, and every discrepancy becomes an archaeology project.</p>
+      </li>
+      <li class="fail rv">
+        <div class="fail-n">03</div>
+        <div>
+          <h3>The audit surprises you every single time</h3>
+          <span class="tag">SOC 2 and state MTL</span>
+        </div>
+        <p>Money movement pulls in obligations you did not scope: immutable audit trails, segregated settlement accounts, sanctions screening, and evidence that a given cent was where you claim it was on a given date. Retrofitting that into a system built for product velocity is the expensive way to learn it.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ================= CAPABILITIES ================= -->
+<section class="sec rule" id="capabilities">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>02</b> / Capabilities</div>
+      <div>
+        <h2 class="sec-title">Six primitives. Everything else composes from them.</h2>
+        <p class="sec-sub">Trestle exposes a small object model on purpose. Counterparties, accounts, ledger entries, payments, events, and reports. If you know one endpoint you can guess the rest.</p>
+      </div>
+    </div>
+
+    <div class="caps">
+      <article class="cap rv">
+        <svg class="cap-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 7h14M17 7l-3-3M17 7l-3 3M21 17H7M7 17l3-3M7 17l3 3"/></svg>
+        <h3>Payouts</h3>
+        <p>Push funds to any counterparty on the fastest rail that satisfies your constraints, or pin the rail yourself. Automatic retry across rails on soft failure.</p>
+        <ul>
+          <li>Smart rail selection by cost, speed, limit</li>
+          <li>Batch endpoint, 25,000 per request</li>
+          <li>Scheduled and recurring disbursements</li>
+        </ul>
+      </article>
+
+      <article class="cap rv">
+        <svg class="cap-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+        <h3>Collections</h3>
+        <p>Pull funds with ACH debit, SEPA Direct Debit, BACS DD, and open banking payment initiation. Mandate storage and return handling included.</p>
+        <ul>
+          <li>Mandate lifecycle and proof of authorization</li>
+          <li>R-code and return reason normalization</li>
+          <li>Balance checks before debit where supported</li>
+        </ul>
+      </article>
+
+      <article class="cap rv">
+        <svg class="cap-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 4v16h16M8 16V9M12 16V6M16 16v-4M20 16v-7"/></svg>
+        <h3>Ledger</h3>
+        <p>A real double-entry ledger with immutable entries, atomic multi-leg transactions, and balances you can query at any historical timestamp.</p>
+        <ul>
+          <li>Serializable transactions, no partial writes</li>
+          <li>Balance as of any point in time</li>
+          <li>Custom account hierarchies per tenant</li>
+        </ul>
+      </article>
+
+      <article class="cap rv">
+        <svg class="cap-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"/><path d="M20 13v5a2 2 0 0 1-2 2H6"/></svg>
+        <h3>Reconciliation</h3>
+        <p>Bank statements ingested continuously and matched against ledger entries. Exceptions surface as typed objects, not as a mystery in a spreadsheet.</p>
+        <ul>
+          <li>Continuous BAI2, MT940, and camt.053 ingest</li>
+          <li>Deterministic matching with audit reasons</li>
+          <li>Break queue with assignment and notes</li>
+        </ul>
+      </article>
+
+      <article class="cap rv">
+        <svg class="cap-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+        <h3>FX and multi-currency</h3>
+        <p>Hold balances in 24 currencies. Lock a rate for up to 60 seconds, or settle at the interbank mid rate plus a disclosed spread.</p>
+        <ul>
+          <li>Quote objects with explicit expiry</li>
+          <li>Spread shown per quote, never bundled</li>
+          <li>Same day conversion on 11 corridors</li>
+        </ul>
+      </article>
+
+      <article class="cap rv">
+        <svg class="cap-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 3v6M12 21v-6M4.9 7l4.3 2.5M19.1 17l-4.3-2.5M4.9 17l4.3-2.5M19.1 7l-4.3 2.5"/><circle cx="12" cy="12" r="2.6"/></svg>
+        <h3>Events and webhooks</h3>
+        <p>Every state change emits a signed, ordered event. Replay any window up to 30 days, and inspect delivery attempts in the dashboard.</p>
+        <ul>
+          <li>HMAC signed, timestamped, replay safe</li>
+          <li>Per endpoint ordering guarantees</li>
+          <li>One click replay by time range or type</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW IT WORKS ================= -->
+<section class="sec rule">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>03</b> / Integration</div>
+      <div>
+        <h2 class="sec-title">Three calls from empty repo to settled funds.</h2>
+        <p class="sec-sub">Sandbox keys are issued instantly and simulate real rail behaviour, including returns, cutoffs, and weekend settlement gaps.</p>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step rv">
+        <div class="step-n">1</div>
+        <h3>Create a counterparty</h3>
+        <p>Bank details are tokenized on receipt. Trestle validates routing numbers, IBANs, and sort codes against live directories before the object is returned.</p>
+<pre><code><span class="k">const</span> cp = <span class="k">await</span> trestle
+  .counterparties.<span class="f">create</span>({
+    name: <span class="s">"Halcyon Ltd"</span>,
+    country: <span class="s">"GB"</span>,
+    account: {
+      iban: <span class="s">"GB29NWBK6016…"</span>
+    }
+  });</code></pre>
+      </div>
+
+      <div class="step rv">
+        <div class="step-n">2</div>
+        <h3>Fund the settlement account</h3>
+        <p>Pull from your operating account or receive inbound on a virtual account. The ledger records both legs the moment funds are confirmed.</p>
+<pre><code><span class="k">await</span> trestle.transfers.<span class="f">create</span>({
+  from: <span class="s">"acct_operating"</span>,
+  to:   <span class="s">"acct_settlement"</span>,
+  amount: <span class="n">2_500_000</span>,
+  currency: <span class="s">"gbp"</span>,
+  rail: <span class="s">"fps"</span>
+});</code></pre>
+      </div>
+
+      <div class="step rv">
+        <div class="step-n">3</div>
+        <h3>Pay out and listen</h3>
+        <p>Submit the payout with an idempotency key, then react to <code class="mono">payout.settled</code> or <code class="mono">payout.returned</code> on your webhook endpoint.</p>
+<pre><code>app.<span class="f">post</span>(<span class="s">"/hooks"</span>, (req, res) =&gt; {
+  <span class="k">const</span> e = trestle.webhooks
+    .<span class="f">verify</span>(req, SECRET);
+
+  <span class="k">if</span> (e.type === <span class="s">"payout.settled"</span>)
+    <span class="f">markPaid</span>(e.data.id);
+
+  res.<span class="f">sendStatus</span>(<span class="n">200</span>);
+});</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RAILS ================= -->
+<section class="sec rule" id="rails">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>04</b> / Coverage</div>
+      <div>
+        <h2 class="sec-title">Seventeen rails, published cutoffs, no surprises.</h2>
+        <p class="sec-sub">Pricing below is list rate at the Scale plan. Cutoffs are the last submission time that still settles on the stated schedule, and they are enforced by the API rather than by a support ticket.</p>
+      </div>
+    </div>
+
+    <div class="rail-tabs rv" role="tablist" aria-label="Region">
+      <button class="rail-tab" role="tab" aria-selected="true" data-region="us">United States</button>
+      <button class="rail-tab" role="tab" aria-selected="false" data-region="eu">Europe and UK</button>
+      <button class="rail-tab" role="tab" aria-selected="false" data-region="row">Rest of world</button>
+    </div>
+
+    <div class="tbl-scroll rv">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Rail</th>
+            <th scope="col">Settlement</th>
+            <th scope="col">Cutoff</th>
+            <th scope="col">Per transaction</th>
+            <th scope="col">Limit</th>
+            <th scope="col">Reversible</th>
+          </tr>
+        </thead>
+        <tbody id="railBody"></tbody>
+      </table>
+    </div>
+    <p class="rails-note rv">Volume above 500,000 transactions per month moves to negotiated interchange. Wires and CHAPS are priced at cost plus a fixed 90 cent handling fee.</p>
+  </div>
+</section>
+
+<!-- ================= LEDGER ================= -->
+<section class="sec rule" id="ledger">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>05</b> / Ledger</div>
+      <div>
+        <h2 class="sec-title">Double entry, or it did not happen.</h2>
+        <p class="sec-sub">Most payment APIs give you a status field. Trestle gives you the accounting. Every movement writes balanced entries in a single serializable transaction, and nothing is ever updated in place.</p>
+      </div>
+    </div>
+
+    <div class="ledger-grid">
+      <div class="ledger-copy rv">
+        <h3>The number is the same everywhere, because there is only one number.</h3>
+        <p>Balances are derived from entries, not stored and patched. When you ask for a merchant balance as of 14:22:07 last Tuesday, you get the balance as of 14:22:07 last Tuesday, computed from immutable history.</p>
+        <p>That property is what makes disputes short. You are not reconstructing what probably happened. You are reading what did.</p>
+        <ul class="ledger-pts">
+          <li><b>ATOMIC</b><span>Multi leg transactions commit fully or not at all, across any number of accounts and currencies.</span></li>
+          <li><b>IMMUTABLE</b><span>Entries are append only. Corrections are reversing entries with a link to the original.</span></li>
+          <li><b>QUERYABLE</b><span>Point in time balances, trial balance exports, and per tenant account trees.</span></li>
+          <li><b>EXPORTABLE</b><span>Journal exports to NetSuite, Xero, and QuickBooks on a schedule you set.</span></li>
+        </ul>
+      </div>
+
+      <div class="ledger-card rv">
+        <div class="ledger-head">
+          <span>txn_9Kd2QpLm</span>
+          <span>&middot;</span>
+          <span>2026-02-11 14:22:07Z</span>
+          <span class="bal">USD</span>
+        </div>
+        <table class="ledger-tbl">
+          <thead>
+            <tr><th>Account</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="acct">merchant:m_44b1:payable</td><td class="dr">482.50</td><td class="cr">–</td></tr>
+            <tr><td class="acct">platform:settlement:usd</td><td class="dr">–</td><td class="cr">482.50</td></tr>
+            <tr><td class="acct">platform:fees:earned</td><td class="dr">–</td><td class="cr">7.24</td></tr>
+            <tr><td class="acct">merchant:m_44b1:fees</td><td class="dr">7.24</td><td class="cr">–</td></tr>
+            <tr class="tot"><td>Balanced</td><td class="dr">489.74</td><td class="cr">489.74</td></tr>
+          </tbody>
+        </table>
+        <div class="ledger-foot"><span class="dot" style="background:var(--mint)"></span> Committed in 11 ms &middot; entry le_7Yb2Q &middot; hash 4f2a…c901</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RELIABILITY ================= -->
+<section class="sec rule" id="reliability">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>06</b> / Reliability</div>
+      <div>
+        <h2 class="sec-title">Boring on purpose, and audited about it.</h2>
+        <p class="sec-sub">Trestle runs in three regions with active-active writes to the ledger. Controls are independently assessed, and the evidence is available under NDA rather than described in a marketing sentence.</p>
+      </div>
+    </div>
+
+    <div class="trust-grid rv">
+      <div class="trust"><span class="chk">CERTIFIED</span><h4>SOC 2 Type II</h4><p>Continuous monitoring across 114 controls. Report refreshed annually, bridge letter on request.</p></div>
+      <div class="trust"><span class="chk">CERTIFIED</span><h4>PCI DSS Level 1</h4><p>Full scope assessment covering card data storage, transmission, and the tokenization vault.</p></div>
+      <div class="trust"><span class="chk">CERTIFIED</span><h4>ISO 27001 and 27018</h4><p>Information security management plus cloud PII handling, audited by an accredited body.</p></div>
+      <div class="trust"><span class="chk">ENFORCED</span><h4>Idempotency everywhere</h4><p>Every mutating endpoint accepts a key. Replays return the original response for 24 hours.</p></div>
+      <div class="trust"><span class="chk">ENFORCED</span><h4>Signed webhooks</h4><p>HMAC SHA-256 with a timestamp window and key rotation without downtime.</p></div>
+      <div class="trust"><span class="chk">ENFORCED</span><h4>Segregated funds</h4><p>Customer funds sit in FBO accounts at partner banks, never commingled with operating cash.</p></div>
+      <div class="trust"><span class="chk">ENFORCED</span><h4>Immutable audit log</h4><p>Every API call, dashboard action, and key use recorded with actor, IP, and diff. Streamable to your SIEM.</p></div>
+      <div class="trust"><span class="chk">ENFORCED</span><h4>Screening at submission</h4><p>OFAC, UN, and EU consolidated lists checked before the rail sees the instruction, with match evidence stored.</p></div>
+    </div>
+
+    <div class="uptime rv">
+      <div class="uptime-stat">
+        <div class="v" id="upVal">99.993%</div>
+        <div class="l">Trailing 90 day availability</div>
+        <p class="sub">Measured at the edge across all API regions, including scheduled maintenance windows.</p>
+      </div>
+      <div class="spark-wrap">
+        <svg id="spark" viewBox="0 0 600 96" preserveAspectRatio="none" style="width:100%;height:96px" aria-label="p99 latency over the last 90 days">
+          <defs>
+            <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(255,107,44,.30)"/>
+              <stop offset="100%" stop-color="rgba(255,107,44,0)"/>
+            </linearGradient>
+          </defs>
+          <path id="sparkFill" fill="url(#sg)" d=""></path>
+          <path id="sparkLine" fill="none" stroke="#FF6B2C" stroke-width="1.6" d=""></path>
+        </svg>
+        <div class="spark-lab"><span>90 DAYS AGO</span><span>p99 LATENCY, ms</span><span>TODAY</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CALCULATOR ================= -->
+<section class="sec rule" id="pricing">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>07</b> / Cost</div>
+      <div>
+        <h2 class="sec-title">Work out what you would actually pay.</h2>
+        <p class="sec-sub">Pricing is per transaction with volume bands applied marginally, the same way a tax bracket works. Drag the slider to see the blended rate at your volume.</p>
+      </div>
+    </div>
+
+    <div class="calc rv">
+      <div class="calc-left">
+        <div class="calc-lab">Monthly transaction volume</div>
+        <div class="calc-vol"><span class="v" id="volOut">120,000</span><span class="u">payments per month</span></div>
+        <input type="range" id="volRange" min="0" max="100" value="55" aria-label="Monthly transaction volume">
+        <div class="range-lab"><span>1,000</span><span>50,000</span><span>500,000</span><span>5,000,000</span></div>
+
+        <div class="plan-toggle" role="group" aria-label="Plan">
+          <button data-plan="build" aria-pressed="false">Build</button>
+          <button data-plan="scale" aria-pressed="true">Scale</button>
+        </div>
+
+        <div class="bands" id="bands">
+          <div class="band" data-band="0"><span class="rng">First 50,000</span><span class="bar"><i></i></span><span class="amt">$0.35</span></div>
+          <div class="band" data-band="1"><span class="rng">50k to 500k</span><span class="bar"><i></i></span><span class="amt">$0.22</span></div>
+          <div class="band" data-band="2"><span class="rng">500k to 2M</span><span class="bar"><i></i></span><span class="amt">$0.14</span></div>
+          <div class="band" data-band="3"><span class="rng">Above 2M</span><span class="bar"><i></i></span><span class="amt">$0.09</span></div>
+        </div>
+      </div>
+
+      <div class="calc-right">
+        <div class="calc-line"><span>Transaction charges</span><b id="txCost">$0</b></div>
+        <div class="calc-line"><span>Platform fee</span><b id="platFee">$0</b></div>
+        <div class="calc-line"><span>Ledger and reconciliation</span><b>included</b></div>
+        <div class="calc-line"><span>Sandbox and replays</span><b>included</b></div>
+        <div class="calc-total"><span>Est. monthly</span><b id="totalOut">$0</b></div>
+        <p class="calc-blend">Blended rate of <b id="blendOut">$0.00</b> per payment, or <b id="annualOut">$0</b> per year. Wires, CHAPS, and FX conversions are billed separately at the rates published in the rail table.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PLANS ================= -->
+<section class="sec">
+  <div class="wrap">
+    <div class="plans">
+      <div class="plan rv">
+        <div class="plan-name">Build</div>
+        <div class="plan-for">For teams still shaping the flow, and for anyone in sandbox.</div>
+        <div class="plan-price"><span class="fig">$0</span><span class="per">/month</span></div>
+        <div class="plan-rate">from $0.35 per payment</div>
+        <a href="#cta" class="btn btn-ghost">Create sandbox keys</a>
+        <ul class="plan-feat">
+          <li>Unlimited sandbox volume</li>
+          <li>ACH, SEPA, and Faster Payments in production</li>
+          <li>Full ledger and reconciliation</li>
+          <li>Signed webhooks with 7 day replay</li>
+          <li>Community Slack and email support</li>
+          <li class="off">Instant rails, RTP and FedNow</li>
+          <li class="off">Contractual uptime SLA</li>
+        </ul>
+      </div>
+
+      <div class="plan feat rv">
+        <div class="plan-name">Scale</div>
+        <div class="plan-for">For platforms in production with real money and real auditors.</div>
+        <div class="plan-price"><span class="fig">$2,400</span><span class="per">/month</span></div>
+        <div class="plan-rate">from $0.22 per payment above 50k</div>
+        <a href="#cta" class="btn btn-primary">Talk to an engineer</a>
+        <ul class="plan-feat">
+          <li>All 17 rails including RTP, FedNow, SEPA Instant</li>
+          <li>99.99% uptime SLA with service credits</li>
+          <li>30 day webhook replay and event search</li>
+          <li>Multi entity ledger and sub accounts</li>
+          <li>Sanctions screening with case management</li>
+          <li>Shared Slack channel, 1 hour response</li>
+          <li>Quarterly control evidence pack</li>
+        </ul>
+      </div>
+
+      <div class="plan rv">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-for">For regulated institutions and platforms above 2M payments a month.</div>
+        <div class="plan-price"><span class="fig">Custom</span></div>
+        <div class="plan-rate">negotiated interchange, from $0.09</div>
+        <a href="#cta" class="btn btn-ghost">Contact sales</a>
+        <ul class="plan-feat">
+          <li>Everything in Scale</li>
+          <li>Dedicated infrastructure and data residency</li>
+          <li>Bring your own partner bank</li>
+          <li>Custom cutoff windows and batch schedules</li>
+          <li>Named SRE and quarterly architecture review</li>
+          <li>Direct regulator and auditor liaison</li>
+          <li>Annual penetration test participation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= QUOTE ================= -->
+<section class="sec rule">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>08</b> / Proof</div>
+      <div>
+        <h2 class="sec-title">What changed after the migration.</h2>
+      </div>
+    </div>
+
+    <div class="quote-main rv">
+      <blockquote>"We had four engineers on payments and a finance team that lost the last week of every month to reconciliation. We moved to Trestle over a quarter. The engineers went back to product, and the month end close now takes an afternoon. The ledger is the part I did not expect to care about, and it is the part I would not give up."</blockquote>
+      <div class="quote-meta">
+        <div class="avatar">DR</div>
+        <div>
+          <div class="who">Dana Rehman</div>
+          <div class="role">CTO, Northwind Freight &middot; 90,000 carrier payouts per month</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="quotes-sm">
+      <div class="qs rv">
+        <p>"Rail selection paid for itself in the first month. Roughly 60 percent of our payouts did not actually need a wire, and nobody had ever checked."</p>
+        <div class="who">MARCUS OYELARAN &middot; VP ENGINEERING, FOUNDRY PAYROLL</div>
+      </div>
+      <div class="qs rv">
+        <p>"Our SOC 2 auditor asked for payment evidence. We sent a dashboard link with a scoped read only role. That was the whole exchange."</p>
+        <div class="who">PRIYA VENKATESAN &middot; HEAD OF PLATFORM, HALCYON</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DEVELOPERS ================= -->
+<section class="sec rule" id="developers">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>09</b> / Developer experience</div>
+      <div>
+        <h2 class="sec-title">The tooling you would have built yourself, on day one.</h2>
+        <p class="sec-sub">Typed SDKs generated from the same OpenAPI spec that powers the docs, so the client library and the reference never drift apart.</p>
+      </div>
+    </div>
+
+    <div class="dx-grid">
+      <div class="rv">
+        <div class="sdks">
+          <div class="sdk"><div class="nm">Node</div><div class="vr">v3.4.1 &middot; TypeScript</div></div>
+          <div class="sdk"><div class="nm">Python</div><div class="vr">v3.4.1 &middot; typed, async</div></div>
+          <div class="sdk"><div class="nm">Go</div><div class="vr">v3.4.0 &middot; context aware</div></div>
+          <div class="sdk"><div class="nm">Ruby</div><div class="vr">v3.3.8 &middot; sorbet sigs</div></div>
+          <div class="sdk"><div class="nm">Java</div><div class="vr">v3.3.8 &middot; JDK 17+</div></div>
+          <div class="sdk"><div class="nm">.NET</div><div class="vr">v3.2.4 &middot; net8.0</div></div>
+          <div class="sdk"><div class="nm">PHP</div><div class="vr">v3.2.4 &middot; PSR-18</div></div>
+          <div class="sdk"><div class="nm">Elixir</div><div class="vr">v2.9.0 &middot; community</div></div>
+          <div class="sdk"><div class="nm">OpenAPI</div><div class="vr">3.1 &middot; always current</div></div>
+        </div>
+      </div>
+
+      <div class="rv">
+        <ul class="dx-list">
+          <li>
+            <h4>Sandbox that behaves like the rails <code>sandbox</code></h4>
+            <p>Trigger a return, a late settlement, an insufficient funds bounce, or a bank holiday with a header. No more discovering NACHA return codes in production.</p>
+          </li>
+          <li>
+            <h4>Local CLI with request replay <code>trestle dev</code></h4>
+            <p>Tunnel webhooks to localhost, replay any historical event against your dev machine, and diff your handler output between versions.</p>
+          </li>
+          <li>
+            <h4>Every response carries a trace <code>x-trestle-trace</code></h4>
+            <p>Paste the trace id into the dashboard to see the full lifecycle: validation, screening, rail submission, bank acknowledgement, ledger commit.</p>
+          </li>
+          <li>
+            <h4>Versioning that does not break you <code>2026-01-15</code></h4>
+            <p>Date pinned API versions. Breaking changes ship behind a new date, and old versions are supported for a minimum of 24 months.</p>
+          </li>
+          <li>
+            <h4>Errors written for humans <code>4xx</code></h4>
+            <p>Every error returns a machine code, a plain sentence, the offending field, and a link to the exact section of the docs that explains the fix.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section class="sec rule" id="faq">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="sec-idx"><b>10</b> / Questions</div>
+      <div>
+        <h2 class="sec-title">The things engineers ask on the first call.</h2>
+      </div>
+    </div>
+
+    <div class="faq rv">
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="ix">01</span> Are you a bank, or do you sit on top of one?<span class="pm"></span></button>
+        <div class="faq-a"><div class="faq-a-in">Trestle is not a bank. We hold direct rail memberships where they are available to non-banks, and we work with four partner banks across the US, UK, and EU for the rest. Customer funds sit in FBO accounts at those banks. Which bank backs a given account is visible in the API on the <code>settlement_bank</code> field, because you should never have to ask us that in a support ticket.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="ix">02</span> What happens when a rail goes down?<span class="pm"></span></button>
+        <div class="faq-a"><div class="faq-a-in">If you specified a rail explicitly, the payout stays queued and you get a <code>payout.delayed</code> event with the expected recovery window. If you used smart selection, we route to the next rail that satisfies your constraints on speed, cost, and limit, and the substitution is recorded on the payout object. Rail health is published in real time on the status page and available as an API resource.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="ix">03</span> How long does a realistic integration take?<span class="pm"></span></button>
+        <div class="faq-a"><div class="faq-a-in">Sandbox to first successful payout is usually under a day. A production launch covering one region, webhook handling, and reconciliation typically runs two to four weeks including your own review cycles. The long pole is almost never our API, it is your onboarding and KYB flow for counterparties, which is why we ship a hosted version of it.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="ix">04</span> Can we migrate an existing ledger in?<span class="pm"></span></button>
+        <div class="faq-a"><div class="faq-a-in">Yes. The backfill endpoint accepts historical entries with original timestamps, which keeps point in time balance queries correct across the cutover. Most teams import 12 to 24 months. We run a parallel period where both systems are written to, then compare trial balances daily until they match for a full close cycle.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="ix">05</span> What are the rate limits?<span class="pm"></span></button>
+        <div class="faq-a"><div class="faq-a-in">1,000 requests per second per account on read endpoints and 200 per second on writes, burstable to triple that for 60 seconds. Batch endpoints accept 25,000 payments per request and do not count against the write limit. Limits are per API key so you can isolate a noisy background job from your user facing traffic.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="ix">06</span> Do you support our compliance obligations, or replace them?<span class="pm"></span></button>
+        <div class="faq-a"><div class="faq-a-in">We support them. Trestle performs sanctions screening, transaction monitoring, and retains evidence, and we give you the artefacts an examiner asks for. You remain responsible for your own program, your risk appetite, and any licensing your model requires. Our compliance team will join calls with your counsel, and we will tell you plainly when a use case needs a money transmitter licence rather than letting you find out later.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false"><span class="ix">07</span> What does leaving look like?<span class="pm"></span></button>
+        <div class="faq-a"><div class="faq-a-in">Full ledger export in a documented format, counterparty records with the original bank details you supplied, and 90 days of continued read access after termination at no charge. Tokenized details we hold under PCI scope are exported to your own vault provider through a direct transfer, not emailed to you as a file.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="cta" id="cta">
+  <div class="wrap cta-in">
+    <h2 class="rv">Ship your first payout this week.</h2>
+    <p class="rv">Sandbox keys are issued instantly, no call required. When you are ready for production we will walk the integration with you before a single real cent moves.</p>
+    <div class="cta-btns rv">
+      <a href="#top" class="btn btn-primary btn-lg">Get API keys</a>
+      <a href="#developers" class="btn btn-ghost btn-lg">Read the docs</a>
+    </div>
+    <p class="cta-fine rv">No card required &middot; Full rail simulation in sandbox &middot; SOC 2 Type II and PCI DSS Level 1</p>
+  </div>
+</section>
+
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <div class="foot-brand">
+        <a href="#top" class="brand" aria-label="Trestle home">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 9h24M16 9v16M8 25l8-11 8 11" stroke="#FF6B2C" stroke-width="2.2" fill="none" stroke-linecap="square"/></svg>
+          <b>Trestle</b>
+        </a>
+        <p>Payment rails and a double-entry ledger for platforms that move money on behalf of their customers.</p>
+        <a href="#reliability" class="status-pill" style="margin-top:18px"><span class="dot"></span> All rails operational</a>
+      </div>
+
+      <div class="foot-col">
+        <h5>Product</h5>
+        <ul>
+          <li><a href="#capabilities">Payouts</a></li>
+          <li><a href="#capabilities">Collections</a></li>
+          <li><a href="#ledger">Ledger</a></li>
+          <li><a href="#capabilities">Reconciliation</a></li>
+          <li><a href="#capabilities">FX</a></li>
+        </ul>
+      </div>
+
+      <div class="foot-col">
+        <h5>Developers</h5>
+        <ul>
+          <li><a href="#developers">API reference</a></li>
+          <li><a href="#developers">SDKs</a></li>
+          <li><a href="#developers">Sandbox</a></li>
+          <li><a href="#developers">Changelog</a></li>
+          <li><a href="#reliability">Status</a></li>
+        </ul>
+      </div>
+
+      <div class="foot-col">
+        <h5>Rails</h5>
+        <ul>
+          <li><a href="#rails">ACH and same day ACH</a></li>
+          <li><a href="#rails">RTP and FedNow</a></li>
+          <li><a href="#rails">SEPA and SEPA Instant</a></li>
+          <li><a href="#rails">Faster Payments</a></li>
+          <li><a href="#rails">Wires and CHAPS</a></li>
+        </ul>
+      </div>
+
+      <div class="foot-col">
+        <h5>Company</h5>
+        <ul>
+          <li><a href="#top">About</a></li>
+          <li><a href="#top">Careers</a></li>
+          <li><a href="#reliability">Security</a></li>
+          <li><a href="#reliability">Compliance</a></li>
+          <li><a href="#cta">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot-bot">
+      <p>Trestle Financial Technologies, Inc. is a technology company, not a bank. Banking services are provided by partner financial institutions, Members FDIC. This page is a design exercise and describes a fictional product. Figures shown are illustrative.</p>
+      <div class="right">
+        <a href="#top">PRIVACY</a>
+        <a href="#top">TERMS</a>
+        <a href="#top">DPA</a>
+        <span>&copy; 2026</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+(function(){
+  "use strict";
+  const $  = (s,c)=> (c||document).querySelector(s);
+  const $$ = (s,c)=> Array.from((c||document).querySelectorAll(s));
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- toast ---------- */
+  const toast = $("#toast");
+  let toastT;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toastT);
+    toastT = setTimeout(()=>toast.classList.remove("show"), 1800);
+  }
+  function copy(text){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(()=>showToast("Copied to clipboard"))
+        .catch(()=>fallbackCopy(text));
+    } else { fallbackCopy(text); }
+  }
+  function fallbackCopy(text){
+    const ta=document.createElement("textarea");
+    ta.value=text; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); showToast("Copied to clipboard"); }
+    catch(e){ showToast("Press Ctrl+C to copy"); }
+    document.body.removeChild(ta);
+  }
+
+  $$("[data-copy]").forEach(b=> b.addEventListener("click",()=> copy(b.dataset.copy)));
+
+  /* ---------- nav ---------- */
+  const nav = $("#nav");
+  const onScroll = ()=> nav.classList.toggle("stuck", window.scrollY > 8);
+  onScroll();
+  window.addEventListener("scroll", onScroll, {passive:true});
+
+  const burger = $("#burger"), menu = $("#mobileMenu");
+  burger.addEventListener("click", ()=>{
+    const open = menu.classList.toggle("open");
+    burger.setAttribute("aria-expanded", String(open));
+    burger.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+  });
+  $$("#mobileMenu a").forEach(a=> a.addEventListener("click",()=>{
+    menu.classList.remove("open");
+    burger.setAttribute("aria-expanded","false");
+  }));
+
+  /* ---------- reveal ---------- */
+  if(!reduce && "IntersectionObserver" in window){
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          const sibs = Array.from(e.target.parentElement.children).filter(n=>n.classList.contains("rv"));
+          const i = Math.min(sibs.indexOf(e.target), 6);
+          e.target.style.transitionDelay = (i * 55) + "ms";
+          e.target.classList.add("in");
+          io.unobserve(e.target);
+        }
+      });
+    }, {rootMargin:"0px 0px -8% 0px", threshold:.08});
+    $$(".rv").forEach(el=> io.observe(el));
+  } else {
+    $$(".rv").forEach(el=> el.classList.add("in"));
+  }
+
+  /* ---------- code tabs ---------- */
+  const tabs = $$(".tab");
+  const panelIds = ["p-curl","p-node","p-py","p-go"];
+  tabs.forEach(t=>{
+    t.addEventListener("click", ()=>{
+      tabs.forEach(x=> x.setAttribute("aria-selected","false"));
+      t.setAttribute("aria-selected","true");
+      panelIds.forEach(id=> $("#"+id).classList.add("hidden"));
+      $("#"+t.getAttribute("aria-controls")).classList.remove("hidden");
+    });
+    t.addEventListener("keydown", (e)=>{
+      const i = tabs.indexOf(t);
+      if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
+        e.preventDefault();
+        const n = tabs[(i + (e.key==="ArrowRight"?1:tabs.length-1)) % tabs.length];
+        n.focus(); n.click();
+      }
+    });
+  });
+  $("#copyCode").addEventListener("click", ()=>{
+    const vis = panelIds.map(id=>$("#"+id)).find(p=> !p.classList.contains("hidden"));
+    copy(vis ? vis.innerText : "");
+  });
+
+  /* ---------- counters ---------- */
+  function animateCount(el){
+    const target = parseFloat(el.dataset.count);
+    const dec = parseInt(el.dataset.dec || "0", 10);
+    const pre = el.dataset.prefix || "";
+    const suf = el.dataset.suffix || "";
+    if(reduce){ el.textContent = pre + target.toFixed(dec) + suf; return; }
+    const dur = 1300, t0 = performance.now();
+    function frame(now){
+      const p = Math.min((now - t0)/dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const v = target * eased;
+      el.textContent = pre + (dec ? v.toFixed(dec) : Math.round(v).toLocaleString("en-US")) + suf;
+      if(p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+  if("IntersectionObserver" in window){
+    const co = new IntersectionObserver((es)=>{
+      es.forEach(e=>{ if(e.isIntersecting){ animateCount(e.target); co.unobserve(e.target); } });
+    },{threshold:.5});
+    $$("[data-count]").forEach(el=> co.observe(el));
+  } else {
+    $$("[data-count]").forEach(animateCount);
+  }
+
+  /* ---------- rails table ---------- */
+  const RAILS = {
+    us:[
+      ["ACH","standard","T+1 business day","slow","20:45 ET","$0.25","$1,000,000","Yes, 60 days"],
+      ["Same day ACH","same-day","Same business day","fast","16:45 ET","$0.45","$1,000,000","Yes, 60 days"],
+      ["RTP","real-time payments","Under 15 seconds","instant","24/7/365","$0.40","$1,000,000","No"],
+      ["FedNow","instant","Under 20 seconds","instant","24/7/365","$0.35","$500,000","No"],
+      ["Fedwire","wire","Same day","fast","17:00 ET","$12.00","No limit","No"],
+      ["Check","paper","5 to 8 business days","slow","15:00 ET","$1.40","$250,000","Yes, stop pay"]
+    ],
+    eu:[
+      ["SEPA Credit Transfer","sepa_ct","T+1 business day","slow","15:30 CET","€0.20","€999,999,999","Recall only"],
+      ["SEPA Instant","sepa_inst","Under 10 seconds","instant","24/7/365","€0.30","€100,000","No"],
+      ["SEPA Direct Debit","sepa_dd","T+2 business days","slow","12:00 CET","€0.22","€999,999,999","Yes, 8 weeks"],
+      ["Faster Payments","fps","Under 2 minutes","instant","24/7/365","£0.20","£1,000,000","No"],
+      ["BACS","bacs","3 business days","slow","10:30 GMT","£0.15","No limit","Yes, indemnity"],
+      ["CHAPS","chaps","Same day","fast","17:40 GMT","£15.00","No limit","No"]
+    ],
+    row:[
+      ["Interac e-Transfer","interac","Under 30 minutes","instant","24/7/365","C$0.50","C$25,000","No"],
+      ["PIX","pix","Under 10 seconds","instant","24/7/365","R$0.10","No limit","Yes, MED"],
+      ["UPI","upi","Under 10 seconds","instant","24/7/365","₹0.00","₹500,000","No"],
+      ["NPP and PayTo","npp","Under 60 seconds","instant","24/7/365","A$0.30","A$1,000,000","No"],
+      ["Zengin","zengin","Same business day","fast","15:30 JST","¥60.00","No limit","No"]
+    ]
+  };
+  const railBody = $("#railBody");
+  function renderRails(region){
+    railBody.innerHTML = RAILS[region].map(r=>`
+      <tr>
+        <td><span class="rail-name">${r[0]}</span><span class="rail-code">rail: "${r[1]}"</span></td>
+        <td><span class="speed ${r[3]}"><i></i>${r[2]}</span></td>
+        <td class="cell-mono">${r[4]}</td>
+        <td class="cost">${r[5]}</td>
+        <td class="cell-mono">${r[6]}</td>
+        <td class="cell-mono">${r[7]}</td>
+      </tr>`).join("");
+  }
+  renderRails("us");
+  $$(".rail-tab").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      $$(".rail-tab").forEach(x=> x.setAttribute("aria-selected","false"));
+      b.setAttribute("aria-selected","true");
+      renderRails(b.dataset.region);
+    });
+  });
+
+  /* ---------- sparkline ---------- */
+  (function(){
+    const W=600,H=96,N=90;
+    let seed=42;
+    const rnd=()=>{ seed=(seed*1103515245+12345)%2147483648; return seed/2147483648; };
+    const pts=[];
+    for(let i=0;i<N;i++){
+      const base=138 + Math.sin(i/7)*9 + Math.sin(i/23)*5;
+      const spike = (i===31||i===64) ? 46 : 0;
+      pts.push(base + rnd()*14 + spike);
+    }
+    const min=Math.min.apply(null,pts)-10, max=Math.max.apply(null,pts)+10;
+    const x=i=> (i/(N-1))*W;
+    const y=v=> H - ((v-min)/(max-min))*(H-8) - 4;
+    let d="M "+x(0).toFixed(1)+" "+y(pts[0]).toFixed(1);
+    for(let i=1;i<N;i++) d += " L "+x(i).toFixed(1)+" "+y(pts[i]).toFixed(1);
+    const line=$("#sparkLine"), fill=$("#sparkFill");
+    line.setAttribute("d", d);
+    fill.setAttribute("d", d + " L "+W+" "+H+" L 0 "+H+" Z");
+    if(!reduce){
+      const len = line.getTotalLength ? line.getTotalLength() : 1200;
+      line.style.strokeDasharray = len;
+      line.style.strokeDashoffset = len;
+      if("IntersectionObserver" in window){
+        const so=new IntersectionObserver(es=>{
+          es.forEach(e=>{
+            if(e.isIntersecting){
+              line.style.transition="stroke-dashoffset 1.6s cubic-bezier(.22,.61,.36,1)";
+              line.style.strokeDashoffset="0";
+              so.unobserve(e.target);
+            }
+          });
+        },{threshold:.3});
+        so.observe($("#spark"));
+      } else { line.style.strokeDashoffset="0"; }
+    }
+  })();
+
+  /* ---------- pricing calculator ---------- */
+  const BANDS = [
+    {upTo: 50000,   rate: 0.35},
+    {upTo: 500000,  rate: 0.22},
+    {upTo: 2000000, rate: 0.14},
+    {upTo: Infinity,rate: 0.09}
+  ];
+  const PLANS = { build:{fee:0}, scale:{fee:2400} };
+  let plan = "scale";
+
+  const range = $("#volRange");
+  const MINV = 1000, MAXV = 5000000;
+  function sliderToVolume(p){
+    const t = p/100;
+    const v = MINV * Math.pow(MAXV/MINV, t);
+    // round to a readable step
+    const mag = Math.pow(10, Math.max(2, Math.floor(Math.log10(v)) - 1));
+    return Math.max(MINV, Math.round(v/mag)*mag);
+  }
+  const usd = (n, dec)=> "$" + n.toLocaleString("en-US",{minimumFractionDigits:dec||0, maximumFractionDigits:dec||0});
+
+  function calc(){
+    const vol = sliderToVolume(parseFloat(range.value));
+    range.style.setProperty("--pct", range.value + "%");
+
+    let remaining = vol, prev = 0, txCost = 0;
+    const perBand = [];
+    BANDS.forEach(b=>{
+      const cap = b.upTo === Infinity ? Infinity : b.upTo - prev;
+      const used = Math.max(0, Math.min(remaining, cap));
+      perBand.push(used);
+      txCost += used * b.rate;
+      remaining -= used;
+      prev = b.upTo;
+    });
+
+    const fee = PLANS[plan].fee;
+    const total = txCost + fee;
+
+    $("#volOut").textContent = vol.toLocaleString("en-US");
+    $("#txCost").textContent = usd(Math.round(txCost));
+    $("#platFee").textContent = fee ? usd(fee) : "$0";
+    $("#totalOut").textContent = usd(Math.round(total));
+    $("#blendOut").textContent = "$" + (total/vol).toFixed(3);
+    $("#annualOut").textContent = usd(Math.round(total*12));
+
+    $$("#bands .band").forEach((el,i)=>{
+      // the open-ended top band is measured against a 3M reference so its bar still reads proportionally
+      const capacity = BANDS[i].upTo === Infinity ? 3000000 : BANDS[i].upTo - (i ? BANDS[i-1].upTo : 0);
+      const pct = Math.min(100, (perBand[i]/capacity)*100);
+      $("i", el).style.width = pct + "%";
+      el.classList.toggle("dim", perBand[i] === 0);
+    });
+  }
+  range.addEventListener("input", calc);
+  $$(".plan-toggle button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      $$(".plan-toggle button").forEach(x=> x.setAttribute("aria-pressed","false"));
+      b.setAttribute("aria-pressed","true");
+      plan = b.dataset.plan;
+      calc();
+    });
+  });
+  calc();
+
+  /* ---------- faq ---------- */
+  $$(".faq-q").forEach(q=>{
+    const panel = q.nextElementSibling;
+    q.addEventListener("click", ()=>{
+      const open = q.getAttribute("aria-expanded") === "true";
+      // close siblings
+      $$(".faq-q").forEach(o=>{
+        if(o !== q && o.getAttribute("aria-expanded")==="true"){
+          o.setAttribute("aria-expanded","false");
+          o.nextElementSibling.style.height = "0px";
+        }
+      });
+      if(open){
+        q.setAttribute("aria-expanded","false");
+        panel.style.height = "0px";
+      } else {
+        q.setAttribute("aria-expanded","true");
+        panel.style.height = panel.firstElementChild.offsetHeight + "px";
+      }
+    });
+  });
+  window.addEventListener("resize", ()=>{
+    $$(".faq-q").forEach(q=>{
+      if(q.getAttribute("aria-expanded")==="true"){
+        q.nextElementSibling.style.height = q.nextElementSibling.firstElementChild.offsetHeight + "px";
+      }
+    });
+  });
+
+})();
+</script>
+</body>
+</html>
